@@ -44,7 +44,7 @@ match_handler = MatchHandler()
 
 #   Gentrys Quest data
 GQManager.load_rankings()
-gentrys_quest_classic_version = "V2.3.1"
+gentrys_quest_classic_version = "V2.4"
 
 # flask set up
 app = Flask(  # Create a flask app
