@@ -36,14 +36,10 @@ DB.connect()
 
 #   osu data
 live_player_status = {}
-player_data = PlayerList
-print("\nLoading osu players\n")
-print("\nNo players available\n")
 
 match_handler = MatchHandler()
 
-#   Gentrys Quest data
-GQManager.load_rankings()
+#   Gentry's Quest data
 gentrys_quest_classic_version = "V2.3.1"
 
 # flask set up

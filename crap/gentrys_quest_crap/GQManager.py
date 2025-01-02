@@ -30,33 +30,6 @@ def ranking(func):
 
 class GQManager:
     @staticmethod
-    def load_rankings():
-        print("Loading rankings")
-        print("#1 Rating items")
-        items = DB.get_group("SELECT id, type, owner, metadata, version FROM gentrys_quest_items;")
-        for item in items:
-            if item[4] != GPSystem.version:  # check the version
-                if item[1] == "character":
-                    rating = GPSystem.rater.get_character_rating(item[3])
-                elif item[1] == "artifact":
-                    rating = GPSystem.rater.get_artifact_rating(item[3])
-                else:
-                    rating = GPSystem.rater.get_weapon_rating(item[3])
-
-                DB.do(
-                    f"UPDATE gentrys_quest_items SET rating = {rating}, version = \'{GPSystem.version}\' where id = {item[0]}")
-
-        print("#2 Ranking users (classic)")
-        for id in DB.get_group("SELECT distinct owner FROM gentrys_quest_items where is_classic = true;"):
-            id = id[0]
-            GQManager.update_user_rating(id, True)
-
-        print("#2 Ranking users (current)")
-        for id in DB.get_group("SELECT distinct owner FROM gentrys_quest_items where is_classic = false;"):
-            id = id[0]
-            GQManager.update_user_rating(id, False)
-
-    @staticmethod
     def update_user_rating(id, classic: bool) -> dict:
         # weighting
         character_rating = 0
