@@ -127,8 +127,20 @@ class GQManager:
         return Item.gift_item(item_type, data, is_classic, owner)
 
     @staticmethod
+    def gift_item_to_all(item_type: str, data, is_classic: bool):
+        table = "gentrys_quest_classic_data" if is_classic else "gentrys_quest_data"
+        ids = DB.get_group(f"SELECT id FROM {table}")
+        for id in ids:
+            Item.gift_item(item_type, data, is_classic, id)
+
+        return "gifted!"
+
+    @staticmethod
     def classic_add_money(id, amount):
-        DB.do("UPDATE gentrys_quest_classic_data SET new_money = new_money + %s where id = %s", params=(amount, id))
+        if id == "*":
+            DB.do("UPDATE gentrys_quest_classic_data SET new_money = new_money + %s", params=(amount,))
+        else:
+            DB.do("UPDATE gentrys_quest_classic_data SET new_money = new_money + %s where id = %s", params=(amount, id))
         return amount
 
     @staticmethod

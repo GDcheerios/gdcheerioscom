@@ -39,8 +39,8 @@ live_player_status = {}
 
 match_handler = MatchHandler()
 
-#   Gentry's Quest data
-gentrys_quest_classic_version = "V2.3.1"
+#   Gentrys Quest data
+gentrys_quest_classic_version = "V2.4"
 
 # flask set up
 app = Flask(  # Create a flask app
