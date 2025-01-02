@@ -2,10 +2,9 @@
 import asyncio
 import json
 import logging
-import random
-import string
 import urllib
 from datetime import datetime, timedelta
+from PSQLConnector import PSQLConnection as db
 
 # flask packages
 import requests
@@ -16,12 +15,10 @@ from flask_socketio import SocketIO, emit
 # credential variables
 import Client_Credentials as client
 from GPSystem.GPmain import GPSystem
-from crap.Account import Account
-# scripts
-from crap.Initialization import *
-from crap.PSQLConnection import PSQLConnection as DB
 
-initialize_files()  # setup necessary files
+# routes
+from routes.api.token_routes import token_blueprint
+from routes.api.account_routes import account_blueprint
 
 # data imports
 from crap.osu_crap.Match import Match
@@ -29,10 +26,6 @@ from crap.osu_crap.PlayerList import PlayerList
 from crap.osu_crap.MatchHandler import MatchHandler
 
 from crap.gentrys_quest_crap.GQManager import GQManager
-
-# global vars
-#   database
-DB.connect()
 
 #   osu data
 live_player_status = {}
@@ -46,56 +39,42 @@ match_handler = MatchHandler()
 GQManager.load_rankings()
 gentrys_quest_classic_version = "V2.3.1"
 
-# flask set up
-app = Flask(  # Create a flask app
-    __name__,
-    template_folder='templates',  # Name of html file folder
-    static_folder='static',  # Name of directory for static files
-)
-app.config['SECRET_KEY'] = Client_Credentials.secret
-socketio = SocketIO(app, logger=False)
-bcrypt = Bcrypt(app)
 
-# logging config
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.NOTSET)
+def create_app():
+    app = Flask(  # Create a flask app
+        __name__,
+        template_folder='templates',  # Name of html file folder
+        static_folder='static',  # Name of directory for static files
+    )
+    app.config['SECRET_KEY'] = client.secret
+    socketio = SocketIO(app, logger=False)
+    bcrypt = Bcrypt(app)
+
+    # logging config
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.NOTSET)
+
+    # connect the db
+    db.connect(
+        user=client.db_user,
+        password=client.db_password,
+        database=client.db,
+        host=client.db_hostname,
+        port=client.db_port,
+    )
+
+    # load blueprints
+    #   api
+    app.register_blueprint(token_blueprint, url_prefix='/api')
+    app.register_blueprint(account_blueprint, url_prefix='/api')
+
+    return app
 
 
 # <editor-fold desc="API">
 
-# <editor-fold desc="token API">
-@app.route("/api/generate-token")
-async def generate_token():
-    token = ""
-    for i in range(32):
-        token += random.choice(string.ascii_letters)
-
-    DB.do("INSERT INTO tokens values (%s);", params=(token,))
-    return token
-
-
-@app.route("/api/clear-tokens")
-async def clear_tokens():
-    DB.do("DELETE FROM tokens *;")
-    return "Done"
-
-
-@app.route("/api/delete-token/<token>")
-async def delete_token(token):
-    DB.do("DELETE FROM tokens WHERE value = %s;", params=(token,))
-    return f"removed {token}"
-
-
-@app.route("/api/verify-token/<token>")
-def verify_token(token):
-    result = DB.get("SELECT * FROM tokens where value = %s;", params=(token,))
-    return str(result is not None)
-
-
-# </editor-fold>
-
 # <editor-fold desc="account API">
-@app.route("/api/account/create/<email>+<username>+<password>")
+@app
 async def account_create(username, password, email, osu_id=0, about_me=""):
     password = str(password)
     password = str(bcrypt.generate_password_hash(password))[2:-1]
@@ -318,7 +297,7 @@ async def update_live_status(id):
 
 @app.route("/api/gq/get-leaderboard/<id>")
 async def gq_get_leaderboard(id):
-    leaderboard = DB.get_group(
+    leaderboard = db.get_group(
         "SELECT name, MAX(score) as hs FROM leaderboard_scores WHERE leaderboard = %s GROUP BY name ORDER BY hs DESC;",
         params=(id,))
     standings = []
@@ -339,8 +318,8 @@ async def gq_get_leaderboard(id):
 @app.route("/api/gq/submit-leaderboard/<leaderboard>/<user>+<score>", methods=['POST'])
 async def gq_submit_leaderboard(leaderboard, user, score):
     user = Account(user)
-    if DB.get("select online from leaderboards where id = %s", params=leaderboard)[0]:
-        DB.do("INSERT INTO leaderboard_scores (name, score, leaderboard, \"user\") values (%s, %s, %s, %s);",
+    if db.get("select online from leaderboards where id = %s", params=leaderboard)[0]:
+        db.do("INSERT INTO leaderboard_scores (name, score, leaderboard, \"user\") values (%s, %s, %s, %s);",
               params=(user.username, int(score), int(leaderboard), user.id))
 
     return {
