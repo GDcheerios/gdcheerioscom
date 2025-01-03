@@ -74,23 +74,6 @@ def create_app():
 # <editor-fold desc="API">
 
 # <editor-fold desc="account API">
-@app
-async def account_create(username, password, email, osu_id=0, about_me=""):
-    password = str(password)
-    password = str(bcrypt.generate_password_hash(password))[2:-1]
-
-    Account.create(username, password, email, osu_id, about_me)
-
-
-def login(username, password) -> str | dict:
-    account = Account(username)
-    if account:
-        if bcrypt.check_password_hash(account.password, password):
-            return account.jsonify()
-
-    return "incorrect info"
-
-
 @app.route('/api/account/login-form', methods=['POST'])
 async def login_cookie():
     username = request.form.get('nm')
@@ -121,34 +104,6 @@ async def signout():
     resp = make_response(render_template('account/login.html'))
     resp.delete_cookie('userID')
     return resp
-
-
-@app.route("/create-account", methods=['POST'])
-def create_account():
-    username = request.form.get("nm")
-    if Account.name_exists(username):
-        return redirect("/account/create")
-
-    password = request.form.get("pw")
-    email = request.form.get("em")
-    try:
-        osuid = int(request.form.get("id"))
-    except:
-        osuid = 0
-    about_me = request.form.get("am")
-    asyncio.run(account_create(username, password, email, osuid, about_me))
-    login_result = login(username, password)
-    if login_result != "incorrect info" and login_result is not None:
-        resp = make_response(
-            render_template('account/user-profile.html',
-                            account=login_result
-                            ))
-        resp.set_cookie('userID', str(login_result["id"]))
-        return resp
-    else:
-        resp = make_response(
-            render_template('account/login.html', warning="incorrect info"))
-        return resp
 
 
 @app.route("/api/account/change-pfp", methods=["POST"])
