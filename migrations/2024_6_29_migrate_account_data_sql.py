@@ -5,7 +5,7 @@ I'm migrating all account data into sql!
 import json
 import os
 
-from crap.PSQLConnection import PSQLConnection
+from objects.PSQLConnection import PSQLConnection
 
 
 psql = PSQLConnection()

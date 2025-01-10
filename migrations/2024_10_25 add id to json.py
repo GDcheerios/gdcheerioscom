@@ -1,6 +1,6 @@
 import json
 
-from crap.PSQLConnection import PSQLConnection as DB
+from objects.PSQLConnection import PSQLConnection as DB
 
 DB.connect()
 items = DB.get_group("SELECT id, metadata FROM gentrys_quest_items")

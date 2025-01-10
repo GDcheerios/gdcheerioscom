@@ -1,0 +1,53 @@
+<div class="nav-bar">
+  <nav>
+    <h1 id="thecom">GDcheerios.com</h1>
+    <ul>
+      <!-- Main dropdown -->
+      <li class="dropdown">
+        <a href="/">Main</a>
+        <ul class="dropdown-content">
+          <li><a href="/">Home</a></li>
+          <li><a href="/about">About Me</a></li>
+          <li><a href="https://github.com/GDcheeriosYT/website-project">GitHub</a></li>
+        </ul>
+      </li>
+
+      <!-- Account dropdown -->
+      <li class="dropdown">
+        <a href="/account">Account</a>
+        <ul class="dropdown-content">
+          {% if request.cookies.get('userID') != None %}
+          <li><a href="/account/{{ request.cookies.get('userID') }}">Profile</a></li>
+          <li><a href="/account/signout">Sign Out</a></li>
+          {% else %}
+          <li><a href="/account/login">Log In</a></li>
+          <li><a href="/account/create">Create Account</a></li>
+          {% endif %}
+        </ul>
+      </li>
+    </ul>
+  </nav>
+</div>
+<script>
+  // Handle name randomization
+  const nameEl = document.getElementById('thecom');
+  if (Math.floor(Math.random() * 100) < 20) {
+      nameEl.innerHTML = "GDcheeriosDotCom";
+  }
+
+  // hide the things
+  document.querySelectorAll('.dropdown-content').forEach(function (content) {
+    content.style.display = 'none';
+  });
+
+  // Handle dropdown visibility
+  document.querySelectorAll('.dropdown').forEach(function (dropdown) {
+    dropdown.addEventListener('mouseenter', function () {
+      this.querySelector('.dropdown-content').style.display = 'block';
+    });
+
+    dropdown.addEventListener('mouseleave', function () {
+      this.querySelector('.dropdown-content').style.display = 'none';
+    });
+  });
+</script>

@@ -1,7 +1,7 @@
 # mekhi has too many poop artifacts
 # we remove them :)
 
-from crap.PSQLConnection import PSQLConnection as DB
+from objects.PSQLConnection import PSQLConnection as DB
 
 DB.connect()
 

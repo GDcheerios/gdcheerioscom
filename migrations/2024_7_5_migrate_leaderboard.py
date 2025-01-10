@@ -1,4 +1,4 @@
-from crap.PSQLConnection import PSQLConnection as DB
+from objects.PSQLConnection import PSQLConnection as DB
 
 DB.connect()
 

@@ -1,4 +1,3 @@
-{% extends 'base.html' %}
 <html>
   <head>
     {% block head %}
@@ -7,9 +6,10 @@
     {% endblock %}
   </head>
   <body>
+    {% include 'navbar.html' %}
     {% block body %}
       <h2 style="font-style: bold; color: red; text-align: center;">{{ warning }}</h2>
-      <form action = "/create-account" method = "POST">
+      <form action = "/api/create-account" method = "POST">
         {% if osu_info == None %}
         <p><h1><a href=https://osu.ppy.sh/oauth/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&response_type=code&scope=public+identify&state=randomval">Link osu account here</a></h1></p>
         <input type="text" value="0" name="id" style="display: none;" readonly>

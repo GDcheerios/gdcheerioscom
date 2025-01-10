@@ -8,6 +8,7 @@ make a .env file like this:
 DOMAIN = "http://127.0.0.1"
 PORT = 8080
 SECRET = "MySecret"
+IS_PRODUCTION = 0 OR 1  # TRUE | FALSE
 
 DB_HOSTNAME = "hostname"
 DB_PASSWORD = "password"
