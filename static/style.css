@@ -2,11 +2,52 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif; /* Modern font for better readability */
-  background: linear-gradient(#7f7f7f, #595959); /* Soft background shade */
+  background-color: #7f7f7f /* Soft background shade */
+}
+
+.category-header {
+  font-size: 3rem;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  color: white;
 }
 
 a {
   color: white;
+}
+
+.main-choice {
+  margin-left: 9%;
+  display: flex;
+  justify-content: normal;
+  gap: 0;
+}
+
+.choice-selection {
+  font-size: 1.45rem;
+  width: 45%;
+  padding-top: 200px;
+  height: 250px;
+  text-align: center;
+  background-color: transparent;
+  border: none;
+  color: white;
+  text-decoration: none;
+}
+
+.choice-selection h1{
+  margin: 0;
+}
+
+.choice-selection:hover {
+  transition: all 0.3s;
+  font-size: 1.7rem;
+}
+
+hr {
+  height: 500px;
+  margin: 0;
 }
 
 .block{

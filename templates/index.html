@@ -14,7 +14,24 @@
     {% block body %}
     <div class="block">
       <h1>Welcome to GDcheerios.com</h1>
-      <h2>Home of Gentry's Quest and Osu Score Farm Competition</h2>
+      <div class="main-choice">
+        <a href="/gentrys-quest" id="gentrys-quest" class="choice-selection">
+          <h1>Gentry's</h1>
+          <h1>Quest</h1>
+        </a>
+        <hr>
+        <a href="/osu" id="osu" class="choice-selection">
+          <h1>Osu</h1>
+          <h1>Score Farm</h1>
+        </a>
+      </div>
+    </div>
+    <div style="margin-top: 150vh;"></div>
+    <h1 class="category-header">
+      leaderboards
+    </h1>
+
+    <div class="block">
       <div>
         <h1 style="font-size: 95%;">Join the discord?</h1>
         <div style="display: flex; justify-content: center;">
@@ -29,6 +46,24 @@
         <h4>Thank you for considering a <a style="font-size: 100%;" href="https://www.paypal.com/donate/?business=4ZTHQTG8PGNB4&no_recurring=1&item_name=Thanks+a+ton+for+the+support%21&currency_code=USD" target="_blank">donation</a>!</h4>
       </div>
     </div>
+    <script>
+      window.addEventListener('scroll', () => {
+        const threshold = 700;
+        const scrollY = window.scrollY;
+
+        if (scrollY > threshold) {
+          const maxScrollableHeight = document.body.scrollHeight - window.innerHeight;
+          const normalizedScroll = (scrollY - threshold) / (maxScrollableHeight - threshold);
+
+          const red = Math.max(17, 127 - Math.floor(normalizedScroll * 127));
+          const green = Math.max(17, 127 - Math.floor(normalizedScroll * 127));
+          const blue = Math.max(17, 127 - Math.floor(normalizedScroll * 127));
+
+          document.body.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
+        }
+        else document.body.style.backgroundColor = `#7f7f7f`;
+      });
+    </script>
     {% endblock %}
   </body>
 </html>

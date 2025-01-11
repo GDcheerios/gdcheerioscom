@@ -27,13 +27,6 @@ from routes.pages.main_routes import main_blueprint
 from routes.pages.gentrys_quest_routes import gentrys_quest_blueprint
 from routes.pages.account_routes import account_blueprint
 
-# data imports
-
-#   osu data
-live_player_status = {}
-
-#   Gentrys Quest data
-
 
 def create_app():
     app = Flask(  # Create a flask app
@@ -73,9 +66,6 @@ def create_app():
 # </editor-fold>
 
 # <editor-fold desc="helper methods">
-def get_osu_id(userID):
-    return json.load(open(f"accounts/{userID}.json",
-                          "r"))["metadata"]["osu id"]
 
 
 def json_to_html(data):
