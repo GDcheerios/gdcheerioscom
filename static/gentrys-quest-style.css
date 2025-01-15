@@ -1,0 +1,46 @@
+.score-card {
+    display: flex;
+    align-items: center;
+    background-color: #333;
+    color: white;
+    border: 1px solid #000;
+    width: 350px;
+    height: 64px;
+    margin: 30px;
+    border-radius: 2px;
+    padding: 0 1px;
+    position: relative;
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.rank-badge {
+    margin-left: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #666;
+    border-radius: 50px;
+    width: 70px;
+    height: 20px;
+    margin-right: 15px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.rank-badge span {
+    font-size: 12px;
+    font-weight: bold;
+    color: black;
+}
+
+.score-details .player-name {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.score-details .player-score {
+    font-size: 20px;
+    margin: 0;
+    opacity: 0.8;
+}

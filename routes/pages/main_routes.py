@@ -1,10 +1,16 @@
 from flask import Blueprint, render_template, redirect
 
+from api.gentrys_quest_api import leaderboard, in_game_leaderboard
+
 main_blueprint = Blueprint("main_blueprint", __name__)
 
 
 @main_blueprint.route("/")
-def index(): return render_template("index.html")
+def index(): return render_template(
+    "index.html",
+    rankings=leaderboard(amount=5),
+    weekly_event=in_game_leaderboard(3, 5, commas=True)
+)
 
 
 @main_blueprint.route("/about")

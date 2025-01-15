@@ -1,15 +1,11 @@
 # packages
-import asyncio
-import json
 import logging
 import os
-import urllib
-from datetime import datetime, timedelta
-from PSQLConnector import PSQLConnection as Database
+
+from GPSystem.GPmain import GPSystem
 
 # flask packages
-import requests
-from flask import Flask, redirect, render_template, request, make_response
+from flask import Flask
 from flask_bcrypt import Bcrypt
 
 # environment
@@ -34,6 +30,10 @@ def create_app():
         template_folder='templates',  # Name of html file folder
         static_folder='static',  # Name of directory for static files
     )
+
+    @app.context_processor
+    def inject_variables():
+        return {'rater': GPSystem.rater}
 
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)

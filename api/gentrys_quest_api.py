@@ -2,7 +2,7 @@ from environment import database
 from objects import Account
 
 
-def leaderboard(start: int, amount: int, online: bool):
+def leaderboard(start: int = 0, amount: int = 50, online: bool = False):
     """
     Grabs the player ranking leaderboard
 
@@ -24,26 +24,35 @@ def leaderboard(start: int, amount: int, online: bool):
     return database.fetch_all(query, params=(amount, start))
 
 
-def ig_leaderboard(id):
+def in_game_leaderboard(id, amount: int = 0, commas: bool = False):
     """
     Retrieves the in game leaderboard for a given leaderboard id.
 
     :param id: The leaderboard id.
+    :param amount: how many players to grab.
+    :param commas: if the score should be formatted with commas.
     :return: The leaderboard data.
     """
 
-    leaderboard = database.fetch_all(
+    leaderboard_data = database.fetch_all(
         "SELECT name, MAX(score) as hs FROM leaderboard_scores WHERE leaderboard = %s GROUP BY name ORDER BY hs DESC;",
         params=(id,))
     standings = []
     x = 1
-    for standing in leaderboard:
+    for standing in leaderboard_data:
         standing = {
             "placement": x,
             "username": standing[0],
             "score": standing[1]
         }
+
+        if commas:
+            standing["score"] = "{:,}".format(standing["score"])
+
         standings.append(standing)
+
+        if amount != 0 and x >= amount:
+            break
 
         x += 1
 
