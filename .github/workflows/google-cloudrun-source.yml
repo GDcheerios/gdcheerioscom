@@ -2,7 +2,9 @@ name: Deployment
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - master
+      - development
 
 env:
   PROJECT_ID: gdcheerioscom
@@ -12,7 +14,7 @@ env:
 
 jobs:
   deploy-dev:
-    # Add 'id-token' with the intended permissions for workload identity federation
+    if: github.ref == 'refs/heads/development'
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -21,10 +23,10 @@ jobs:
     environment: development
 
     env:
-      DEV_DB_HOSTNAME: ${{secrets.DB_HOSTNAME}}
-      DEV_DB_PASSWORD: ${{secrets.DB_PASSWORD}}
-      DEV_DB_USER: ${{secrets.DB_USER}}
-      DEV_DB: ${{secrets.DB}}
+      DEV_DB_HOSTNAME: ${{ secrets.DB_HOSTNAME }}
+      DEV_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DEV_DB_USER: ${{ secrets.DB_USER }}
+      DEV_DB: ${{ secrets.DB }}
 
     steps:
       - name: Checkout
@@ -42,7 +44,6 @@ jobs:
         with:
           service: ${{ env.DEV_SERVICE }}
           region: ${{ env.REGION }}
-          # NOTE: If required, update to the appropriate source folder
           source: ./
           env_vars: |-
             DOMAIN=https://dev.gdcheerios.com
@@ -56,24 +57,23 @@ jobs:
             CLIENT_ID=CLIENT_ID:latest
             SECRET=SECRET:latest
 
-      # If required, use the Cloud Run url output in later steps
       - name: Show Output
-        run: echo ${{ steps.deploy.outputs.url }}
+        run: echo ${{ steps.deploy1.outputs.url }}
 
   deploy-prod:
-    # Add 'id-token' with the intended permissions for workload identity federation
+    if: github.ref == 'refs/heads/master'
     permissions:
       contents: 'read'
       id-token: 'write'
 
     runs-on: ubuntu-latest
-    environment: Production
+    environment: production
 
     env:
-      PROD_DB_HOSTNAME: ${{secrets.DB_HOSTNAME}}
-      PROD_DB_PASSWORD: ${{secrets.DB_PASSWORD}}
-      PROD_DB_USER: ${{secrets.DB_USER}}
-      PROD_DB: ${{secrets.DB}}
+      PROD_DB_HOSTNAME: ${{ secrets.DB_HOSTNAME }}
+      PROD_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      PROD_DB_USER: ${{ secrets.DB_USER }}
+      PROD_DB: ${{ secrets.DB }}
 
     steps:
       - name: Checkout
@@ -85,13 +85,12 @@ jobs:
         with:
           credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-      - name: Deploy dev to Cloud Run
+      - name: Deploy prod to Cloud Run
         id: deploy1
         uses: google-github-actions/deploy-cloudrun@v2.6.0
         with:
           service: ${{ env.PROD_SERVICE }}
           region: ${{ env.REGION }}
-          # NOTE: If required, update to the appropriate source folder
           source: ./
           env_vars: |-
             DOMAIN=https://gdcheerios.com
@@ -105,6 +104,5 @@ jobs:
             CLIENT_ID=CLIENT_ID:latest
             SECRET=SECRET:latest
 
-      # If required, use the Cloud Run url output in later steps
       - name: Show Output
-        run: echo ${{ steps.deploy.outputs.url }}
+        run: echo ${{ steps.deploy1.outputs.url }}
