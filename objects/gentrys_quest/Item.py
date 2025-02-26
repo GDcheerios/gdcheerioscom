@@ -1,7 +1,7 @@
 import json
 from PSQLConnection import PSQLConnection as DB
 
-from GPSystem.GPmain import GPSystem
+from GPSystemTest.GPmain import GPSystem
 
 
 class Item:
