@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect
 
-from api.gentrys_quest_api import leaderboard, in_game_leaderboard
+from api.gentrys_quest.leaderboard_api import *
 
 main_blueprint = Blueprint("main_blueprint", __name__)
 

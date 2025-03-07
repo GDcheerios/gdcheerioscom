@@ -27,7 +27,6 @@ class Item:
         self.version = item_result[4]
         self.owner = item_result[5]
         self.metadata = item_result[6]
-
         self.deleted = deleted
 
     @staticmethod

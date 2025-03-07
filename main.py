@@ -2,8 +2,6 @@
 import logging
 import os
 
-from GPSystem.GPmain import GPSystem
-
 # flask packages
 from flask import Flask
 from flask_bcrypt import Bcrypt
@@ -33,7 +31,7 @@ def create_app():
 
     @app.context_processor
     def inject_variables():
-        return {'rater': GPSystem.rater}
+        return {'rater': environment.rater}
 
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)
@@ -55,17 +53,6 @@ def create_app():
     app.register_blueprint(account_blueprint, url_prefix='/account')
 
     return app
-
-
-# </editor-fold>
-
-# </editor-fold>
-
-# <editor-fold desc="templates">
-
-# </editor-fold>
-
-# <editor-fold desc="helper methods">
 
 
 def json_to_html(data):
@@ -99,9 +86,6 @@ def get_token(auth):
         return token[7:]
 
     return token
-
-
-# </editor-fold>
 
 
 if __name__ == "__main__":
