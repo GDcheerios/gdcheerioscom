@@ -1,4 +1,5 @@
 .env
+.copy
 *.json
 *.__pycache__
 /minecraft/
