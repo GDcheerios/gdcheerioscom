@@ -1,24 +1,21 @@
 from PSQLConnector.connector import PSQLConnection as Database
+from GPSystem import GPSystem
 
 print("loading environment variables...")
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+print("loaded environment variables")
 
+print("setting main variables")
 # main variables
 domain = os.environ['DOMAIN']
 port = os.environ['PORT']  # the port
 secret = os.environ['SECRET']
 is_production = os.environ['IS_PRODUCTION'] == 1
 debug = not is_production  # debugging?
-rater = None
-if debug:
-    from GPSystemTest.GPmain import GPSystem
-    rater = GPSystem.rater
-else:
-    from GPSystemTest.GPmain import GPSystem
-    rater = GPSystem.rater
+rater = GPSystem().rater
 
 # instance variables
 bcrypt = None  # the instance of bcrypt
