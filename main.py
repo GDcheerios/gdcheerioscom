@@ -687,7 +687,7 @@ def get_livestatus(data):
 
 @app.route("/queue-ratings", methods=['POST'])
 def queue_ratings():
-    condition = request.headers.get("Authorization") == client.secret
+    condition = request.headers.get("Authorization")[7:] == client.secret
     if condition:
         DB.do(
             """
