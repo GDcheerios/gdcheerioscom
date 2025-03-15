@@ -513,7 +513,6 @@ async def gentrys_quest_leaderboard():
         "gentrys quest/leaderboard.html",
         players=players,
         get_color=GQManager.get_color,
-        version=GPSystem.version,
         classic_header="Leaderboard"
     )
 
@@ -527,7 +526,6 @@ async def gentrys_quest_online_players():
             online=True
         ),
         get_color=GQManager.get_color,
-        version=GPSystem.version,
         classic_header="Online Players"
     )
 
@@ -686,6 +684,19 @@ def update_client_status(data):
 def get_livestatus(data):
     emit('match data receive', asyncio.run(grabber(data, True)))
 
+
+@app.route("/queue-ratings", methods=['POST'])
+def queue_ratings():
+    condition = request.headers.get("Authorization") == client.secret
+    if condition:
+        DB.do(
+            """
+            UPDATE gentrys_quest_items
+            SET queued = true;
+            """
+        )
+
+    return str(condition)
 
 # </editor-fold>
 
