@@ -19,7 +19,7 @@ from GPSystem.GPmain import GPSystem
 from crap.Account import Account
 # scripts
 from crap.Initialization import *
-from crap.PSQLConnection import PSQLConnection as DB
+from PSQLConnector import PSQLConnection as DB
 
 initialize_files()  # setup necessary files
 
