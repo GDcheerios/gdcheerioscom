@@ -13,11 +13,11 @@ def leaderboard(start: int = 0, amount: int = 50, online: bool = False):
     """
     query = f"""
                 SELECT rankings.id, accounts.username,
-                rankings.c_weighted, rankings.c_rank, rankings.c_tier
+                rankings.weighted, rankings.rank, rankings.tier
                 FROM rankings
                 INNER JOIN accounts ON rankings.id = accounts.id
                 WHERE accounts.status NOT IN ('restricted', 'test') {f"AND accounts.status = 'gqc_online'" if online else ""}
-                ORDER BY c_weighted desc
+                ORDER BY weighted desc
                 LIMIT %s OFFSET %s;
             """
 
