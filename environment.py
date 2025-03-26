@@ -15,7 +15,10 @@ port = os.environ['PORT']  # the port
 secret = os.environ['SECRET']
 is_production = os.environ['IS_PRODUCTION'] == 1
 debug = not is_production  # debugging?
-rater = GPSystem().rater
+
+# Gentry's Quest
+gq_rater = GPSystem().rater
+gq_version = "V"
 
 # instance variables
 bcrypt = None  # the instance of bcrypt

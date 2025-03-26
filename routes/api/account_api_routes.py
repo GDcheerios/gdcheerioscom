@@ -82,8 +82,7 @@ async def login_json():
     password = request.json["password"]
 
     login_result = account_api.login(username, password)
-    if login_result != "incorrect info" and login_result is not None:
-        return login_result
+    return login_result
 
 
 @account_api_blueprint.route("/account/signout")

@@ -31,7 +31,7 @@ def create_app():
 
     @app.context_processor
     def inject_variables():
-        return {'rater': environment.rater}
+        return {'rater': environment.gq_rater}
 
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)

@@ -15,7 +15,7 @@ def account_create(username, password, email, osu_id=0, about_me=""):
     Account.create(username, password, email, osu_id, about_me)
 
 
-def login(username, password) -> int | dict:
+def login(username, password) -> tuple[dict, int]:
     """
     Checks a user's credentials and returns the account if they are correct.
 
@@ -27,8 +27,17 @@ def login(username, password) -> int | dict:
     account = Account(username)
     if account.exists:
         if environment.bcrypt.check_password_hash(account.password, password):
-            return account.jsonify()
+            return {
+                "success": True,
+                "data": account.jsonify()
+            }, 200
 
-        return 1
+        return {
+            "success": False,
+            "error": "wrong_password"
+        }, 401
 
-    return 0
+    return {
+        "success": False,
+        "error": "account_not_found"
+    }, 404

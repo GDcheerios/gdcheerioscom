@@ -17,7 +17,7 @@ class Item:
     def __init__(self, id: int, deleted: bool = False):
         super().__init__(id, deleted)
         print(f"loading item {id}")
-        item_result = DB.get("SELECT id, type, rating, version, owner, metadata FROM gentrys_quest_items WHERE id = %s", params=(id,))
+        item_result = DB.get("SELECT id, type, rating, version, owner, metadata FROM gq_items WHERE id = %s", params=(id,))
         if not item_result:
             print(f"couldn't find item {id}")
             return

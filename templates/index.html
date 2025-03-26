@@ -35,33 +35,37 @@
       <div style="display: flex; flex-direction: column">
         <h1 class="category-header">Rankings</h1>
         <div id="ranking-leaderboard">
-          {% for user in rankings %}
-            <div class="score-card">
-              <div class="rank-badge" style="background-color: {{ rater.rating_colors[user[3]] | safe }};">
-                <span>#{{ loop.index }}</span>
+          {% if rankings != None %}
+            {% for user in rankings %}
+              <div class="score-card">
+                <div class="rank-badge" style="background-color: {{ rater.rating_colors[user[3]] | safe }};">
+                  <span>#{{ loop.index }}</span>
+                </div>
+                <div class="score-details">
+                  <p class="player-name">{{user[1]}}</p>
+                  <p class="player-score">{{user[2]}} GP</p>
+                </div>
               </div>
-              <div class="score-details">
-                <p class="player-name">{{user[1]}}</p>
-                <p class="player-score">{{user[2]}} GP</p>
-              </div>
-            </div>
-          {% endfor %}
+            {% endfor %}
+          {% endif %}
         </div>
       </div>
       <div style="display: flex; flex-direction: column">
         <h1 class="category-header">Weekly Event</h1>
         <div id="weekly-event">
-          {% for user in weekly_event %}
-          <div class="score-card">
-            <div class="rank-badge">
-              <span>#{{ user["placement"] }}</span>
+          {% if weekly_event != None %}
+            {% for user in weekly_event %}
+            <div class="score-card">
+              <div class="rank-badge">
+                <span>#{{ user["placement"] }}</span>
+              </div>
+              <div class="score-details">
+                <p class="player-name">{{user["username"]}}</p>
+                <p class="player-score">{{user["score"]}} score</p>
+              </div>
             </div>
-            <div class="score-details">
-              <p class="player-name">{{user["username"]}}</p>
-              <p class="player-score">{{user["score"]}} score</p>
-            </div>
-          </div>
-          {% endfor %}
+            {% endfor %}
+          {% endif %}
         </div>
       </div>
     </div>
