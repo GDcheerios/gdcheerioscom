@@ -33,8 +33,8 @@ class Account:
                 status,                                                                                         -- 6
                 EXISTS (
                     SELECT 1 
-                    FROM gentrys_quest_data 
-                    WHERE gentrys_quest_data.id = accounts.id
+                    FROM gq_data 
+                    WHERE gq_data.id = accounts.id
                 ) AS has_gq                                                                                     -- 7
             FROM accounts 
             WHERE {from_query_string}
