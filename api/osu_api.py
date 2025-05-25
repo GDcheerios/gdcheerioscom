@@ -20,16 +20,24 @@ def client_grant():
 
 def check_access():
     dt_obj = dt.datetime.now()
-    print("checking token expiration...")
     response = None
 
     try:
         if round(dt_obj.microsecond / 1000) > expiration:
+            print("renewing token")
             response = client_grant()
-        else:
-            print("token is valid!")
+
     except Exception as E:
         print(E)
         response = client_grant()
 
     return response
+
+
+def get_user_info(id: int):
+    print("getting osu user...")
+    return requests.get(f"https://osu.ppy.sh/api/v2/users/{id}/osu", headers={
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {check_access()}"
+    }).json()

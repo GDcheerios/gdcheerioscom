@@ -1,6 +1,6 @@
 import time
 
-timeout = 0  # seconds to wait
+timeout = 0.1  # seconds to wait
 current_time = 0
 
 

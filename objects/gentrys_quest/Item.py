@@ -3,8 +3,6 @@ import json
 import environment
 from PSQLConnection import PSQLConnection as DB
 
-from GPSystemTest.GPmain import GPSystem
-
 
 class Item:
     id = None

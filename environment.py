@@ -1,5 +1,4 @@
 from PSQLConnector.connector import PSQLConnection as Database
-from GPSystem import GPSystem
 from utils.printy import *
 
 print_start("loading environment variables...")
@@ -20,12 +19,29 @@ print_end()
 
 print_start("setting gq variables")
 # Gentry's Quest
+from GPSystem import GPSystem
+import math
+
 gq_rater = GPSystem().rater
 gq_version = "V"
+gq_levels = []
+
+for level in range(100):
+    level += 1
+    xp = (level * 10000) * math.exp(level * 0.1)
+    gq_levels.append(xp)
+
+for level in range(400):
+    level += 1
+    xp = gq_levels[99] + (2854810277 * level)
+    gq_levels.append(xp)
+
+gq_levels[0] = 0
+
 print_end()
 
 print_start("allocating instance variables")
-# instance variables
+# instance variablessd
 bcrypt = None  # the instance of bcrypt
 socket = None  # the instance of socketio
 print_end()

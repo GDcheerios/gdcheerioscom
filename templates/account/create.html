@@ -3,36 +3,39 @@
     {% block head %}
     <title>Create Account</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/accounts-style.css">
     {% endblock %}
   </head>
   <body>
     {% include 'navbar.html' %}
     {% block body %}
       <h2 style="font-style: bold; color: red; text-align: center;">{{ warning }}</h2>
-      <form action = "/api/create-account" method = "POST">
-        {% if osu_info == None %}
-        <p><h1><a href=https://osu.ppy.sh/oauth/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&response_type=code&scope=public+identify&state=randomval">Link osu account here</a></h1></p>
-        <input type="text" value="0" name="id" style="display: none;" readonly>
-        {% else %}
-          <h1>Linked osu account:</h1>
-          <div class="linked-osu-account" style="background-image: url({{osu_info['background url']}}); display: flex; width: 60%; height: 20%; margin: auto; margin-top: 5px;">
-            <div class="linked-osu-account-content">
-              <img src="{{osu_info['avatar']}}">
-              <h1>{{osu_info['username']}}</h1>
+      <div class="account-form">
+        <form action = "/api/create-account" method = "POST">
+          {% if osu_info == None %}
+          <p><h1><a href=https://osu.ppy.sh/oauth/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&response_type=code&scope=public+identify&state=randomval">Link osu account here</a></h1></p>
+          <input type="text" value="0" name="id" style="display: none;" readonly>
+          {% else %}
+            <h1>Linked osu account:</h1>
+            <div class="linked-osu-account" style="background-image: url({{osu_info['background url']}}); display: flex; width: 60%; height: 20%; margin: auto; margin-top: 5px;">
+              <div class="linked-osu-account-content">
+                <img src="{{osu_info['avatar']}}">
+                <h1>{{osu_info['username']}}</h1>
+              </div>
             </div>
-          </div>
-          <input type="text" value="{{osu_info['id']}}" name="id" style="display: none;" readonly>
-        {% endif %}
-        <p><h1>Enter email</h1></p>
-        <p><input type = 'email' name = 'em' required/></p>
-        <p><h1>Enter username</h1></p>
-        <p><input type = 'text' pattern="[a-zA-Z0-9_$!]{1,24}" name = 'nm' required/></p>
-        <p><h1>Enter password</h1></p>
-        <p><input type = 'password' pattern="[a-zA-Z0-9_$!]{1,}" name = 'pw' required/></p>
-        <p><h1>Tell people about yourself</h1></p>
-        <p><input type = 'text' maxlength="3000" name = 'am'/></p>
-        <p><input type = 'submit' value = 'Create'/></p>
-      </form>
+            <input type="text" value="{{osu_info['id']}}" name="id" style="display: none;" readonly>
+          {% endif %}
+          <p><h1>Enter email</h1></p>
+          <p><input type = 'email' name = 'em' required/></p>
+          <p><h1>Enter username</h1></p>
+          <p><input type = 'text' pattern="[a-zA-Z0-9_$!]{1,24}" name = 'nm' required/></p>
+          <p><h1>Enter password</h1></p>
+          <p><input type = 'password' pattern="[a-zA-Z0-9_$!]{1,}" name = 'pw' required/></p>
+          <p><h1>Tell people about yourself</h1></p>
+          <p><input type = 'text' maxlength="3000" name = 'am'/></p>
+          <p><input type = 'submit' value = 'Create'/></p>
+        </form>
+      </div>
     {% endblock %}
   </body>
 </html>

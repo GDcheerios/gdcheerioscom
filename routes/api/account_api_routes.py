@@ -32,20 +32,25 @@ def create_account() -> Response:
     login_result = account_api.login(username, password)
 
     # Check if the user could be created
-    if login_result != "false" and login_result is not None:
+    if login_result[1] == 200:
         resp = make_response(
-            render_template(
-                'account/user-profile.html',
-                account=login_result
+            redirect(
+                '/account'
             )
         )
 
-        resp.set_cookie('userID', str(login_result["id"]))
+        resp.set_cookie('userID', str(login_result[0]['data']["id"]))
 
     else:
+        error = ""
+        if login_result[1] == 404:
+            error = "Couldn't find account with that username."
+        elif login_result[1] == 401:
+            error = "Incorrect password."
+
         resp = make_response(
             render_template(
-                'account/create.html'
+                'account/create.html', warning=error
             )
         )
 
@@ -53,7 +58,7 @@ def create_account() -> Response:
 
 
 @account_api_blueprint.route('/account/login-form', methods=['POST'])
-async def login_cookie():
+def login_cookie():
     """
     Login form POST method.
     Handles the login form POST request and creates a cookie with the user's ID'.
@@ -62,22 +67,23 @@ async def login_cookie():
     username = request.form.get('nm')
     password = request.form.get('pw')
     login_result = account_api.login(username, password)
-    if login_result == 0:
+    if login_result[1] == 404:
         resp = make_response(
-            render_template('account/login.html', warning="Couldn't find account with that username."))
-    elif login_result == 1:
+            render_template('account/login.html', warning="Couldn't find account with that username.", code=401))
+    elif login_result[1] == 401:
         resp = make_response(
-            render_template('account/login.html', warning="Incorrect password."))
+            render_template('account/login.html', warning="Incorrect password.", code=404))
     else:
-        resp = make_response(redirect(f'/account/{login_result["id"]}'))
-        resp.set_cookie('userID', str(login_result["id"]), expires=datetime.now() + timedelta(days=360))
+        account = login_result[0]['data']  # set this to only read login data
+        resp = make_response(redirect(f"/account/{account['id']}"))
+        resp.set_cookie('userID', str(account['id']), expires=datetime.now() + timedelta(days=360))
         return resp
 
     return resp
 
 
 @account_api_blueprint.route("/account/login-json", methods=['POST'])
-async def login_json():
+def login_json():
     username = request.json["username"]
     password = request.json["password"]
 
@@ -86,14 +92,14 @@ async def login_json():
 
 
 @account_api_blueprint.route("/account/signout")
-async def signout():
+def signout():
     resp = make_response(render_template('account/login.html'))
     resp.delete_cookie('userID')
     return resp
 
 
-@account_api_blueprint.route("/api/account/change-username", methods=["POST"])
-async def change_username():
+@account_api_blueprint.route("/account/change-username", methods=["POST"])
+def change_username():
     id = request.cookies.get("userID")
     account = Account(id)
     username = request.form.get("username")
@@ -103,6 +109,6 @@ async def change_username():
     return redirect(f'/user/{account.id}')
 
 
-@account_api_blueprint.route("/api/account/grab/<identifier>")
-async def grab_account(identifier):
+@account_api_blueprint.route("/account/grab/<identifier>")
+def grab_account(identifier):
     return Account(identifier).jsonify()

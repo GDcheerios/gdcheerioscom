@@ -1,5 +1,6 @@
-import os.path
 from environment import database
+from api.osu_api import get_user_info
+from api.gentrys_quest.user_api import get_xp
 
 
 class Account:
@@ -32,8 +33,8 @@ class Account:
                 about,                                                                                          -- 5
                 status,                                                                                         -- 6
                 EXISTS (
-                    SELECT 1 
-                    FROM gq_data 
+                    SELECT 1
+                    FROM gq_data
                     WHERE gq_data.id = accounts.id
                 ) AS has_gq                                                                                     -- 7
             FROM accounts 
@@ -75,9 +76,9 @@ class Account:
     @staticmethod
     def create(username: str, password: str, email: str, osu_id: int, about: str):
         query = """
-        INSERT INTO accounts (username, password, email, osu_id, about)
-        VALUES (%s, %s, %s, %s, %s)
-        """
+                INSERT INTO accounts (username, password, email, osu_id, about)
+                VALUES (%s, %s, %s, %s, %s) \
+                """
 
         params = (
             username,
@@ -88,6 +89,7 @@ class Account:
         )
 
         database.execute(query, params)
+        Account(username).update_osu_data()  # attempt to initialize osu data
 
     @staticmethod
     def set_status(id: int, status: str):
@@ -108,20 +110,96 @@ class Account:
     @staticmethod
     def name_exists(name: str) -> bool:
         """
-        Check if username exists
+        Check if a username exists
         """
 
         result = database.fetch_all(f"select username from accounts where username = %s;", params=(name,))
         return len(result) > 0
 
+    def get_osu_data(self):
+        if self.has_osu:
+            data = get_user_info(self.osu_id)
+            return {
+                'username': data['username'],
+                'score': data['statistics']['total_score'],
+                'playcount': data['statistics']['play_count'],
+                'accuracy': data['statistics']['hit_accuracy'],
+                'performance': data['statistics']['pp'],
+                'rank': data['statistics']['global_rank']
+            }
+        else:
+            return None
+
+    def update_osu_data(self):
+        data = self.get_osu_data()
+        if data is not None:
+            result = database.fetch_one("SELECT id FROM osu_users WHERE id = %s", params=(self.osu_id,))
+            if result:
+                database.execute(
+                    "UPDATE osu_users SET username = %s, score = %s, playcount = %s, accuracy = %s, performance = %s, rank = %s WHERE id = %s",
+                    params=(
+                        data['username'],
+                        data['score'],
+                        data['playcount'],
+                        data['accuracy'],
+                        data['performance'],
+                        data['rank'],
+                        self.osu_id
+                    )
+                )
+            else:
+                database.execute(
+                    "INSERT INTO osu_users (id, username, score, playcount, accuracy, performance, rank) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    params=(
+                        self.osu_id,
+                        data['username'],
+                        data['score'],
+                        data['playcount'],
+                        data['accuracy'],
+                        data['performance'],
+                        data['rank']
+                    )
+                )
+
     # </editor-fold>
 
-    def jsonify(self):
+    def jsonify(self) -> dict:
+
+        gq_data = None
+        items = {
+            "characters": [],
+            "artifacts": [],
+            "weapons": []
+        }
+        osu_data = None
+
+        if self.has_gq:
+            gq_data = database.fetch_to_dict("SELECT * FROM gq_data WHERE id = %s", params=(self.id,))
+            # gq_data.pop['xp']
+            gq_data['experience'] = get_xp(self.id)
+            gq_items = database.fetch_all_to_dict("SELECT * FROM gq_items WHERE owner = %s", params=(self.id,))
+
+            for item in gq_items:
+                if item['type'] == 'character':
+                    items['characters'].append(item)
+
+                elif item['type'] == 'artifact':
+                    items['artifacts'].append(item)
+
+                else:
+                    items['weapons'].append(item)
+
+            gq_data['items'] = items
+
+        if self.has_osu:
+            osu_data = database.fetch_to_dict("SELECT * FROM osu_users WHERE id = %s", params=(self.osu_id,))
+
         return {
             "id": self.id,
             "username": self.username,
             "email": self.email,
-            "osuid": self.osu_id,
+            "osu data": osu_data,
+            "gq data": gq_data,
             "about": self.about,
             "pfp": self.pfp,
             "status": self.status

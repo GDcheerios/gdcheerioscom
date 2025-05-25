@@ -1,0 +1,50 @@
+<html>
+  <head>
+    {% block head %}
+      <title>Levels</title>
+      <link rel="stylesheet" href="/static/style.css">
+      <link rel="stylesheet" href="/static/gentrys-quest-style.css">
+    {% endblock %}
+
+    <style>
+      table {
+        margin: auto;
+        border-collapse: collapse;
+        color: white;
+      }
+      th, td {
+        text-align: center;
+        padding: 10px;
+        border: 1px solid #000;
+      }
+      th {
+        background-color: #333;
+      }
+    </style>
+
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    {% block body %}
+      <h1>Levels</h1>
+      <table style="margin: auto;">
+        <thead>
+          <tr>
+            <th>level</th>
+            <th>xp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set index = namespace(counter=1) %}
+          {% for level in levels %}
+            <tr>
+              <td>{{ index.counter }}</td>
+              <td>{{ "{:,}".format(level|int) }} xp</td>
+              {% set index.counter = index.counter + 1 %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endblock %}
+  </body>
+</html>

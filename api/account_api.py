@@ -1,5 +1,3 @@
-from flask_bcrypt import Bcrypt
-
 import environment
 from objects.Account import Account
 
@@ -41,3 +39,7 @@ def login(username, password) -> tuple[dict, int]:
         "success": False,
         "error": "account_not_found"
     }, 404
+
+
+def get_account_count() -> int:
+    return environment.database.fetch_one("SELECT COUNT(*) FROM accounts")[0]

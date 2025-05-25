@@ -1,31 +1,26 @@
 <html>
-  <head>
-    {% block head %}
-    <title>Home</title>
-    <link rel="stylesheet" href="/static/style.css">
-    {% endblock %}
-  </head>
-  <body>
-    {% include 'navbar.html' %}
-    {% block body %}
-        <h1 style="font-size: 240%;">
-            Mr. Gentry's classroom has fallen into the hands of his wicked twin brother, Evil Gentry. Now, he needs the help of a mighty warrior—a Gentry Warrior. Battle through challenges, collect powerful items, and rise to become the ultimate Gentry Warrior!
-            <br>
-            <br>
-            <div>
-                <a href="https://github.com/GDcheeriosYT/Gentrys-Quest-Classic/releases/latest/download/Gentrys.Quest.exe" download class="download-button">
-                    Download Gentrys Quest Classic
-                </a>
-                <h3>or</h3>
-                <iframe
-                        src="https://store.steampowered.com/widget/3208870/?utm_source=homepage&utm_campaign=mycampaign"
-                        style="width: 90%; height: 200px; border: none;"
-                ></iframe>
-            </div>
-            <br>
-            <br>
-            Join the <a style="font-size: 100%;" target="_blank" href="https://discord.gg/vDu7TaSwQg">Discord</a> for more info!
-        </h1>
-    {% endblock %}
-  </body>
+    <head>
+        {% block head %}
+        <title>Home</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <link rel="stylesheet" href="/static/gentrys-quest-style.css">
+        {% endblock %}
+    </head>
+    <body>
+        {% include 'navbar.html' %}
+        {% block body %}
+            <h1 style="font-size: 240%; text-align: center; margin-top: 50px; margin-bottom: 100px;">
+                Mr. Gentry's classroom has fallen into the hands of his wicked twin brother, Evil Gentry. Now, he needs the help of
+                a mighty warrior—a Gentry Warrior. Battle through challenges, collect powerful items, and rise to become the
+                ultimate Gentry Warrior!
+                <br>
+                <br>
+                <iframe src="https://store.steampowered.com/widget/3208870/?utm_source=homepage&utm_campaign=mycampaign"
+                        style="width: 90%; height: 200px; border: none;"></iframe>
+                <br>
+                <br>
+                Join the <a style="font-size: 100%;" target="_blank" href="https://discord.gg/vDu7TaSwQg">Discord</a> for more info!
+            </h1>
+        {% endblock %}
+    </body>
 </html>

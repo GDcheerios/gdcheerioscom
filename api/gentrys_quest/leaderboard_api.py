@@ -12,10 +12,10 @@ def leaderboard(start: int = 0, amount: int = 50, online: bool = False):
     :return: Player leaderboard data.
     """
     query = f"""
-                SELECT rankings.id, accounts.username,
-                rankings.weighted, rankings.rank, rankings.tier
-                FROM rankings
-                INNER JOIN accounts ON rankings.id = accounts.id
+                SELECT gq_rankings.id, accounts.username,
+                gq_rankings.weighted, gq_rankings.rank, gq_rankings.tier
+                FROM gq_rankings
+                INNER JOIN accounts ON gq_rankings.id = accounts.id
                 WHERE accounts.status NOT IN ('restricted', 'test') {f"AND accounts.status = 'gqc_online'" if online else ""}
                 ORDER BY weighted desc
                 LIMIT %s OFFSET %s;
