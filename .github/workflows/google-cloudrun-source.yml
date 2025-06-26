@@ -47,10 +47,11 @@ jobs:
           source: ./
           env_vars: |-
             DOMAIN=https://dev.gdcheerios.com
+            IS_PRODUCTION=1
           secrets: |-
-            DB_HOSTNAME=DEV_DB_HOSTNAME:latest
-            DB_PASSWORD=DEV_DB_PASSWORD:latest
-            DB_USER=DEV_DB_USER:latest
+            DB_HOSTNAME=DB_HOSTNAME:latest
+            DB_PASSWORD=DB_PASSWORD:latest
+            DB_USER=DB_USER:latest
             DB=DEV_DB:latest
             OSU_API_KEY=OSU_API_KEY:latest
             OSU_SECRET=OSU_SECRET:latest
@@ -94,10 +95,11 @@ jobs:
           source: ./
           env_vars: |-
             DOMAIN=https://gdcheerios.com
+            IS_PRODUCTION=1
           secrets: |-
-            DB_HOSTNAME=PROD_DB_HOSTNAME:latest
-            DB_PASSWORD=PROD_DB_PASSWORD:latest
-            DB_USER=PROD_DB_USER:latest
+            DB_HOSTNAME=DB_HOSTNAME:latest
+            DB_PASSWORD=DB_PASSWORD:latest
+            DB_USER=DB_USER:latest
             DB=PROD_DB:latest
             OSU_API_KEY=OSU_API_KEY:latest
             OSU_SECRET=OSU_SECRET:latest
