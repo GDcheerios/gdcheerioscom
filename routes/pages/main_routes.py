@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect
 
+import environment
 from api.gentrys_quest.leaderboard_api import *
 
 main_blueprint = Blueprint("main_blueprint", __name__)
@@ -14,7 +15,10 @@ def index(): return render_template(
 
 
 @main_blueprint.route("/about")
-def about(): return render_template("about.html")
+def about(): return render_template(
+    "about.html",
+    osu_user=environment.database.fetch_to_dict("SELECT * FROM osu_users WHERE id = 11339405;")
+)
 
 
 @main_blueprint.route("/user/<id>")
