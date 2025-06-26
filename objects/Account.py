@@ -43,6 +43,8 @@ class Account:
             params=(identifier,)
         )
 
+        self.pfp = "https://storage.cloud.google.com/gdcheerioscombucket/profile-pictures/huh.png"
+
         try:
             self.id = result[0]
             self.username = result[1]
@@ -52,10 +54,6 @@ class Account:
             self.has_gq = result[7]
             self.osu_id = result[4]
             self.about = result[5]
-            if self.has_osu:
-                self.pfp = f"https://a.ppy.sh/{self.osu_id}"
-            else:
-                self.pfp = f"static/pfps/huh.png"
             self.status = result[6]
             self.exists = True
         except TypeError:
@@ -68,7 +66,6 @@ class Account:
             self.has_gq = False
             self.osu_id = 0
             self.about = "This user does not exist"
-            self.pfp = f"static/pfps/huh.png"
             self.status = "restricted"
             self.exists = False
 

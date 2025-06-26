@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect
 
+import environment
 from api.gentrys_quest.leaderboard_api import *
 
 main_blueprint = Blueprint("main_blueprint", __name__)
