@@ -5,7 +5,7 @@ I'm migrating all account data into sql!
 import json
 import os
 
-from crap.PSQLConnection import PSQLConnection
+from objects.PSQLConnection import PSQLConnection
 
 
 psql = PSQLConnection()
@@ -50,7 +50,7 @@ VALUES (%s, %s, %s, %s, %s, %s)
         inventory = data["metadata"]["Gentry's Quest Classic data"]["inventory"]
         for character in inventory["characters"]:
             query = """
-            insert into gentrys_quest_items (type, metadata, rating, owner, is_classic)
+            insert into gq_items (type, metadata, rating, owner, is_classic)
             values (%s, %s, %s, %s, %s)
             """
 
