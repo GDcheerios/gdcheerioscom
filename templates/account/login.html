@@ -1,21 +1,24 @@
-{% extends 'base.html' %}
 <html>
   <head>
     {% block head %}
     <title>Home</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/accounts-style.css">
     {% endblock %}
   </head>
   <body>
+    {% include 'navbar.html' %}
     {% block body %}
       <h2 style="font-style: bold; color: red; text-align: center;">{{ warning }}</h2>
-      <form action = "/api/account/login-form" method = "POST">
-        <p><h1>Enter username</h1></p>
-        <p><input type = 'text' name = 'nm'/></p>
-        <p><h1>Enter password</h1></p>
-        <p><input type = 'password' name = 'pw'/></p>
-        <p><input type = 'submit' value = 'Login'/></p>
-      </form>
+      <div class="account-form">
+        <form action = "/api/account/login-form" method = "POST">
+          <p><h1>Enter username</h1></p>
+          <p><input type = 'text' name = 'nm'/></p>
+          <p><h1>Enter password</h1></p>
+          <p><input type = 'password' name = 'pw'/></p>
+          <p><input type = 'submit' value = 'Login'/></p>
+        </form>
+      </div>
     {% endblock %}
   </body>
 </html>

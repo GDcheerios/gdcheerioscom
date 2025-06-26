@@ -1,5 +1,4 @@
-{% extends 'base.html' %}
-<html>
+<html lang="en">
   <head>
     {% block head %}
     <meta charset="utf-8">
@@ -10,6 +9,7 @@
     {% endblock %}
   </head>
   <body>
+    {% include 'navbar.html' %}
     {% block body %}
     <div class="warning"><span class="warning-text">!warning!</span>This website is a work in progress<span class="warning-text">!warning!</span><br><a href="/info">more info</a></div>
     <br>
@@ -17,4 +17,4 @@
     <h2 class="white-text" style="text-align: center">Farm your way to the top in the osu! score farm website.</h2>
     {% endblock %}
   </body>
-  </html>
+</html>

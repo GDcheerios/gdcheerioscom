@@ -1,4 +1,4 @@
-from crap.PSQLConnection import PSQLConnection as DB
+from objects.PSQLConnection import PSQLConnection as DB
 
 DB.connect()
 
@@ -49,7 +49,7 @@ data = [{"id": 1, "name": "BIgbodyMekhi", "score": 988, "id_ref": 75},
         {"id": 45, "name": "Dukecj1", "score": 80953, "id_ref": 44}]
 
 for score in data:
-        DB.do("INSERT INTO leaderboard_scores values (%s, %s, %s, %s, %s)",
+        DB.do("INSERT INTO gq_scores values (%s, %s, %s, %s, %s)",
                 params=(
                         score["id"],
                         score["name"],

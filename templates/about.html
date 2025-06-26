@@ -1,4 +1,3 @@
-{% extends 'base.html' %}
 <html>
     <head>
         {% block head %}
@@ -7,71 +6,121 @@
         {% endblock %}
     </head>
     <body>
+        {% include 'navbar.html' %}
         {% block body %}
-            <h1 style="font-size: 350%;">About Me</h1>
-            <div id="page-sep" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-                <div id="left" style="display: flex; flex-direction: column;">
-                    <h1 style="font-size: 100%;">Info</h1>
-                    <div class="section" id="intro">
-                        <h1>I'm Brayden Messerschmidt</h1>
-                        <h1>A.K.A GDcheerios</h1>
-                        <div id="collab-images" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-                            <img src="{{url_for('static', filename='images/collab/AnimeBrayden.png')}}">
-                            <img src="{{url_for('static', filename='images/collab/talky brayden.gif')}}">
-                            <img src="{{url_for('static', filename='images/collab/The_Brayden.png')}}">
-                            <img src="{{url_for('static', filename='images/collab/Brayden2.png')}}">
-                            <img src="{{url_for('static', filename='images/collab/hyveebrayden.png')}}">
-                            <img src="{{url_for('static', filename='images/collab/theboys.png')}}">
+            <h1 class="block" style="font-size: 350%;">About Me</h1>
+            <div style="display: flex; flex-direction: column;">
+                <div class="block" id="intro">
+                    <h1>I'm Brayden Messerschmidt</h1>
+                    <h1>A.K.A GDcheerios</h1>
+                    <img
+                            src="https://storage.cloud.google.com/gdcheerioscombucket/pictures/grad.jpg"
+                            alt="me"
+                            style="width: 25%; height: auto;"
+                    >
+                </div>
+                <div class="block" id="Main info">
+                    <h1>
+                        I'm <span style="color: #cccccc;" id="age"></span> years old. <br>
+                        I love programming, watching anime, and playing video games. <br>
+                    </h1>
+                </div>
+                <div class="block" id="music">
+                    <h1>Music</h1>
+                    <div style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                        <div>
+                            <h2>Songs</h2>
                         </div>
-                        <img style="display: block; width: 50%; height: 500px; margin-left: auto; margin-right: auto; margin-top: 7px;" src="{{url_for('static', filename='images/brayden_fast.jpg')}}">
-                    </div>
-                    <div class="section" id="socials">
-                        <h1>Socials</h1>
-                        <div id="socials-container" style="display: flex; flex-direction: column; justify-content: space-evenly;">
-                            <div id="discord" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-                                <h1>Discord</h1>
-                                <h1>gdcheerios2</h1>
-                            </div>
-                            <div id="youtube" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-                                <h1>Youtube</h1>
-                                <h1><a style="font-size: 100%;" href="https://www.youtube.com/channel/UCU-ucr7ITJ5hcKVMSX_J6lA" target="_blank">GDcheerios</a></h1>
-                            </div>
-                            <div id="steam" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-                                <h1>Steam</h1>
-                                <h1><a style="font-size: 100%;" href="https://steamcommunity.com/id/gdcheerios/" target="_blank">GDcheerios</a></h1>
-                            </div>
-                            <div id="twitch" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-                                <h1>Twitch</h1>
-                                <h1><a style="font-size: 100%;" href="https://www.twitch.tv/gdcheerios" target="_blank">GDcheerios</a></h1>
-                            </div>
-                            <div id="x" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-                                <h1>X</h1>
-                                <h1><a style="font-size: 100%;" href="https://x.com/GDcheerios" target="_blank">GDcheerios</a></h1>
-                            </div>
+                        <div>
+                            <h2>Albums</h2>
+                        </div>
+                        <div>
+                            <h2>Artists</h2>
                         </div>
                     </div>
-                    <div class="section" id="Main info">
-                        <h1>
-                            I'm <span style="color: #2b6aae;" id="age"></span> years old. <br>
-                            I love programming, watching anime, and playing video games. <br>
-                            I currently work at a grocery store named <a style="font-size: 100%;" href="https://www.hy-vee.com/stores/detail.aspx?s=180" target="_blank">Hy-Vee</a>. <br>
-                            <img src="{{url_for('static', filename='images/hyvee/brayden_orange_chicken.png')}}">
-                        </h1>
-                    </div>
-                    <div class="section" id="Autobiography">
-                    <h1>I was born on September 8th 2004</h1>
-                    <h1>More info coming soon...</h1>
+                    <h3>Work in progress...</h3>
+                </div>
+                <div class="block" id="games">
+                    <h1>Favorite Games</h1>
+                    <table style="color: white; width: 100%; text-align: center;">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Icon</th>
+                            <th>Game</th>
+                            <th>Hours</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1.</td>
+                                <td><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Osu%21_logo_2024.png/960px-Osu%21_logo_2024.png" alt="osu!" style="width: 50px; height: auto;"></td>
+                                <td>osu!</td>
+                                <td>1,802 hours</td>
+                            </tr>
+                            <tr>
+                                <td>2.</td>
+                                <td><img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/632360/header.jpg?t=1747421657" alt="ROR2" style="width: 50px; height: auto;"></td>
+                                <td>Risk of Rain 2</td>
+                                <td>513 hours</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="block" id="anime">
+                    <h1>Favorite Anime</h1>
+                    <div style="display: flex; flex-direction: column; text-align: center; justify-content: space-evenly;">
+                        <h2>からかい上手の高木さん</h2>
+                        <h2>Bleach</h2>
+                        <h2>Sword Art Online</h2>
+                        <h2>Violet Evergarden</h2>
+                        <h2>魔法少女まどか★マギカ</h2>
+                        <h2>Mob Psycho 100</h2>
+                        <h2>Jujutsu Kaisen</h2>
                     </div>
                 </div>
-                <div id="right">
-                    <div>
-                        <div id="upper-right">
-                            <h1 style="font-size: 100%;">Resume</h1>
-                            <iframe height="47%" width="640" title="My Resume" src="https://docs.google.com/document/d/e/2PACX-1vR8iIaVf2aTMSrDPk8W5sH6v8ZkbX9F6HqxN20jTyhGcljnqrUwthayzCh5aDnZRjK9m8sAO9CvBI6k/pub?embedded=true"></iframe>
+                <div class="block" id="socials">
+                    <h1>Socials</h1>
+                    <div id="socials-container" style="display: flex; flex-direction: column; justify-content: space-evenly;">
+                        <div id="GDcheerioscom" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>GDcheerios.com</h1>
+                            <h1><a href="/user/1">GDcheerios</a></h1>
                         </div>
-                        <div id="lower-right">
-                            <h1 style="font-size: 100%;">Schedule</h1>
-                            <iframe height="47%" width="640" title="My Schedule" src="https://time.gdcheerios.com"></iframe>
+                        <div id="discord" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>Discord</h1>
+                            <h1>gdcheerios2</h1>
+                        </div>
+                        <div id="youtube" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>Youtube</h1>
+                            <h1><a style="font-size: 100%;" href="https://www.youtube.com/channel/UCU-ucr7ITJ5hcKVMSX_J6lA" target="_blank">GDcheerios</a></h1>
+                        </div>
+                        <div id="steam" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>Steam</h1>
+                            <h1><a style="font-size: 100%;" href="https://steamcommunity.com/id/gdcheerios/" target="_blank">GDcheerios</a></h1>
+                        </div>
+                        <div id="twitch" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>Twitch</h1>
+                            <h1><a style="font-size: 100%;" href="https://www.twitch.tv/gdcheerios" target="_blank">GDcheerios</a></h1>
+                        </div>
+                        <div id="x" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>X</h1>
+                            <h1><a style="font-size: 100%;" href="https://x.com/GDcheerios" target="_blank">GDcheerios</a></h1>
+                        </div>
+                        <div id="instagram" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>Instagram</h1>
+                            <h1><a style="font-size: 100%;" href="https://www.instagram.com/gdcheerios/" target="_blank">GDcheerios</a></h1>
+                        </div>
+                        <div id="monkeytype" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>MonkeyType</h1>
+                            <h1><a style="font-size: 100%;" href="https://monkeytype.com/profile/GDcheerios" target="_blank">GDcheerios</a></h1>
+                        </div>
+                        <div id="lastfm" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>Last.fm</h1>
+                            <h1><a style="font-size: 100%;" href="https://last.fm/user/GDcheerios" target="_blank">GDcheerios</a></h1>
+                        </div>
+                        <div id="osu" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+                            <h1>osu!</h1>
+                            <h1><a style="font-size: 100%;" href="https://osu.ppy.sh/users/11339405" target="_blank">GDcheerios</a></h1>
                         </div>
                     </div>
                 </div>
