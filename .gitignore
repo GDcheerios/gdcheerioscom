@@ -11,6 +11,6 @@
 static/pfps/*
 !static/pfps/
 !static/pfps/huh.png
-/.tmp.drivedownload/
+/.tmp.drivedownload/z
 /.tmp.driveupload/
 /.idea/
