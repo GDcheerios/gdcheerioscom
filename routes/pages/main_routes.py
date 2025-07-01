@@ -15,10 +15,7 @@ def index(): return render_template(
 
 
 @main_blueprint.route("/about")
-def about(): return render_template(
-    "about.html",
-    osu_user=environment.database.fetch_to_dict("SELECT * FROM osu_users WHERE id = 11339405;")
-)
+def about(): return render_template("about.html")
 
 
 @main_blueprint.route("/user/<id>")

@@ -41,7 +41,7 @@ gq_levels[0] = 0
 print_end()
 
 print_start("allocating instance variables")
-# instance variablessd
+# instance variables
 bcrypt = None  # the instance of bcrypt
 socket = None  # the instance of socketio
 print_end()
