@@ -4,10 +4,12 @@ import datetime as dt
 import environment
 
 expiration = 0
+token = 0
 
 
 def client_grant():
     global expiration
+    global token
     print("granting client...")
     response = requests.post(f"https://osu.ppy.sh/oauth/token",
                              headers={"Accept": "application/json", "Content-Type": "application/json"},
@@ -15,27 +17,30 @@ def client_grant():
                                    "grant_type": "client_credentials", "scope": "public"}).json()
     dt_obj = dt.datetime.now()
     expiration = round(dt_obj.microsecond / 1000) + response["expires_in"]
-    return response["access_token"]
+    token = response["access_token"]
+    return token
 
 
 def check_access():
+    global expiration
+    global token
+    print("checking access...")
     dt_obj = dt.datetime.now()
-    response = None
 
     try:
         if round(dt_obj.microsecond / 1000) > expiration:
             print("renewing token")
-            response = client_grant()
+            token = client_grant()
 
     except Exception as E:
         print(E)
-        response = client_grant()
+        token = client_grant()
 
-    return response
+    return token
 
 
 def get_user_info(id: int):
-    print("getting osu user...")
+    print(f"getting osu user {id}")
     return requests.get(f"https://osu.ppy.sh/api/v2/users/{id}/osu", headers={
         "Accept": "application/json",
         "Content-Type": "application/json",
