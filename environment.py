@@ -13,7 +13,7 @@ print_start("setting main variables")
 domain = os.environ['DOMAIN']
 port = os.environ['PORT']  # the port
 secret = os.environ['SECRET']
-is_production = os.environ['IS_PRODUCTION'] == 1
+is_production = int(os.environ['IS_PRODUCTION']) == 1
 debug = not is_production  # debugging?
 print_end()
 
