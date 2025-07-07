@@ -1,10 +1,8 @@
-bcrypt==4.1.2
-Flask==3.1.0
+bcrypt==4.3.0
+Flask==3.1.1
 Flask-Bcrypt==1.0.1
-Flask-SocketIO==5.3.6
-requests==2.32.0
-pyopenssl==24.0.0
+requests==2.32.4
 psycopg2==2.9.10
 python-dotenv==1.0.1
 GPSystem @ git+https://github.com/GDcheerios/GPSystem.git
-PSQLConnection @ git+https://github.com/GDcheerios/PSQLConnection
+PSQLConnection @ git+https://github.com/GDcheerios/PSQLConnection.git
