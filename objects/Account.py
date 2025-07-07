@@ -165,7 +165,7 @@ class Account:
                     'playcount': data['statistics']['play_count'],
                     'accuracy': data['statistics']['hit_accuracy'],
                     'performance': data['statistics']['pp'],
-                    'rank': data['statistics']['global_rank'],
+                    'rank': data['statistics']['global_rank'] or 0,
                 }
             except KeyError:
                 print("User doesn't exist on osu!")
