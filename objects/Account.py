@@ -73,7 +73,7 @@ class Account:
             self.has_gq = False
             self.osu_id = 0
             self.about = "This user does not exist"
-            self.status = "restricted"
+            self.status = "offline"
             self.tags = []
             self.exists = False
 
