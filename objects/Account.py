@@ -15,6 +15,8 @@ class Account:
     pfp: str
     status: str
     tags: list
+    gq_scores: list
+    osu_data: dict
     exists: bool
 
     def __init__(self, identifier):
@@ -58,7 +60,8 @@ class Account:
             self.osu_id = result["osu_id"]
             self.about = result["about"]
             self.status = result["status"]
-            self.tags = database.fetch_all_to_dict("SELECT * FROM account_tags WHERE account = %s", params=(self.id,))
+            self.tags = database.fetch_all_to_dict("SELECT * FROM account_tags WHERE account = %s",
+                                                   params=(self.id,)) or []
             self.exists = True
         except TypeError:
             self.id = 0
@@ -74,8 +77,37 @@ class Account:
             self.tags = []
             self.exists = False
 
+        self.gq_scores = []
+        self.osu_data = {}
+
         if self.has_osu:
             self.osu_data = self.get_osu_data()
+
+        self.gq_scores = database.fetch_all_to_dict(
+            """
+            SELECT id,
+                   score,
+                   (SELECT gq_leaderboards.name
+                    from gq_leaderboards
+                    where gq_leaderboards.id = gq_scores.leaderboard) as name
+            FROM gq_scores
+            WHERE "user" = %s
+            """,
+            params=(self.id,)
+        ) or []
+
+        leaderboards = {}
+        for score in self.gq_scores:
+            if score["name"] not in leaderboards:
+                leaderboards[score["name"]] = []
+
+        for score in self.gq_scores:
+            leaderboards[score["name"]].append({
+                "score": score["score"],
+                "id": score["id"]
+            })
+
+        self.gq_scores = leaderboards
 
     # <editor-fold desc="Modifiers">
     @staticmethod
@@ -126,15 +158,19 @@ class Account:
 
     def fetch_osu_data(self):
         if self.has_osu:
-            data = get_user_info(self.osu_id)
-            return {
-                'username': data['username'],
-                'score': data['statistics']['total_score'],
-                'playcount': data['statistics']['play_count'],
-                'accuracy': data['statistics']['hit_accuracy'],
-                'performance': data['statistics']['pp'],
-                'rank': data['statistics']['global_rank'],
-            }
+            try:
+                data = get_user_info(self.osu_id)
+                return {
+                    'username': data['username'],
+                    'score': data['statistics']['total_score'],
+                    'playcount': data['statistics']['play_count'],
+                    'accuracy': data['statistics']['hit_accuracy'],
+                    'performance': data['statistics']['pp'],
+                    'rank': data['statistics']['global_rank'],
+                }
+            except KeyError:
+                print("User doesn't exist on osu!")
+                database.execute("UPDATE accounts SET osu_id = 0 WHERE id = %s", params=(self.id,))
 
         return None
 
@@ -142,7 +178,8 @@ class Account:
         if self.has_osu:
             data = database.fetch_to_dict("SELECT * FROM osu_users WHERE id = %s", params=(self.osu_id,))
             if not data:
-                self.update_osu_data()
+                if not self.update_osu_data():
+                    return None
                 return self.get_osu_data()
             else:
                 return data
@@ -165,6 +202,8 @@ class Account:
 
         if can_refresh:
             data = self.fetch_osu_data()
+            if not data:
+                return False
 
         result = database.fetch_one("SELECT id FROM osu_users WHERE id = %s", params=(self.osu_id,))
         if result:
@@ -194,6 +233,8 @@ class Account:
                 )
             )
 
+        return True
+
     # </editor-fold>
 
     def jsonify(self) -> dict:
@@ -203,6 +244,7 @@ class Account:
             "email": self.email,
             "osu data": self.osu_data,
             "gq data": None,
+            "gq scores": self.gq_scores,
             "about": self.about,
             "pfp": self.pfp,
             "status": self.status,
