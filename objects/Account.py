@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-
 from environment import database
 from api.osu_api import get_user_info
 from api.gentrys_quest.user_api import get_xp
@@ -108,7 +107,7 @@ class Account:
             })
 
         self.gq_scores = leaderboards
-
+        
     # <editor-fold desc="Modifiers">
     @staticmethod
     def create(username: str, password: str, email: str, osu_id: int, about: str):

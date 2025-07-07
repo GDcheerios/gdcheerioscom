@@ -15,59 +15,7 @@
     {% block body %}
     <div class="block">
       <h1>Welcome to GDcheerios.com</h1>
-      <div class="main-choice">
-        <a href="/gentrys-quest" id="gentrys-quest" class="choice-selection">
-          <h1>Gentry's</h1>
-          <h1>Quest</h1>
-        </a>
-        <hr>
-        <a href="/osu" id="osu" class="choice-selection">
-          <h1>Osu</h1>
-          <h1>Score Farm</h1>
-        </a>
-      </div>
-    </div>
-    <div style="margin-top: 150vh;"></div>
-    <h1 class="category-header">
-      leaderboards
-    </h1>
-    <div style="display: flex; justify-content: space-between; margin-left: 20%; margin-right: 20%;">
-      <div style="display: flex; flex-direction: column">
-        <h1 class="category-header">Rankings</h1>
-        <div id="ranking-leaderboard">
-          {% if rankings != None %}
-            {% for user in rankings %}
-              <div class="score-card">
-                <div class="rank-badge" style="background-color: {{ rater.rating_colors[user[3]] | safe }};">
-                  <span>#{{ loop.index }}</span>
-                </div>
-                <div class="score-details">
-                  <p class="player-name">{{user[1]}}</p>
-                  <p class="player-score">{{user[2]}} GP</p>
-                </div>
-              </div>
-            {% endfor %}
-          {% endif %}
-        </div>
-      </div>
-      <div style="display: flex; flex-direction: column">
-        <h1 class="category-header">Weekly Event</h1>
-        <div id="weekly-event">
-          {% if weekly_event != None %}
-            {% for user in weekly_event %}
-            <div class="score-card">
-              <div class="rank-badge">
-                <span>#{{ user["placement"] }}</span>
-              </div>
-              <div class="score-details">
-                <p class="player-name">{{user["username"]}}</p>
-                <p class="player-score">{{user["score"]}} score</p>
-              </div>
-            </div>
-            {% endfor %}
-          {% endif %}
-        </div>
-      </div>
+      <h2>Currently being worked on!</h2>
     </div>
     <div class="block">
       <div>
