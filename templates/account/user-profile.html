@@ -1,104 +1,137 @@
 <html>
-  <head>
+<head>
     {% block head %}
     <title>{{ account.username }} profile</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="/static/accounts-style.css">
     <meta name="description" content="{{username}}'s profile">
     {% endblock %}
-  </head>
-  <body>
-    {% include 'navbar.html' %}
-    {% block body %}
-    <div class="block" style="margin-top: 3%;">
-      <img style="margin-left: auto; margin-right: auto; display: block;" src="{{ account.pfp }}">
-      <h1 class="username">{{account.username}}</h1>
-      {% if request.cookies.get('userID') == account.id|string %}
-        <p style="text-align: center;">Change username</p>
-        <form action="/api/account/change-username" method="POST"><input type="text" name="username" pattern="[a-zA-Z0-9_$!]{1,24}" value="new username"></input><input type="submit" value="set"></form>
-      {% endif %}
+</head>
+<body>
+{% include 'navbar.html' %}
+{% block body %}
+<div class="block" style="margin-top: 3%;">
+    <div style="display: flex; flex-direction: row; justify-content: space-between; margin-bottom: 10px;">
+        <div style="display: flex; flex-direction: row; margin-right: 10px;">
+            <img style="display: block;" src="{{ account.pfp }}">
+            <div>
+                <h1 class="username">{{account.username}}</h1>
+                <div id="tags"></div>
+            </div>
+        </div>
+        <div style="display: flex; flex-direction: row;">
+            <h2 class="about">{{ account.about|safe }}</h2>
+        </div>
     </div>
-    <div class="block">
-      <div class="profile-info-button" style="margin: 10px;" onclick='swapCategory("about-me")'>Details</div>
-      {% if account.has_osu %}
-        <div class="profile-info-button" style="margin: 10px;" onclick="window.open('https://osu.ppy.sh/users/{{account.osu_id}}', 'mywindow')">osu! (profile)</div>
-      {% endif %}
-      {% if account.has_gqc %}
-      <div class="profile-info-button" style="margin: 10px;" onclick="swapCategory('gqc')">Gentry's Quest (Classic)</div>
-      {% endif %}
-      {% if account.has_gq %}
-      <div class="profile-info-button" style="margin: 10px;" onclick="swapCategory('gq')">Gentry's Quest</div>
-      {% endif %}
-    </div>
-    <div class="block">
-      <div id="about-me">
-        <h1>About Me</h1>
-        <h2>{{ account.about|safe }}</h2>
-      </div>
-      <div id="gqc-data">
-        {% if account.has_gqc %}
-          {% set gqc_main = gentry_manager.get_ranking(account.id, true) %}
-          {% set gqc_items = gentry_manager.get_items(account.id, true) %}
-          <h1>Overall ranking</h1>
-          <h1>{{ gqc_main }}</h1>
-          <br>
-          <h1>Top 100 items</h1>
-          <div style="display: flex; flex-direction: row; justify-content: space-evenly;">
-            <div id="classic-characters">
-              <h1>Characters</h1>
-              {% for item in gqc_items["characters"] %}
-                <div style="character">
-                  <h1>#{{ item["placement"] }} <a style="font-size: 100%;" href="/api/gq/get-item/{{ item['id'] }}" target="_blank">{{ item["name"] }}</a> {{ item["rating"] }}gp</h1>
-                </div>
-              {% endfor %}
-            </div>
-            <div id="classic-artifacts">
-              <h1>Artifacts</h1>
-              {% for item in gqc_items["artifacts"] %}
-              <div style="character">
-                <h1>#{{ item["placement"] }} <a style="font-size: 100%;" href="/api/gq/get-item/{{ item['id'] }}" target="_blank">{{ item["name"] }}</a> {{ item["rating"] }}gp</h1>
-              </div>
-              {% endfor %}
-            </div>
-            <div id="classic-weapons">
-              <h1>Weapons</h1>
-              {% for item in gqc_items["weapons"] %}
-              <div style="character">
-                <h1>#{{ item["placement"] }} <a style="font-size: 100%;" href="/api/gq/get-item/{{ item['id'] }}" target="_blank">{{ item["name"] }}</a> {{ item["rating"] }}gp</h1>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-      </div>
-      <script>
-        document.getElementById("gqc-data").style.display = 'none'
-        document.getElementById("gq-data").style.display = 'none'
-
-        function swapCategory(category){
-          switch (category){
-            case "about-me":
-              document.getElementById("about-me").style.display = 'block'
-              document.getElementById("gqc-data").style.display = 'none'
-              document.getElementById("gq-data").style.display = 'none'
-              break;
-
-            case "gqc":
-              document.getElementById("about-me").style.display = 'none'
-              document.getElementById("gqc-data").style.display = 'block'
-              document.getElementById("gq-data").style.display = 'none'
-              break;
-
-            case "gq":
-              document.getElementById("about-me").style.display = 'none'
-              document.getElementById("gqc-data").style.display = 'none'
-              document.getElementById("gq-data").style.display = 'block'
-              break;
-          }
+    <script>
+        const tags = {{ account.tags | safe }};
+        const tagsContainer = document.getElementById('tags');
+        const typePriority = {
+            "gd": 1,
+            "dev": 2,
+            "unique": 3,
+            "rare": 4,
+            "event": 5
+        };
+        const userStatusTag = {
+            "account": {{ account.id }},
+            "id": 1,
+            "title": "{{ account.status }}",
+            "type": "{{ account.status }}"
         }
 
-      </script>
+
+        const sortedTags = tags.sort((a, b) => {
+            const priorityA = typePriority[a.type] || 100;
+            const priorityB = typePriority[b.type] || 100;
+
+            return priorityA - priorityB;
+        });
+
+
+        function addTag(tag) {
+            const tagElement = document.createElement('span');
+            tagElement.classList.add('tag');
+            if (tag.type) {
+                tagElement.classList.add(`tag-${tag.type}`);
+            }
+            tagElement.textContent = tag.title;
+            tagsContainer.appendChild(tagElement);
+        }
+
+        if (userStatusTag.type === "restricted") addTag(userStatusTag);
+        sortedTags.forEach((tag) => {
+            addTag(tag);
+        });
+    </script>
+</div>
+{% if account.has_gq or account.gq_scores | length > 0 %}
+<div id="gq-data" class="block">
+    <h1>Gentrys Quest</h1>
+    <div id="gq-scores">
+        <div id="leaderboard-container">
+            <h1 style="text-align: center; font-size: 24px; margin-bottom: 20px;">Scores</h1>
+            <select id="leaderboard-toggle" style="margin: 10px auto; display: block;" onchange="renderLeaderboard()"></select>
+            <div id="leaderboard-list" class="leaderboard-list"></div>
+        </div>
     </div>
-    {% endblock %}
-  </body>
+    <script>
+        const leaderboardData = {{ account.gq_scores | safe }};
+
+        function initializeLeaderboard() {
+            const dropdown = document.getElementById('leaderboard-toggle');
+            for (const leaderboardName of Object.keys(leaderboardData)) {
+                const option = document.createElement('option');
+                option.value = leaderboardName;
+                option.textContent = leaderboardName;
+                dropdown.appendChild(option);
+            }
+            renderLeaderboard();
+        }
+
+        function renderLeaderboard() {
+            const selectedLeaderboard = document.getElementById('leaderboard-toggle').value;
+            const scores = leaderboardData[selectedLeaderboard];
+            const leaderboardList = document.getElementById('leaderboard-list');
+            leaderboardList.innerHTML = '';
+            if (scores) {
+                scores.sort((a, b) => b.score - a.score).forEach((entry, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'leaderboard-entry';
+                    item.innerHTML = `
+                    <div class="rank">${index + 1}</div>
+                    <div class="score">${entry.score.toLocaleString()}</div>
+                `;
+                    leaderboardList.appendChild(item);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeLeaderboard);
+    </script>
+</div>
+{% endif %}
+{% if account.has_osu %}
+<div id="osu-data" class="block">
+    <h1>OSU!</h1>
+    <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px; margin-top: 10px;">
+        <div style="display: flex; flex-direction: row;">
+            <img src="https://a.ppy.sh/{{ account.osu_id }}">
+            <div style="display: flex; flex-direction: column; margin-left: 10px;">
+                <h2 style="margin-bottom: 0;"><a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{
+                    account.osu_data.username }}</a></h2>
+                <h2>#{{ "{:,}".format(account.osu_data.rank) }}</h2>
+            </div>
+        </div>
+        <div style="display: flex; flex-direction: column; margin-left: 10px;">
+            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.score) }} score</h2>
+            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.playcount) }} plays</h2>
+            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.accuracy) }} accuracy</h2>
+            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.performance) }} pp</h2>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+</body>
 </html>
