@@ -46,3 +46,11 @@ def get_user_info(id: int):
         "Content-Type": "application/json",
         "Authorization": f"Bearer {check_access()}"
     }).json()
+
+
+# <editor-fold desc="osu score farm">
+
+def get_matches():
+    return environment.database.fetch_all_to_dict("SELECT * FROM osu_matches")
+
+# </editor-fold>

@@ -1,0 +1,66 @@
+.matches {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 0;
+}
+
+.match {
+
+}
+
+.create {
+    background: #333333;
+    color: #fff;
+    margin-left: 25%;
+    margin-right: 25%;
+    padding: 10px;
+    border-radius: 16px;
+    margin-bottom: 0;
+}
+
+.create-players {
+    color: #fff;
+    margin-left: 25%;
+    margin-right: 25%;
+    padding: 10px;
+    border-radius: 16px;
+    border: 2px solid #333333;
+}
+
+.create-players-header{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+input {
+    width: 120px;
+    padding: 10px 15px;
+    font-size: 24px;
+    color: #fff;
+    background-color: #7f7f7f;
+    border: 2px solid #232323;
+    margin-right: 10px;
+    font-weight: bold;
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input:focus {
+    border-color: #000;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+.checkbox-container{
+    display: flex;
+    flex-direction: column;
+}
+

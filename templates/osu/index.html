@@ -5,16 +5,80 @@
     <meta name="viewport" content="width=device-width">
     <title>Home</title>
     <link rel="stylesheet" href="/static/style.css">
-    
+    <link rel="stylesheet" href="/static/osu-style.css">
     {% endblock %}
   </head>
   <body>
     {% include 'navbar.html' %}
-    {% block body %}
-    <div class="warning"><span class="warning-text">!warning!</span>This website is a work in progress<span class="warning-text">!warning!</span><br><a href="/info">more info</a></div>
-    <br>
-    <h1 class="white-text">Welcome to the osu! score farm website!</h1>
-    <h2 class="white-text" style="text-align: center">Farm your way to the top in the osu! score farm website.</h2>
-    {% endblock %}
+    <div style="text-align: center">
+        <h1>Welcome to osu!score farm</h1>
+        <h2>Set big scores to become the highest in the lobby!</h2>
+    </div>
+    <div class="matches">
+      {% if request.cookies.get('userID') is not none %}
+        <div>
+          <div class="create">
+            <h1>Create a match</h1>
+            <div style="display: flex;">
+              <input type="hidden" name="id" value="{{ request.cookies.get('userID') }}" required>
+              <input style="width: 400px;" type="text" name="name" placeholder="Match name" required>
+              <div class="checkbox-container">
+                <h4 style="width: 120px ; text-align: center; margin: 0;">Open</h4>
+                <input style="height: 42px;" type="checkbox" id="open-checkbox" name="open" value="true" checked>
+              </div>
+              <input style="height: 80px;" type="submit" value="Create">
+            </div>
+          </div>
+          <div style="margin-top: 0;" class="create-players">
+            <div class="create-players-header">
+              <div style="display: flex; flex-direction: row; justify-content: space-between" id="player-add">
+                <input style="width: 500px;" id="playerName" type="text" placeholder="Player name">
+                <input type="submit" onclick="addPlayer()" value="Add">
+              </div>
+<!--              <div id="team-add">-->
+<!--                <input type="text" placeholder="Player name">-->
+<!--                <input type="submit" value="Add">-->
+<!--              </div>-->
+            </div>
+            <div class="block" id="players"></div>
+          </div>
+        </div>
+        <script>
+          let players = [];
+
+          function addPlayer() {
+            const id = document.getElementById('playerName').value;
+            if (players.includes(id)) return;
+            players.push(id);
+            const playersEl = document.getElementById('players');
+            const playerEl = document.createElement('div');
+            playerEl.id = `player-${id}`;
+            playerEl.innerHTML = `
+              <input style="width: 400px;" type="text" value="${id}" readonly>
+              <input style="height: 80px;" type="submit" onclick="removePlayer('${id}')" value="Remove">
+            `;
+            playersEl.appendChild(playerEl);
+          }
+
+          function removePlayer(id) {
+            const playerEl = document.getElementById(`player-${id}`);
+            if (playerEl) {
+              playerEl.remove();
+            }
+            players = players.filter(player => player !== id);
+          }
+
+          function createMatch() {
+            const name = document.getElementById('name').value;
+          }
+
+          // const teamsCheckbox = document.getElementById('teams-checkbox');
+          // const teamAddElement = document.getElementById('team-add');
+          // teamsCheckbox.addEventListener('change', () => {
+          //   teamAddElement.style.display = teamsCheckbox.checked ? 'block' : 'none';
+          // })
+        </script>
+      {% endif %}
+    </div>
   </body>
 </html>

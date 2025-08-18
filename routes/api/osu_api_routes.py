@@ -5,7 +5,7 @@ from flask import Blueprint, request, redirect
 
 import environment
 
-osu_api_blueprint = Blueprint('osu', __name__)
+osu_api_blueprint = Blueprint('osu_api_blueprint', __name__)
 
 
 @osu_api_blueprint.route('/code_grab')
@@ -38,3 +38,8 @@ def code_grab():
     }
 
     return redirect(f"/account/create?osu_info={json.dumps(info)}")
+
+
+@osu_api_blueprint.route('/osu/create-match', methods=['POST'])
+def create_match():
+

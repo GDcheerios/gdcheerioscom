@@ -20,6 +20,7 @@ from routes.api.gentrys_quest_api_routes import gentrys_quest_api_blueprint
 from routes.pages.main_routes import main_blueprint
 from routes.pages.gentrys_quest_routes import gentrys_quest_blueprint
 from routes.pages.account_routes import account_blueprint
+from routes.pages.osu_routes import osu_blueprint
 
 
 def create_app():
@@ -51,6 +52,7 @@ def create_app():
     app.register_blueprint(main_blueprint)
     # app.register_blueprint(gentrys_quest_blueprint, url_prefix='/gentrys-quest')
     app.register_blueprint(account_blueprint, url_prefix='/account')
+    app.register_blueprint(osu_blueprint, url_prefix='/osu')
 
     return app
 
