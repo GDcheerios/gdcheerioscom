@@ -7,7 +7,7 @@ from objects.Account import Account
 account_api_blueprint = Blueprint('account', __name__)
 
 
-@account_api_blueprint.route("/create-account", methods=['POST'])
+@account_api_blueprint.route("/account/create-account", methods=['POST'])
 def create_account() -> Response:
     """
     The account creation POST method.
