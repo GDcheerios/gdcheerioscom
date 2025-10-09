@@ -109,6 +109,19 @@ def change_username():
     return redirect(f'/user/{account.id}')
 
 
+@account_api_blueprint.route("/account/check/username", methods=["GET"])
+def check_username():
+    username = request.args.get("username")
+    return {"exists": Account.name_exists(username)}
+
+
+@account_api_blueprint.route("/account/check/email", methods=["GET"])
+def check_email():
+    email = request.args.get("email")
+    print(email, Account.email_exists(email))
+    return {"exists": Account.email_exists(email)}
+
+
 @account_api_blueprint.route("/account/grab/<identifier>")
 def grab_account(identifier):
     return Account(identifier).jsonify()

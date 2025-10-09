@@ -1,42 +1,201 @@
 <html>
   <head>
     {% block head %}
-    <title>Create Account</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="/static/accounts-style.css">
+        <title>Create Account</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <link rel="stylesheet" href="/static/accounts-style.css">
     {% endblock %}
   </head>
   <body>
-    {% include 'navbar.html' %}
-    {% block body %}
-      <h2 style="font-style: bold; color: red; text-align: center;">{{ warning }}</h2>
-      <div class="account-form">
-        <form action = "/api/account/create-account" method = "POST">
+  {% include 'navbar.html' %}
+  {% block body %}
+  <h2 style="color: red; text-align: center;">{{ warning }}</h2>
+  <div class="account-form">
+      <form id="create-form" action="/api/account/create-account" method="POST" novalidate>
           {% if osu_info == None %}
           <p><h1><a href=https://osu.ppy.sh/oauth/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&response_type=code&scope=public+identify&state=randomval">Link osu account here</a></h1></p>
           <input type="text" value="0" name="id" style="display: none;" readonly>
           {% else %}
-            <h1>Linked osu account:</h1>
-            <div class="linked-osu-account" style="background-image: url({{osu_info['background url']}}); display: flex; width: 60%; height: 20%; margin: auto; margin-top: 5px;">
+          <h1>Linked osu account:</h1>
+          <div class="linked-osu-account" style="background-image: url({{osu_info['background url']}}); display: flex; width: 60%; height: 20%; margin: auto; margin-top: 5px;">
               <div class="linked-osu-account-content">
-                <img src="{{osu_info['avatar']}}">
-                <h1>{{osu_info['username']}}</h1>
+                  <img src="{{osu_info['avatar']}}">
+                  <h1>{{osu_info['username']}}</h1>
               </div>
-            </div>
-            <input type="text" value="{{osu_info['id']}}" name="id" style="display: none;" readonly>
+          </div>
+          <input type="text" value="{{osu_info['id']}}" name="id" style="display: none;" readonly>
           {% endif %}
           <p><h1>Enter email</h1></p>
-          <p><input type = 'email' name = 'em' required/></p>
-          <p><h1>Enter username</h1></p>
-          <p><input type = 'text' pattern="[a-zA-Z0-9_$!]{1,24}" name = 'nm' required/></p>
-          <p><h1>Enter password</h1></p>
-          <p><input type = 'password' pattern="[a-zA-Z0-9_$!]{1,}" name = 'pw' required/></p>
+          <p>
+              <input
+                      type="email"
+                      name="em"
+                      required
+                      pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                      autocomplete="email"
+              />
+          <div class="error-container"><span class="error-message" id="email-error"></span></div>
+          </p>
+          <p>
+          <h1>Enter username</h1></p>
+          <p>
+              <input
+                      type="text"
+                      name="nm"
+                      required
+                      minlength="1"
+                      maxlength="24"
+                      pattern="^[a-zA-Z0-9_$!]{1,24}$"
+                      autocomplete="username"
+              />
+          <div class="error-container"><span class="error-message" id="username-error"></span></div>
+          </p>
+          <p>
+          <h1>Enter password</h1></p>
+          <p>
+              <input
+                      type="password"
+                      name="pw"
+                      required
+                      minlength="8"
+                      pattern="^[a-zA-Z0-9_$!]{8,}$"
+                      autocomplete="new-password"
+              />
+          <div class="error-container"><span class="error-message" id="password-error"></span></div>
+          </p>
           <p><h1>Tell people about yourself</h1></p>
-          <p><input type = 'text' maxlength="3000" name = 'am'/></p>
-          <p><input type = 'submit' value = 'Create'/></p>
-        </form>
-      </div>
-    {% endblock %}
+          <p><input type="text" maxlength="3000" name="am"/></p>
+          <p><input id="submit-btn" type="submit" value="Create" disabled/></p>
+      </form>
+  </div>
+  <script>
+      function setFieldState(input, messageEl, ok, messageIfError = '') {
+          input.classList.remove('input-error', 'input-success');
+          if (ok) {
+              messageEl.textContent = '';
+              input.classList.add('input-success');
+              return true;
+          } else {
+              messageEl.textContent = messageIfError || input.validationMessage || 'Invalid value';
+              input.classList.add('input-error');
+              return false;
+          }
+      }
+
+      const form = document.getElementById('create-form');
+      const submitBtn = document.getElementById('submit-btn');
+
+      const emailInput = document.querySelector('input[name="em"]');
+      const usernameInput = document.querySelector('input[name="nm"]');
+      const passwordInput = document.querySelector('input[name="pw"]');
+
+      const emailError = document.getElementById('email-error');
+      const usernameError = document.getElementById('username-error');
+      const passwordError = document.getElementById('password-error');
+
+      let emailAvailable = false;
+      let usernameAvailable = false;
+      let emailCheckToken = 0;
+      let usernameCheckToken = 0;
+
+      function validateEmailLocal() {
+          const ok = emailInput.checkValidity();
+          return setFieldState(emailInput, emailError, ok, 'Please enter a valid email address');
+      }
+      function validateUsernameLocal() {
+          const ok = usernameInput.checkValidity();
+          return setFieldState(usernameInput, usernameError, ok, 'Username must be 1-24 characters: letters, numbers, _, $, or !');
+      }
+      function validatePasswordLocal() {
+          const ok = passwordInput.checkValidity();
+          return setFieldState(passwordInput, passwordError, ok, 'Password must be at least 8 chars; allowed: letters, numbers, _, $, !');
+      }
+
+      function debounce(fn, wait) {
+          let t;
+          return (...args) => {
+              clearTimeout(t);
+              t = setTimeout(() => fn(...args), wait);
+          };
+      }
+
+      const checkEmail = debounce(async (email) => {
+          const myToken = ++emailCheckToken;
+          if (!validateEmailLocal()) { emailAvailable = false; updateSubmit(); return; }
+          try {
+              const res = await fetch(`/api/account/check/email?email=${encodeURIComponent(email)}`);
+              const data = await res.json();
+              if (myToken !== emailCheckToken) return;
+              emailAvailable = !data.exists;
+              if (data.exists) {
+                  setFieldState(emailInput, emailError, false, 'Email already in use');
+              } else {
+                  setFieldState(emailInput, emailError, true);
+              }
+          } catch {
+              if (myToken !== emailCheckToken) return;
+              emailAvailable = false;
+              setFieldState(emailInput, emailError, false, 'Error checking email');
+          }
+          updateSubmit();
+      }, 300);
+
+      const checkUsername = debounce(async (username) => {
+          const myToken = ++usernameCheckToken;
+          if (!validateUsernameLocal()) { usernameAvailable = false; updateSubmit(); return; }
+          try {
+              const res = await fetch(`/api/account/check/username?username=${encodeURIComponent(username)}`);
+              const data = await res.json();
+              if (myToken !== usernameCheckToken) return;
+              usernameAvailable = !data.exists;
+              if (data.exists) {
+                  setFieldState(usernameInput, usernameError, false, 'Username already in use');
+              } else {
+                  setFieldState(usernameInput, usernameError, true);
+              }
+          } catch {
+              if (myToken !== usernameCheckToken) return;
+              usernameAvailable = false;
+              setFieldState(usernameInput, usernameError, false, 'Error checking username');
+          }
+          updateSubmit();
+      }, 300);
+
+      function updateSubmit() {
+          const emailOK = emailInput.checkValidity() && emailAvailable;
+          const userOK = usernameInput.checkValidity() && usernameAvailable;
+          const passOK = passwordInput.checkValidity();
+          submitBtn.disabled = !(emailOK && userOK && passOK);
+      }
+
+      emailInput.addEventListener('input', (e) => {
+          validateEmailLocal();
+          checkEmail(e.target.value);
+      });
+      usernameInput.addEventListener('input', (e) => {
+          validateUsernameLocal();
+          checkUsername(e.target.value);
+      });
+      passwordInput.addEventListener('input', () => {
+          validatePasswordLocal();
+          updateSubmit();
+      });
+
+      form.addEventListener('submit', (e) => {
+          const emailOK = emailInput.checkValidity() && emailAvailable;
+          const userOK = usernameInput.checkValidity() && usernameAvailable;
+          const passOK = passwordInput.checkValidity();
+          if (!(emailOK && userOK && passOK)) {
+              e.preventDefault();
+              if (!emailOK) setFieldState(emailInput, emailError, false, emailInput.value && !emailAvailable ? 'Email already in use' : 'Please enter a valid email address');
+              if (!userOK) setFieldState(usernameInput, usernameError, false, usernameInput.value && !usernameAvailable ? 'Username already in use' : 'Username must be 1-24 characters: letters, numbers, _, $, or !');
+              if (!passOK) setFieldState(passwordInput, passwordError, false, 'Password must be at least 8 chars; allowed: letters, numbers, _, $, !');
+          }
+      });
+
+      updateSubmit();
+  </script>
+  {% endblock %}
   </body>
 </html>
 

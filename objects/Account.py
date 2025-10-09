@@ -1,3 +1,4 @@
+import secrets, hashlib
 from datetime import datetime, timedelta
 from environment import database
 from api.osu_api import get_user_info
@@ -127,6 +128,11 @@ class Account:
         database.execute(query, params)
 
     @staticmethod
+    def queue(username: str, password: str, email: str, osu_id: int, about: str):
+        pass
+
+
+    @staticmethod
     def set_status(id: int, status: str):
         database.execute("UPDATE accounts SET status = %s where id = %s", params=(status, id))
 
@@ -146,9 +152,20 @@ class Account:
     def name_exists(name: str) -> bool:
         """
         Check if a username exists
+        :return: true or false, depending on if the username exists in the database
         """
 
         result = database.fetch_all(f"select username from accounts where username = %s;", params=(name,))
+        return len(result) > 0
+
+    @staticmethod
+    def email_exists(email: str) -> bool:
+        """
+        Check if an email exists
+        :return: true or false, depending on if the email exists in the database
+        """
+
+        result = database.fetch_all(f"select email from accounts where email = %s;", params=(email,))
         return len(result) > 0
 
     # </editor-fold>
