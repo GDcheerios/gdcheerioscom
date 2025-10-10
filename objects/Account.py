@@ -1,8 +1,11 @@
 import secrets, hashlib
 from datetime import datetime, timedelta
-from environment import database
+import environment
+
+database = environment.database
 from api.osu_api import get_user_info
 from api.gentrys_quest.user_api import get_xp
+from objects.EmailManager import EmailManager
 
 
 class Account:
@@ -108,13 +111,14 @@ class Account:
             })
 
         self.gq_scores = leaderboards
-        
+
     # <editor-fold desc="Modifiers">
     @staticmethod
-    def create(username: str, password: str, email: str, osu_id: int, about: str):
+    def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":
         query = """
                 INSERT INTO accounts (username, password, email, osu_id, about)
-                VALUES (%s, %s, %s, %s, %s) \
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
                 """
 
         params = (
@@ -125,12 +129,25 @@ class Account:
             about
         )
 
-        database.execute(query, params)
+        id = database.fetch_one(query, params)[0]
+        return Account(id)
 
     @staticmethod
     def queue(username: str, password: str, email: str, osu_id: int, about: str):
-        pass
-
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        password = str(password)
+        password = str(environment.bcrypt.generate_password_hash(password))[2:-1]  # remove the byte chars
+        pending_id = database.fetch_one(
+            """
+            INSERT INTO pending_accounts (username, password, email, osu_id, about, token)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            params=(username, password, email, osu_id, about, token_hash)
+        )[0]
+        EmailManager.send_verification_email(email, username,
+                                             f"{environment.domain}/api/account/verify?sid={pending_id}&token={raw_token}")
 
     @staticmethod
     def set_status(id: int, status: str):

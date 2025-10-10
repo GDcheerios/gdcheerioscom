@@ -9,7 +9,9 @@
   <body>
   {% include 'navbar.html' %}
   {% block body %}
-  <h2 style="color: red; text-align: center;">{{ warning }}</h2>
+  {% if msg %}
+    <h1 style="font-size: 300%; text-align: center;">{{ msg }}</h1>
+  {% endif %}
   <div class="account-form">
       <form id="create-form" action="/api/account/create-account" method="POST" novalidate>
           {% if osu_info == None %}
