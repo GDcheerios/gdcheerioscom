@@ -15,6 +15,9 @@ port = os.environ['PORT']  # the port
 secret = os.environ['SECRET']
 is_production = int(os.environ['IS_PRODUCTION']) == 1
 debug = not is_production  # debugging?
+smtp_host = os.environ['SMTP_HOST']
+smtp_email = os.environ['SMTP_EMAIL']
+smtp_password = os.environ['SMTP_PASSWORD']
 print_end()
 
 print_start("setting gq variables")
