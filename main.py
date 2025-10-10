@@ -29,10 +29,6 @@ def create_app():
         static_folder='static',  # Name of directory for static files
     )
 
-    @app.context_processor
-    def inject_variables():
-        return {'rater': environment.gq_rater}
-
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)
 
@@ -45,11 +41,11 @@ def create_app():
     # app.register_blueprint(token_blueprint, url_prefix='/api')
     app.register_blueprint(account_api_blueprint, url_prefix='/api')
     app.register_blueprint(osu_api_blueprint, url_prefix='/api')
-    # app.register_blueprint(gentrys_quest_api_blueprint, url_prefix='/api')
+    app.register_blueprint(gentrys_quest_api_blueprint, url_prefix='/api')
 
     #   pages
     app.register_blueprint(main_blueprint)
-    # app.register_blueprint(gentrys_quest_blueprint, url_prefix='/gentrys-quest')
+    app.register_blueprint(gentrys_quest_blueprint, url_prefix='/gentrys-quest')
     app.register_blueprint(account_blueprint, url_prefix='/account')
 
     return app

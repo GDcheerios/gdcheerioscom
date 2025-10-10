@@ -2,7 +2,7 @@ from environment import database
 from objects import Account
 
 
-def leaderboard(start: int = 0, amount: int = 50, online: bool = False):
+def get_top_players(start: int = 0, amount: int = 50, online: bool = False):
     """
     Grabs the player ranking leaderboard
 
@@ -16,40 +16,55 @@ def leaderboard(start: int = 0, amount: int = 50, online: bool = False):
                 gq_rankings.weighted, gq_rankings.rank, gq_rankings.tier
                 FROM gq_rankings
                 INNER JOIN accounts ON gq_rankings.id = accounts.id
-                WHERE accounts.status NOT IN ('restricted', 'test') {f"AND accounts.status = 'gqc_online'" if online else ""}
+                WHERE accounts.status NOT IN ('restricted', 'test') {f"AND accounts.status = 'gq_online'" if online else ""}
                 ORDER BY weighted desc
                 LIMIT %s OFFSET %s;
             """
 
-    return database.fetch_all(query, params=(amount, start))
+    return database.fetch_all_to_dict(query, params=(amount, start))
 
 
-def in_game_leaderboard(id, amount: int = 0, commas: bool = False):
+def get_leaderboard(id, amount: int = 0):
     """
     Retrieves the in game leaderboard for a given leaderboard id.
 
     :param id: The leaderboard id.
     :param amount: how many players to grab.
-    :param commas: if the score should be formatted with commas.
-    :return: The leaderboard data.
+    :return: The leaderboard data enriched with account and gq rank info.
     """
 
-    leaderboard_data = database.fetch_all(
-        "SELECT name, MAX(score) as hs FROM gq_scores WHERE leaderboard = %s GROUP BY name ORDER BY hs DESC;",
-        params=(id,))
+    leaderboard_data = database.fetch_all_to_dict(
+        """
+        SELECT 
+            MAX(gs.score) AS hs,
+            gs."user"      AS account_id,
+            a.username     AS username,
+            gr.weighted    AS weighted,
+            gr.rank        AS rank,
+            gr.tier        AS tier
+        FROM gq_scores gs
+        LEFT JOIN accounts a ON a.id = gs."user"
+        LEFT JOIN gq_rankings gr ON gr.id = gs."user"
+        WHERE gs.leaderboard = %s
+        GROUP BY gs."user", a.username, gr.weighted, gr.rank, gr.tier
+        ORDER BY hs DESC;
+        """,
+        params=(id,)
+    )
 
     if leaderboard_data is not None:
         standings = []
         x = 1
-        for standing in leaderboard_data:
+        for row in leaderboard_data:
             standing = {
                 "placement": x,
-                "username": standing[0],
-                "score": standing[1]
+                "id": row.get("account_id"),
+                "username": row.get("username"),
+                "score": row.get("hs"),
+                "weighted": row.get("weighted"),
+                "rank": row.get("rank"),
+                "tier": row.get("tier"),
             }
-
-            if commas:
-                standing["score"] = "{:,}".format(standing["score"])
 
             standings.append(standing)
 

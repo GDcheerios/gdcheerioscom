@@ -82,11 +82,11 @@ def save():
 
 # region Leaderboards
 @gentrys_quest_api_blueprint.route("/gq/get-leaderboard/<start>+<amount>+<online>", methods=["GET"])
-def leaderboard(start, amount, online): return leaderboard_api.leaderboard(start, amount, online=online == 'true')
+def leaderboard(start, amount, online): return leaderboard_api.player_leaderboard(start, amount, online=online == 'true')
 
 
 @gentrys_quest_api_blueprint.route("gq/get-ig-leaderboard/<id>", methods=["GET"])
-def gq_get_leaderboard(id): return leaderboard_api.in_game_leaderboard(id)
+def gq_get_leaderboard(id): return leaderboard_api.get_leaderboard(id)
 
 
 @gentrys_quest_api_blueprint.route("/gq/submit-leaderboard/<leaderboard>/<user>+<score>", methods=['POST'])

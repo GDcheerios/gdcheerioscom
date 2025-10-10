@@ -11,16 +11,14 @@
           <li><a href="https://github.com/GDcheeriosYT/website-project" target="_blank">GitHub</a></li>
         </ul>
       </li>
-
-<!--      <li>-->
-<!--        <a href="/gentrys-quest">Gentry's Quest</a>-->
-<!--        <ul class="dropdown-content">-->
-<!--          <li><a href="/gentrys-quest/levels">levels</a></li>-->
-<!--        </ul>-->
-<!--      </li>-->
+      <li class="dropdown">
+        <a href="/gentrys-quest">Gentry's Quest</a>
+        <ul class="dropdown-content">
+          <li><a href="/gentrys-quest/leaderboard">Leaderboard</a></li>
+          <li><a href="/gentrys-quest/levels">Levels</a></li>
+        </ul>
+      </li>
 <!--      <li><a href="/osu">Osu</a></li>-->
-
-      <!-- Account dropdown -->
       <li class="dropdown">
         {% if request.cookies.get('userID') != None %}
           <a href="/account/{{request.cookies.get('userID')}}">Profile</a>

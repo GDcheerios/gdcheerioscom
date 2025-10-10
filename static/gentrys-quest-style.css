@@ -3,11 +3,11 @@
     align-items: center;
     background-color: #333;
     color: white;
-    border: 1px solid #000;
+    border: 2px solid #000;
     width: 350px;
     height: 64px;
     margin: 30px;
-    border-radius: 2px;
+    border-radius: 5px;
     padding: 0 1px;
     position: relative;
     clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
@@ -31,6 +31,17 @@
     font-size: 12px;
     font-weight: bold;
     color: black;
+}
+
+.score-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 10px;
+    justify-content: space-around;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
 }
 
 .score-details .player-name {
