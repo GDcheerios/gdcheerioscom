@@ -28,7 +28,8 @@ def create():
     return render_template("account/create.html",
                            client_id=environment.osu_client_id,
                            redirect_uri=f"{environment.domain}/api/code_grab",
-                           osu_info=osu_info
+                           osu_info=osu_info,
+                           msg=request.args.get("msg")
                            )
 
 
