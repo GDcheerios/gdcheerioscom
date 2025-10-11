@@ -1,10 +1,11 @@
-import secrets, hashlib
+import hashlib
+import secrets
 from datetime import datetime, timedelta
+
 import environment
 
 database = environment.database
 from api.osu_api import get_user_info
-from api.gentrys_quest.user_api import get_xp
 from objects.EmailManager import EmailManager
 
 
@@ -40,6 +41,10 @@ class Account:
                 osu_id,
                 about,
                 status,
+                created,
+                is_supporter,
+                last_support,
+                supporter_lasts,
                 EXISTS (
                     SELECT 1
                     FROM gq_data
@@ -63,6 +68,10 @@ class Account:
             self.osu_id = result["osu_id"]
             self.about = result["about"]
             self.status = result["status"]
+            self.created = result["created"]
+            self.supporter = result["is_supporter"]
+            self.last_support = result["last_support"]
+            self.supporter_lasts = result["supporter_lasts"]
             self.tags = database.fetch_all_to_dict("SELECT * FROM account_tags WHERE account = %s",
                                                    params=(self.id,)) or []
             self.exists = True
@@ -74,19 +83,23 @@ class Account:
             self.has_osu = False
             self.has_gqc = False
             self.has_gq = False
+            self.gq_data = None
             self.osu_id = 0
             self.about = "This user does not exist"
             self.status = "offline"
+            self.created = datetime.now()
+            self.supporter = False
+            self.last_support = None
+            self.supporter_lasts = None
             self.tags = []
             self.exists = False
 
-        self.gq_scores = []
         self.osu_data = {}
 
         if self.has_osu:
             self.osu_data = self.get_osu_data()
 
-        self.gq_scores = database.fetch_all_to_dict(
+        gq_scores = database.fetch_all_to_dict(
             """
             SELECT id,
                    score,
@@ -100,17 +113,33 @@ class Account:
         ) or []
 
         leaderboards = {}
-        for score in self.gq_scores:
+        for score in gq_scores:
             if score["name"] not in leaderboards:
                 leaderboards[score["name"]] = []
 
-        for score in self.gq_scores:
+        for score in gq_scores:
             leaderboards[score["name"]].append({
                 "score": score["score"],
                 "id": score["id"]
             })
 
-        self.gq_scores = leaderboards
+        self.gq_data = {
+            "scores": leaderboards,
+            "metadata": environment.database.fetch_to_dict("SELECT * FROM gq_data WHERE id = %s", params=(self.id,)),
+            "ranking": environment.database.fetch_to_dict("SELECT * FROM gq_rankings WHERE id = %s", params=(self.id,)),
+            "items": environment.database.fetch_all_to_dict("SELECT * FROM gq_items WHERE owner = %s", params=(self.id,))
+        }
+        if self.gq_data["ranking"]:
+            self.gq_data["ranking"]["placement"] = environment.database.fetch_one(
+                """
+                SELECT COUNT(*) + 1
+                FROM gq_rankings r2
+                WHERE r2.weighted > (SELECT weighted
+                                     FROM gq_rankings r1
+                                     WHERE r1.id = %s)
+                """,
+                params=(self.id,)
+            )[0]
 
     # <editor-fold desc="Modifiers">
     @staticmethod
@@ -276,10 +305,12 @@ class Account:
             "username": self.username,
             "email": self.email,
             "osu data": self.osu_data,
-            "gq data": None,
-            "gq scores": self.gq_scores,
+            "gq data": self.gq_data,
             "about": self.about,
             "pfp": self.pfp,
             "status": self.status,
+            "supporter": self.supporter,
+            "last_support": self.last_support,
+            "supporter_lasts": self.supporter_lasts,
             "tags": self.tags
         }

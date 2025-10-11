@@ -1,5 +1,8 @@
 import environment
+
 from objects.Account import Account
+
+from api.key_api import issue_access_token
 
 
 def login(username, password) -> tuple[dict, int]:
@@ -14,9 +17,11 @@ def login(username, password) -> tuple[dict, int]:
     account = Account(username)
     if account.exists:
         if environment.bcrypt.check_password_hash(account.password, password):
+            access_token = issue_access_token(account.id)
             return {
                 "success": True,
-                "data": account.jsonify()
+                "data": account.jsonify(),
+                "access_token": access_token
             }, 200
 
         return {
