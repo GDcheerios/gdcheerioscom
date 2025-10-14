@@ -1,3 +1,5 @@
+
+import json
 from flask import Blueprint, request
 
 import environment
@@ -62,19 +64,22 @@ def get(id: int): return Account(id).jsonify()["gq data"]
 @require_scopes(["account:write"])
 def save():
     data = request.json
-    if environment.database.fetch_one("SELECT id FROM accounts WHERE id = %s", params=(data["id"],))[0] is not None:
+    if environment.database.fetch_one("SELECT id FROM gq_data WHERE id = %s", params=(data["ID"],)) is not None:
         environment.database.execute(
             "UPDATE gq_data SET money = %s, start_amount = %s, xp = %s WHERE id = %s",
             params=(
                 data["money"],
-                data["start_amount"],
-                data["xp"],
-                data["id"]
+                data["startAmount"],
+                data["experience"]["Xp"],
+                data["ID"]
             )
         )
     else:
         environment.database.execute(
-            "INSERT INTO gq_data (id, xp, money, start_amount) VALUES (%s, 0, 0, 0)", params=(data["id"],)
+            "INSERT INTO gq_data (id, xp, money, start_amount) VALUES (%s, 0, 0, 0)", params=(data["ID"],)
+        )
+        environment.database.execute(
+            "INSERT INTO gq_rankings (id, weighted, unweighted, rank, tier) VALUES (%s, 0, 0, 'unranked', '1')", params=(data["ID"],)
         )
 
     return "Success", 200
@@ -84,15 +89,15 @@ def save():
 @require_scopes(["account:write"])
 def add_item():
     data = request.json
-    response_data = {}
+    metadata_json = json.dumps(data["item"])
     rating = environment.gq_rater.get_rating(data["type"], data["item"])
     item_data = environment.database.fetch_to_dict(
         """
         INSERT INTO gq_items (type, metadata, owner, rating)
-        VALUES (%s, %s, %s)
+        VALUES (%s, %s::jsonb, %s, %s)
         RETURNING *
         """,
-        params=(data["type"], data["item"], data["owner"], rating)
+        params=(data["type"], metadata_json, data["owner"], rating)
     )
     user_api.rate_user(data["owner"])
     return {
@@ -105,39 +110,42 @@ def add_item():
 @require_scopes(["account:write"])
 def update_item():
     data = request.json
+    print(data)
+    metadata_json = json.dumps(data["item"])
     rating = environment.gq_rater.get_rating(data["type"], data["item"])
     item_data = environment.database.fetch_to_dict(
         """
         UPDATE gq_items
-        SET 
-            metadata = %s,
-            rating = %s,
-            bearer = %s,
-            slot = %s
+        SET metadata = %s::jsonb,
+            rating   = %s
         WHERE id = %s
+        RETURNING *
         """,
-        params=(data["item"], rating, data["bearer"], data["slot"], data["id"])
+        params=(metadata_json, rating, data["item"]["ID"])
     )
-    user_api.rate_user(data["owner"])
+    user_api.rate_user(item_data["owner"])
     return {
-        "ranking": Account(data["owner"]).gq_data["ranking"],
+        "ranking": Account(item_data["owner"]).gq_data["ranking"],
         "item": item_data
     }
 
 
-@gentrys_quest_api_blueprint.post("/gq/remove-item/")
+@gentrys_quest_api_blueprint.post("/gq/remove-item/<id>")
 @require_scopes(["account:write"])
-def remove_item():
-    data = request.json
+def remove_item(id):
+    owner = environment.database.fetch_one("SELECT owner FROM gq_items WHERE id = %s", params=(id,))
+    if owner:
+        owner = owner[0]
+
     environment.database.execute(
         """
-        REMOVE FROM gq_items WHERE id = %s
+        DELETE FROM gq_items WHERE id = %s
         """,
-        params=(data["id"],)
+        params=(id,)
     )
-    user_api.rate_user(data["owner"])
+    user_api.rate_user(owner)
     return {
-        "ranking": Account(data["owner"]).gq_data["ranking"]
+        "ranking": Account(owner).gq_data["ranking"]
     }
 
 

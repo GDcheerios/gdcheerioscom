@@ -43,27 +43,34 @@ def issue_access_token(user_id: int | str) -> str:
 
 def verify_api_key_header():
     auth = request.headers.get("Authorization", "")
-    prefix = "ApiKey "
+    prefix = "Authorization ApiKey "
+
     if not auth.startswith(prefix):
+        print(f"[API] Missing Authorization header")
         return None
+
     combined = auth[len(prefix):].strip()
     if "." not in combined:
+        print(f"[API] Missing key ID/secret")
         return None
     key_id, secret = combined.split(".", 1)
-    # Lookup key by key_id in your DB (fetch secret_hash, user_id, scopes, status, expires_at)
+
     row = environment.database.fetch_to_dict(
         "SELECT user_id, secret_hash, scopes, status, expires_at FROM api_keys WHERE key_id = %s",
         params=(key_id,)
     )
     if not row or row["status"] != "active":
+        print(f"[API] {row[key_id]} inactive")
         return None
-    # Check expiry
-    if row["expires_at"] and row["expires_at"] < environment.database.now():  # replace with proper now()
+
+    if row["expires_at"] and row["expires_at"] < environment.database.now():
+        print(f"[API] {row[key_id]} expired")
         return None
-    # Verify secret against hash
+
     if not environment.bcrypt.check_password_hash(row["secret_hash"], secret):
+        print(f"[API] {row[key_id]} invalid secret")
         return None
-    # Attach identity and scopes for downstream use
+
     g.current_user_id = str(row["user_id"])
     g.current_scopes = row["scopes"]
     return g.current_user_id
@@ -71,7 +78,7 @@ def verify_api_key_header():
 
 def require_scopes(required: list[str]):
     def decorator(fn):
-        @wraps(fn)  # preserve endpoint name and metadata
+        @wraps(fn)
         def wrapper(*args, **kwargs):
             uid = verify_api_key_header()
             if not uid:

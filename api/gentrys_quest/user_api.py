@@ -60,15 +60,16 @@ def rate_user(id: int) -> dict:
         """,
         params=(id,)
     )
-    unweighted_rating = sum(item["rating"] for item in user_items if item.get("rating") is not None)
-    weighted_rating = environment.gq_rater.get_user_rating(user_items)
-    rank, tier = environment.gq_rater.get_rank(weighted_rating)
+    if user_items:
+        unweighted_rating = sum(item["rating"] for item in user_items if item.get("rating") is not None)
+        weighted_rating = environment.gq_rater.get_user_rating(user_items)
+        rank, tier = environment.gq_rater.get_rank(weighted_rating)
 
-    environment.database.execute(
-        """
-        UPDATE gq_rankings
-        SET weighted = %s, unweighted = %s, rank = %s, tier = %s
-        WHERE id = %s
-        """,
-        params=(weighted_rating, unweighted_rating, rank, tier, id)
-    )
+        environment.database.execute(
+            """
+            UPDATE gq_rankings
+            SET weighted = %s, unweighted = %s, rank = %s, tier = %s
+            WHERE id = %s
+            """,
+            params=(weighted_rating, unweighted_rating, rank, tier, id)
+        )

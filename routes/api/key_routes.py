@@ -85,11 +85,10 @@ def create_key():
         return jsonify({"error": "unauthorized"}), 401
 
     payload = request.get_json(silent=True) or {}
-    # Do not log full payload; optionally whitelist fields
     logging.debug("[keys] Request JSON received (fields: %s)", list(payload.keys()))
     name = payload.get("name") or "Unnamed key"
     scopes = payload.get("scopes") or []
-    expires_at = payload.get("expires_at")  # ISO8601 string or None
+    expires_at = payload.get("expires_at")
 
     if not isinstance(scopes, list):
         logging.warning("[keys] scopes is not a list")
@@ -119,14 +118,12 @@ def create_key():
                        expires_at
                    ))
     except Exception as e:
-        # Keep DB error minimal; do not leak internals to clients
         logging.error("[keys] DB insert failed")
         return jsonify({"error": "db_error"}), 500
 
-    # Info-level log without secrets
     logging.info("[keys] Created key (key_id length: %s) for user", len(key_id))
     return jsonify({
-        "key": combined,  # shown once; client must store it securely
+        "key": combined,
         "key_id": key_id,
         "name": name,
         "scopes": scopes,
