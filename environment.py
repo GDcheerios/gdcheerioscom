@@ -39,7 +39,7 @@ for level in range(400):
     xp = gq_levels[99] + (2854810277 * level)
     gq_levels.append(xp)
 
-gq_levels[0] = 0
+gq_levels[0] = 10000
 
 print_end()
 

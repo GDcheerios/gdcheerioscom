@@ -1,8 +1,19 @@
 from flask import Blueprint, render_template, redirect
 
 import environment
+from api.gentrys_quest.leaderboard_api import get_top_players, get_leaderboard
 
 gentrys_quest_blueprint = Blueprint("gentrys_quest_blueprint", __name__)
+
+
+# inject variables into templates
+@gentrys_quest_blueprint.context_processor
+def inject_version(): return {
+    "gq_version": environment.gq_version,
+    "rater": environment.gq_rater,
+    "get_top_players": get_top_players,
+    "get_leaderboard": get_leaderboard
+}
 
 
 @gentrys_quest_blueprint.route("/")
