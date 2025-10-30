@@ -84,6 +84,14 @@ def rate_user(id: int) -> dict:
             params=(weighted_rating,)
         )[0]
 
+        environment.database.execute(
+            """
+            INSERT INTO gq_metrics (user_id, rank, gp)
+            VALUES (%s, %s, %s)
+            """,
+            params=(id, placement, weighted_rating)
+        )
+
         return {
             "weighted": weighted_rating,
             "unweighted": unweighted_rating,

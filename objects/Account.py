@@ -127,6 +127,7 @@ class Account:
 
             self.gq_data = {
                 "scores": leaderboards,
+                "metrics": environment.database.fetch_all_to_dict("SELECT * FROM gq_metrics WHERE user_id = %s ORDER BY recorded_at desc", params=(self.id,)),
                 "metadata": environment.database.fetch_to_dict("SELECT * FROM gq_data WHERE id = %s", params=(self.id,)),
                 "ranking": environment.database.fetch_to_dict("SELECT * FROM gq_rankings WHERE id = %s", params=(self.id,)),
                 "items": environment.database.fetch_all_to_dict("SELECT * FROM gq_items WHERE owner = %s", params=(self.id,))
