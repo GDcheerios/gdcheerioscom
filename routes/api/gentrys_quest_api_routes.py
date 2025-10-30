@@ -155,7 +155,7 @@ def top_players():
     start = request.args.get("start")
     amount = request.args.get("amount")
     online = request.args.get("online")
-    return leaderboard_api.get_top_players(start=0, amount=50, online=online == 'true')
+    return leaderboard_api.get_top_players(start=start, amount=amount, online=online == 'true')
 
 
 @gentrys_quest_api_blueprint.route("/gq/get-leaderboard/<id>", methods=["GET"])
