@@ -143,6 +143,15 @@ class Account:
                     params=(self.id,)
                 )[0]
 
+            level = 0
+            for i, threshold in enumerate(environment.gq_levels):
+                if self.gq_data["metadata"]["score"] >= threshold:
+                    level = i + 1
+                else:
+                    break
+            self.gq_data["metadata"]["level"] = level
+            self.gq_data["metadata"]["required"] = environment.gq_levels[level]
+
     # <editor-fold desc="Modifiers">
     @staticmethod
     def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":
