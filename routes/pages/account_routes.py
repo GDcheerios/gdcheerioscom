@@ -17,7 +17,7 @@ def account():
 
 
 @account_blueprint.route("/<id>")
-def user(id: int | str): return render_template("account/user-profile.html", account=Account(id))
+def user(id: int | str): return render_template("account/user-profile.html", account=Account(id), rater=environment.gq_rater)
 
 
 @account_blueprint.route("/create")

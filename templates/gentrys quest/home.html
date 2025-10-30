@@ -9,18 +9,49 @@
     <body>
         {% include 'navbar.html' %}
         {% block body %}
-            <h1 style="font-size: 240%; text-align: center; margin-top: 50px; margin-bottom: 100px;">
-                Mr. Gentry's classroom has fallen into the hands of his wicked twin brother, Evil Gentry. Now, he needs the help of
-                a mighty warrior—a Gentry Warrior. Battle through challenges, collect powerful items, and rise to become the
-                ultimate Gentry Warrior!
-                <br>
-                <br>
-                <iframe src="https://store.steampowered.com/widget/3208870/?utm_source=homepage&utm_campaign=mycampaign"
-                        style="width: 90%; height: 200px; border: none;"></iframe>
-                <br>
-                <br>
-                Join the <a style="font-size: 100%;" target="_blank" href="https://discord.gg/vDu7TaSwQg">Discord</a> for more info!
-            </h1>
+        <h1 class="block" style="font-size: 350%;">Gentry's Quest</h1>
+        <div style="display: flex; flex-direction: row; justify-content: space-evenly; text-align: center;">
+            <div id="top-players">
+                <h1>Top Players</h1>
+                {% set count = namespace(value=1) %}
+                {% for player in get_top_players(amount=5) %}
+                    <div class="score-card">
+                        <div class="rank-badge" style="background-color: {{ rater.rating_colors[player.rank] }};">
+                            <span>{{ count.value }}</span>
+                        </div>
+                        <div class="score-details">
+                            <div class="player-name">
+                                {{ player.username }}
+                            </div>
+                            <div class="player-score">
+                                {{ "{:,}".format(player.weighted|int) }} GP
+                            </div>
+                        </div>
+                    </div>
+                {% set count.value = count.value + 1 %}
+                {% endfor %}
+            </div>
+            <div id="event-leaderboard">
+                <h1>Event Leaderboard</h1>
+                {% set count = namespace(value=1) %}
+                {% for player in get_leaderboard(id=3, amount=5) %}
+                    <div class="score-card">
+                        <div class="rank-badge" style="background-color: {{ rater.rating_colors[player.rank] }};">
+                            <span>{{ count.value }}</span>
+                        </div>
+                        <div class="score-details">
+                            <div class="player-name">
+                                {{ player.username }}
+                            </div>
+                            <div class="player-score">
+                                {{ "{:,}".format(player.score|int) }} score
+                            </div>
+                        </div>
+                    </div>
+                {% set count.value = count.value + 1 %}
+                {% endfor %}
+            </div>
+        </div>
         {% endblock %}
     </body>
 </html>

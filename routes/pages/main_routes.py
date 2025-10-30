@@ -7,11 +7,7 @@ main_blueprint = Blueprint("main_blueprint", __name__)
 
 
 @main_blueprint.route("/")
-def index(): return render_template(
-    "index.html",
-    rankings=leaderboard(amount=5),
-    weekly_event=in_game_leaderboard(3, 5, commas=True)
-)
+def index(): return render_template("index.html")
 
 
 @main_blueprint.route("/about")
