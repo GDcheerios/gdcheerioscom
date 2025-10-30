@@ -66,45 +66,98 @@
     </script>
 </div>
 {% if account.gq_data.ranking %}
-<div id="gq-data" class="block gq-card">
-    <h1>Gentrys Quest</h1>
-    <div class="gq-header">
-        <div
-        class="gq-rank-badge"
-        style="
-    --rank-color: {{ rater.rating_colors[account.gq_data['ranking']['rank']] }};
-    background:
-      linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--rank-color) 100%, black 0%) 0%,
-        color-mix(in srgb, var(--rank-color) 85%, black 15%) 45%,
-        color-mix(in srgb, var(--rank-color) 70%, black 30%) 100%
-      );
-  "
->
-  <div class="gq-rank-title">{{ account.gq_data['ranking']['rank'] }}</div>
-  <div class="gq-tier">Tier {{ account.gq_data['ranking']['tier'] }}</div>
-</div>
-        <div class="gq-metrics">
-            <div class="gq-metric">
-                <div class="gq-metric-label">Rank</div>
-                <div class="gq-metric-value">#{{ "{:,}".format(account.gq_data["ranking"]["placement"]) }}</div>
+    <div id="gq-data" class="block gq-card">
+        <h1>Gentrys Quest</h1>
+
+        <!-- New grouped layout -->
+        {% set score_i = (account.gq_data['metadata']['score'] | int) %}
+        {% set required_i = (account.gq_data['metadata']['required'] | int) %}
+        {% set next_i = (required_i - score_i) if (required_i - score_i) > 0 else 0 %}
+        {% set pct = ((score_i / (required_i if required_i != 0 else 1)) * 100) | round(0, 'floor') | int %}
+
+        <div style="display:grid; grid-template-columns: 280px 1fr; gap:14px;">
+            <!-- Left column: Rank card -->
+            <div style="border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px;">
+                <div
+                    class="gq-rank-badge"
+                    style="
+                        --rank-color: {{ rater.rating_colors[account.gq_data['ranking']['rank']] }};
+                        background:
+                          linear-gradient(
+                            135deg,
+                            color-mix(in srgb, var(--rank-color) 100%, black 0%) 0%,
+                            color-mix(in srgb, var(--rank-color) 85%, black 15%) 45%,
+                            color-mix(in srgb, var(--rank-color) 70%, black 30%) 100%
+                          );
+                        border-radius:10px;
+                        color:#fff;
+                    ">
+                    <div class="gq-rank-title">{{ account.gq_data['ranking']['rank'] }}</div>
+                    <div class="gq-tier">Tier {{ account.gq_data['ranking']['tier'] }}</div>
+                </div>
+                <div class="gq-metrics" style="margin-top:12px; display:grid; grid-template-columns: 1fr; gap:8px;">
+                    <div class="gq-metric" style="display:flex; justify-content:space-between;">
+                        <div class="gq-metric-label">Placement</div>
+                        <div class="gq-metric-value">#{{ "{:,}".format(account.gq_data["ranking"]["placement"]) }}</div>
+                    </div>
+                    <div class="gq-metric" style="display:flex; justify-content:space-between;">
+                        <div class="gq-metric-label">Weighted</div>
+                        <div class="gq-metric-value">{{ "{:,}".format(account.gq_data["ranking"]["weighted"]) }}</div>
+                    </div>
+                    <div class="gq-metric" style="display:flex; justify-content:space-between;">
+                        <div class="gq-metric-label">Unweighted</div>
+                        <div class="gq-metric-value">{{ "{:,}".format(account.gq_data["ranking"]["unweighted"]) }}</div>
+                    </div>
+                </div>
             </div>
-            <div class="gq-metric">
-                <div class="gq-metric-label">Weighted</div>
-                <div class="gq-metric-value">{{ "{:,}".format(account.gq_data["ranking"]["weighted"]) }}</div>
-            </div>
-            <div class="gq-metric">
-                <div class="gq-metric-label">Unweighted</div>
-                <div class="gq-metric-value">{{ "{:,}".format(account.gq_data["ranking"]["unweighted"]) }}</div>
+
+            <!-- Right column: Experience card -->
+            <div style="border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px; display:grid; grid-template-columns: 140px 1fr 160px; gap:12px; align-items:center;">
+                <!-- Level tile -->
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <div style="font-size:12px; opacity:0.75;">Level</div>
+                    <div style="
+                        width:64px; height:64px; border-radius:14px;
+                        display:flex; align-items:center; justify-content:center;
+                        background: linear-gradient(135deg,#2a2a2a,#1a1a1a);
+                        border:1px solid #333; font-weight:900; font-size:22px;">
+                        {{ account.gq_data['metadata']['level'] | int }}
+                    </div>
+                    <div style="font-size:12px; opacity:0.7;">Total XP</div>
+                    <div style="font-weight:700;">{{ "{:,}".format(score_i) }}</div>
+                </div>
+
+                <!-- Progress -->
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="position:relative; flex:1; height:18px; background:#0f0f0f; border:1px solid #272727; border-radius:999px; overflow:hidden;">
+                            <div style="
+                                position:absolute; height:100%; width: {{ pct }}%;
+                                background: linear-gradient(90deg,#00d2ff,#3a7bd5);
+                                box-shadow: 0 0 12px rgba(0,210,255,0.35);">
+                            </div>
+                            <div style="position:absolute; inset:0; background:
+                                repeating-linear-gradient(120deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 8px, transparent 8px, transparent 16px);
+                                mix-blend-mode: overlay;"></div>
+                        </div>
+                        <div style="min-width:46px; text-align:right; font-variant-numeric: tabular-nums; font-weight:700; font-size:12px; opacity:0.9;">
+                            {{ pct }}%
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:12px; opacity:0.75;">
+                        <span>0</span>
+                        <span>{{ "{:,}".format(required_i) }}</span>
+                    </div>
+                </div>
+
+                <!-- Next level -->
+                <div style="text-align:right;">
+                    <div style="font-size:12px; opacity:0.8;">Next level in</div>
+                    <div style="font-weight:900; font-size:22px;">{{ "{:,}".format(next_i) }} XP</div>
+                </div>
             </div>
         </div>
-    </div>
-    <div id="gq-items" class="block">
-        <h1 style="text-align:center; font-size:24px; margin: 20px 0;">Items</h1>
-        <h2 style="text-align: center;">${{account.gq_data.metadata.money}}</h2>
-        <div class="gq-items-grid" id="gq-items-grid"></div>
-    </div>
+        <!-- End grouped layout -->
     <div id="gq-scores">
         <div id="leaderboard-container">
             <h1 style="text-align: center; font-size: 24px; margin-bottom: 20px;">Scores</h1>
