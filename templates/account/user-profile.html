@@ -110,10 +110,7 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Right column: Experience card -->
             <div style="border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px; display:grid; grid-template-columns: 140px 1fr 160px; gap:12px; align-items:center;">
-                <!-- Level tile -->
                 <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
                     <div style="font-size:12px; opacity:0.75;">Level</div>
                     <div style="
@@ -126,8 +123,6 @@
                     <div style="font-size:12px; opacity:0.7;">Total XP</div>
                     <div style="font-weight:700;">{{ "{:,}".format(score_i) }}</div>
                 </div>
-
-                <!-- Progress -->
                 <div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div style="position:relative; flex:1; height:18px; background:#0f0f0f; border:1px solid #272727; border-radius:999px; overflow:hidden;">
@@ -149,16 +144,135 @@
                         <span>{{ "{:,}".format(required_i) }}</span>
                     </div>
                 </div>
-
-                <!-- Next level -->
                 <div style="text-align:right;">
                     <div style="font-size:12px; opacity:0.8;">Next level in</div>
                     <div style="font-weight:900; font-size:22px;">{{ "{:,}".format(next_i) }} XP</div>
                 </div>
             </div>
         </div>
-        <!-- End grouped layout -->
-    <div id="gq-scores">
+            <div id="gq-metrics-chart" style="margin-top:12px; border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-weight:700;">Rank Graph</div>
+                </div>
+                <div id="gq-chart" style="height:220px; position:relative;">
+                    <canvas id="gqChartCanvas" height="220" style="width:100%; height:100%;"></canvas>
+                </div>
+            </div>
+            <script>
+                const metrics = {{ account.gq_data["metrics"] | tojson | safe }} || [];
+                (function () {
+                    const nowPoint = {
+                        gp: Number({{ account.gq_data["ranking"]["weighted"] | int }}),
+                        rank: Number({{ account.gq_data["ranking"]["placement"] | int }}),
+                        recorded_at: new Date().toISOString()
+                    };
+                    const raw = (Array.isArray(metrics) ? metrics.slice() : []);
+                    raw.push(nowPoint);
+
+                    const now = new Date();
+                    const yearMs = 365 * 24 * 60 * 60 * 1000;
+                    const tMinDate = new Date(now.getTime() - yearMs);
+                    const data = raw
+                        .map(d => ({ ...d, t: new Date(d.recorded_at) }))
+                        .filter(d => !isNaN(d.t) && d.t >= tMinDate && d.t <= now)
+                        .sort((a,b) => a.t - b.t);
+
+                    const canvas = document.getElementById('gqChartCanvas');
+                    if (!canvas || !data.length) return;
+
+                    const gpVals = data.map(d => Number(d.gp || 0));
+                    const rankVals = data.map(d => Number(d.rank || 0));
+                    const labels = data.map(d => d.t);
+
+                    const ctx = canvas.getContext('2d');
+                    const DPR = window.devicePixelRatio || 1;
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width * DPR;
+                    canvas.height = rect.height * DPR;
+                    ctx.scale(DPR, DPR);
+
+                    const pad = { top: 16, right: 40, bottom: 24, left: 40 };
+                    const w = rect.width - pad.left - pad.right;
+                    const h = rect.height - pad.top - pad.bottom;
+
+                    const tMin = tMinDate.getTime();
+                    const tMax = now.getTime();
+                    const tRange = Math.max(1, tMax - tMin);
+
+                    const minGP = Math.min(...gpVals), maxGP = Math.max(...gpVals);
+                    const gpRange = (maxGP - minGP) || 1;
+
+                    const minRank = Math.min(...rankVals), maxRank = Math.max(...rankVals);
+                    const rankMinForScale = Math.min(minRank, 1);
+                    const rankMaxForScale = Math.max(maxRank, minRank + 1);
+                    const rRange = (rankMaxForScale - rankMinForScale) || 1;
+
+                    const xTime = (t) => pad.left + ((t - tMin) / tRange) * w;
+                    const yGP = (v) => pad.top + (1 - (v - minGP) / gpRange) * h;
+                    const yRank = (v) => pad.top + ((v - rankMinForScale) / rRange) * h;
+
+                    ctx.fillStyle = '#111'; ctx.fillRect(0,0,rect.width,rect.height);
+                    ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = 1; ctx.beginPath();
+                    for (let i = 0; i <= 4; i++) { const yy = pad.top + (i/4)*h; ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + w, yy); }
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                    ctx.fillText(maxGP.toLocaleString() + ' GP', 8, yGP(maxGP));
+                    ctx.fillText(minGP.toLocaleString() + ' GP', 8, yGP(minGP));
+
+                    ctx.textAlign = 'right';
+                    ctx.fillText('#' + rankMinForScale, pad.left + w + 36, yRank(rankMinForScale));
+                    ctx.fillText('#' + rankMaxForScale, pad.left + w + 36, yRank(rankMaxForScale));
+
+                    const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    ctx.fillText(fmt(tMinDate), pad.left, pad.top + h + 6);
+                    ctx.fillText(fmt(now), pad.left + w, pad.top + h + 6);
+
+                    ctx.strokeStyle = '#00d2ff'; ctx.lineWidth = 2; ctx.beginPath();
+                    data.forEach((d,i) => { const px = xTime(d.t.getTime()); const py = yGP(gpVals[i]); if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+                    ctx.stroke();
+
+                    ctx.setLineDash([4,3]); ctx.strokeStyle = '#ffae00'; ctx.beginPath();
+                    data.forEach((d,i) => { const px = xTime(d.t.getTime()); const py = yRank(rankVals[i]); if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+                    ctx.stroke(); ctx.setLineDash([]);
+
+                    function drawPoints(color, yFn, vals) {
+                        ctx.fillStyle = color;
+                        data.forEach((d,i) => { const px = xTime(d.t.getTime()); const py = yFn(vals[i]); ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2); ctx.fill(); });
+                    }
+                    drawPoints('#00d2ff', yGP, gpVals);
+                    drawPoints('#ffae00', yRank, rankVals);
+
+                    const legendX = pad.left + 8, legendY = pad.top + 8;
+                    ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.font='12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                    ctx.fillStyle='#00d2ff'; ctx.fillRect(legendX, legendY - 5, 10, 10);
+                    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('GP', legendX + 16, legendY);
+                    const ry = legendY + 16; ctx.fillStyle='#ffae00'; ctx.fillRect(legendX, ry - 5, 10, 10);
+                    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('Rank', legendX + 16, ry);
+
+                    const tooltip = document.createElement('div');
+                    Object.assign(tooltip.style, { position:'absolute', pointerEvents:'none', background:'rgba(0,0,0,0.85)', border:'1px solid #2b2b2b', borderRadius:'8px', padding:'6px 8px', fontSize:'12px', color:'#fff', transform:'translate(-50%, -120%)', display:'none' });
+                    canvas.parentElement.style.position = 'relative'; canvas.parentElement.appendChild(tooltip);
+
+                    canvas.addEventListener('mousemove', (e) => {
+                        const bounds = canvas.getBoundingClientRect();
+                        const cx = (e.clientX - bounds.left);
+                        const tx = tMin + ((cx - pad.left) / Math.max(1, w)) * tRange;
+                        let idx = 0, best = Infinity;
+                        data.forEach((d,i) => { const dist = Math.abs(d.t.getTime() - tx); if (dist < best) { best = dist; idx = i; } });
+                        const px = xTime(data[idx].t.getTime());
+                        const gp = gpVals[idx], rk = rankVals[idx], dt = labels[idx];
+                        tooltip.textContent = `${dt.toLocaleString()}\nGP: ${gp.toLocaleString()}\nRank: #${rk}`;
+                        tooltip.style.left = px + 'px';
+                        tooltip.style.top = (yGP(gp) - 8) + 'px';
+                        tooltip.style.display = 'block';
+                    });
+                    canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+                })();
+            </script>
+        <div id="gq-scores">
         <div id="leaderboard-container">
             <h1 style="text-align: center; font-size: 24px; margin-bottom: 20px;">Scores</h1>
             <select id="leaderboard-toggle" style="margin: 10px auto; display: block;" onchange="renderLeaderboard()"></select>
@@ -201,244 +315,17 @@
     </script>
     <script>
         const items = {{ account.gq_data["items"] | tojson | safe }} || [];
-
-        // Helpers
-        const ucfirst = s => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
-
-        function safeParse(md) {
-            if (!md) return null;
-            if (typeof md === 'object') return md;
-            try { return JSON.parse(md); } catch { return null; }
-        }
-
-        function fmt(num) {
-            return typeof num === 'number' ? num.toLocaleString() : num ?? '-';
-        }
-
-        function chip(label) {
-            const el = document.createElement('span');
-            el.className = 'gq-chip';
-            el.textContent = label;
-            return el;
-        }
-
-        // Per-type renderers
-        function renderCharacter(md, card) {
-            // Header line: Name + star rating
-            const name = md?.name || 'Character';
-            const sr = md?.['star rating'];
-            const exp = md?.experience;
-            const header = document.createElement('div');
-            header.className = 'gq-item-line';
-            header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`;
-            card.appendChild(header);
-
-            // Level + XP
-            const meta = document.createElement('div');
-            meta.className = 'gq-item-meta';
-            if (exp?.level != null) meta.appendChild(chip(`Lv ${fmt(exp.level)}`));
-            if (exp?.xp != null) meta.appendChild(chip(`${fmt(exp.xp)} XP`));
-            card.appendChild(meta);
-
-            // Core stats (attack/health/defense/crit)
-            const stats = md?.stats;
-            const statList = document.createElement('div');
-            statList.className = 'gq-stat-grid';
-            const entries = [
-                ['Attack', stats?.attack],
-                ['Health', stats?.health],
-                ['Defense', stats?.defense],
-                ['Crit Rate', stats?.critRate],
-                ['Crit Dmg', stats?.critDamage]
-            ];
-            entries.forEach(([k,v]) => {
-                if (v != null) {
-                    const s = document.createElement('div');
-                    s.className = 'gq-stat';
-                    s.innerHTML = `<span>${k}</span><b>${fmt(v)}</b>`;
-                    statList.appendChild(s);
-                }
-            });
-            if (statList.children.length) card.appendChild(statList);
-
-            // Weapon summary
-            const weapon = md?.equips?.weapon;
-            if (weapon) {
-                const w = document.createElement('div');
-                w.className = 'gq-subsection';
-                const wExp = weapon.experience;
-                const wBuff = weapon.stats?.buff?.buff;
-                const wAttack = weapon.stats?.attack;
-                const buffText = wBuff ? `Buff: [${wBuff.join(', ')}]` : (wAttack != null ? `Attack +${fmt(wAttack)}` : '');
-                w.innerHTML = `
-        <div class="gq-subtitle">Weapon</div>
-        <div class="gq-item-line"><strong>${weapon.name || 'Weapon'}</strong>${weapon['star rating'] ? ` • ${'★'.repeat(Math.min(5, weapon['star rating']))}` : ''}</div>
-        <div class="gq-item-meta"></div>
-        <div class="gq-muted">${buffText}</div>
-      `;
-                const meta = w.querySelector('.gq-item-meta');
-                if (wExp?.level != null) meta.appendChild(chip(`Lv ${fmt(wExp.level)}`));
-                if (wExp?.xp != null) meta.appendChild(chip(`${fmt(wExp.xp)} XP`));
-                card.appendChild(w);
-            }
-
-            // Artifacts grid (name, star, main attribute)
-            const arts = md?.equips?.artifacts || [];
-            if (Array.isArray(arts) && arts.length) {
-                const sec = document.createElement('div');
-                sec.className = 'gq-subsection';
-                sec.innerHTML = `<div class="gq-subtitle">Artifacts (${arts.length})</div>`;
-                const grid = document.createElement('div');
-                grid.className = 'gq-art-grid';
-                arts.forEach(a => {
-                    if (!a) return;
-                    const main = a.stats?.['main attribute'];
-                    const mainBuff = main?.buff ? `[${main.buff.join(', ')}]` : '';
-                    const el = document.createElement('div');
-                    el.className = 'gq-art';
-                    el.innerHTML = `
-          <div class="gq-item-line"><strong>${a.name || 'Artifact'}</strong>${a['star rating'] ? ` • ${'★'.repeat(Math.min(5, a['star rating']))}` : ''}</div>
-          <div class="gq-muted">${mainBuff}</div>
-        `;
-                    const m = document.createElement('div');
-                    m.className = 'gq-item-meta';
-                    if (a.experience?.level != null) m.appendChild(chip(`Lv ${fmt(a.experience.level)}`));
-                    grid.appendChild(el);
-                    el.appendChild(m);
-                });
-                sec.appendChild(grid);
-                card.appendChild(sec);
-            }
-        }
-
-        function renderWeapon(md, card) {
-            const name = md?.name || 'Weapon';
-            const sr = md?.['star rating'];
-            const header = document.createElement('div');
-            header.className = 'gq-item-line';
-            header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`;
-            card.appendChild(header);
-
-            const meta = document.createElement('div');
-            meta.className = 'gq-item-meta';
-            if (md?.experience?.level != null) meta.appendChild(chip(`Lv ${fmt(md.experience.level)}`));
-            if (md?.experience?.xp != null) meta.appendChild(chip(`${fmt(md.experience.xp)} XP`));
-            if (md?.['weapon type']) meta.appendChild(chip(md['weapon type']));
-            card.appendChild(meta);
-
-            const wBuff = md?.stats?.buff?.buff;
-            const wAttack = md?.stats?.attack;
-            const details = document.createElement('div');
-            details.className = 'gq-muted';
-            details.textContent = wBuff ? `Buff: [${wBuff.join(', ')}]` : (wAttack != null ? `Attack +${fmt(wAttack)}` : '');
-            card.appendChild(details);
-
-            if (md?.verbs?.normal || md?.verbs?.critical) {
-                const verbs = document.createElement('div');
-                verbs.className = 'gq-muted';
-                verbs.textContent = `Verbs: ${[md.verbs.normal, md.verbs.critical].filter(Boolean).join(' / ')}`;
-                card.appendChild(verbs);
-            }
-        }
-
-        function renderArtifact(md, card) {
-            const name = md?.name || 'Artifact';
-            const sr = md?.['star rating'];
-            const header = document.createElement('div');
-            header.className = 'gq-item-line';
-            header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`;
-            card.appendChild(header);
-
-            const meta = document.createElement('div');
-            meta.className = 'gq-item-meta';
-            if (md?.experience?.level != null) meta.appendChild(chip(`Lv ${fmt(md.experience.level)}`));
-            if (md?.family) meta.appendChild(chip(md.family));
-            card.appendChild(meta);
-
-            const main = md?.stats?.['main attribute'];
-            const attrs = md?.stats?.attributes || [];
-            const mainBuff = main?.buff ? `[${main.buff.join(', ')}]` : null;
-
-            if (mainBuff) {
-                const line = document.createElement('div');
-                line.className = 'gq-muted';
-                line.textContent = `Main: ${mainBuff}`;
-                card.appendChild(line);
-            }
-
-            if (Array.isArray(attrs) && attrs.length) {
-                const list = document.createElement('div');
-                list.className = 'gq-attrs';
-                attrs.slice(0, 5).forEach(b => {
-                    const txt = b?.buff ? `[${b.buff.join(', ')}]` : '';
-                    if (txt) list.appendChild(chip(txt));
-                });
-                card.appendChild(list);
-            }
-        }
-
-        function createItemCard(item) {
-            const card = document.createElement('div');
-            card.className = `gq-item-card gq-item-${item.type}`;
-
-            // Top line: type + id + rating
-            const top = document.createElement('div');
-            top.className = 'gq-item-top';
-            top.innerHTML = `
-      <div class="gq-item-type">${ucfirst(item.type)}</div>
-      <div class="gq-item-id">#${item.id}</div>
-    `;
-            const rating = document.createElement('div');
-            rating.className = 'gq-item-rating';
-            rating.textContent = `Rating: ${fmt(Number(item.rating ?? 0))}`;
-            top.appendChild(rating);
-            card.appendChild(top);
-
-            const md = safeParse(item.metadata);
-
-            // Dispatch
-            if (item.type === 'character') renderCharacter(md, card);
-            else if (item.type === 'weapon') renderWeapon(md, card);
-            else if (item.type === 'artifact') renderArtifact(md, card);
-            else {
-                const fallback = document.createElement('div');
-                fallback.className = 'gq-muted';
-                fallback.textContent = 'Unknown item type';
-                card.appendChild(fallback);
-            }
-
-            // Description if present
-            if (md?.description) {
-                const desc = document.createElement('div');
-                desc.className = 'gq-desc';
-                desc.textContent = md.description;
-                card.appendChild(desc);
-            }
-
-            return card;
-        }
-
-        function renderItems(limit = 12) {
-            const grid = document.getElementById('gq-items-grid');
-            grid.innerHTML = '';
-            const subset = items.slice(0, limit);
-            subset.forEach(it => grid.appendChild(createItemCard(it)));
-
-            // Show-all button
-            let existing = document.getElementById('gq-items-more');
-            if (existing) existing.remove();
-            if (items.length > limit) {
-                const more = document.createElement('button');
-                more.id = 'gq-items-more';
-                more.className = 'gq-items-more';
-                more.textContent = `Show all (${items.length})`;
-                more.onclick = () => renderItems(items.length);
-                grid.parentElement.appendChild(more);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => renderItems());
-    </script>
+            const ucfirst = s => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+            function safeParse(md) { if (!md) return null; if (typeof md === 'object') return md; try { return JSON.parse(md); } catch { return null; } }
+            function fmt(num) { return typeof num === 'number' ? num.toLocaleString() : num ?? '-'; }
+            function chip(label) { const el = document.createElement('span'); el.className = 'gq-chip'; el.textContent = label; return el; }
+            function renderCharacter(md, card) { const name = md?.name || 'Character'; const sr = md?.['star rating']; const exp = md?.experience; const header = document.createElement('div'); header.className = 'gq-item-line'; header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`; card.appendChild(header); const meta = document.createElement('div'); meta.className = 'gq-item-meta'; if (exp?.level != null) meta.appendChild(chip(`Lv ${fmt(exp.level)}`)); if (exp?.xp != null) meta.appendChild(chip(`${fmt(exp.xp)} XP`)); card.appendChild(meta); const stats = md?.stats; const statList = document.createElement('div'); statList.className = 'gq-stat-grid'; const entries = [['Attack', stats?.attack],['Health', stats?.health],['Defense', stats?.defense],['Crit Rate', stats?.critRate],['Crit Dmg', stats?.critDamage]]; entries.forEach(([k,v]) => { if (v != null) { const s = document.createElement('div'); s.className = 'gq-stat'; s.innerHTML = `<span>${k}</span><b>${fmt(v)}</b>`; statList.appendChild(s); } }); if (statList.children.length) card.appendChild(statList); const weapon = md?.equips?.weapon; if (weapon) { const w = document.createElement('div'); w.className = 'gq-subsection'; const wExp = weapon.experience; const wBuff = weapon.stats?.buff?.buff; const wAttack = weapon.stats?.attack; const buffText = wBuff ? `Buff: [${wBuff.join(', ')}]` : (wAttack != null ? `Attack +${fmt(wAttack)}` : ''); w.innerHTML = `<div class="gq-subtitle">Weapon</div><div class="gq-item-line"><strong>${weapon.name || 'Weapon'}</strong>${weapon['star rating'] ? ` • ${'★'.repeat(Math.min(5, weapon['star rating']))}` : ''}</div><div class="gq-item-meta"></div><div class="gq-muted">${buffText}</div>`; const meta = w.querySelector('.gq-item-meta'); if (wExp?.level != null) meta.appendChild(chip(`Lv ${fmt(wExp.level)}`)); if (wExp?.xp != null) meta.appendChild(chip(`${fmt(wExp.xp)} XP`)); card.appendChild(w); } const arts = md?.equips?.artifacts || []; if (Array.isArray(arts) && arts.length) { const sec = document.createElement('div'); sec.className = 'gq-subsection'; sec.innerHTML = `<div class="gq-subtitle">Artifacts (${arts.length})</div>`; const grid = document.createElement('div'); grid.className = 'gq-art-grid'; arts.forEach(a => { if (!a) return; const main = a.stats?.['main attribute']; const mainBuff = main?.buff ? `[${main.buff.join(', ')}]` : ''; const el = document.createElement('div'); el.className = 'gq-art'; el.innerHTML = `<div class="gq-item-line"><strong>${a.name || 'Artifact'}</strong>${a['star rating'] ? ` • ${'★'.repeat(Math.min(5, a['star rating']))}` : ''}</div><div class="gq-muted">${mainBuff}</div>`; const m = document.createElement('div'); m.className = 'gq-item-meta'; if (a.experience?.level != null) m.appendChild(chip(`Lv ${fmt(a.experience.level)}`)); grid.appendChild(el); el.appendChild(m); }); sec.appendChild(grid); card.appendChild(sec); } }
+            function renderWeapon(md, card) { const name = md?.name || 'Weapon'; const sr = md?.['star rating']; const header = document.createElement('div'); header.className = 'gq-item-line'; header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`; card.appendChild(header); const meta = document.createElement('div'); meta.className = 'gq-item-meta'; if (md?.experience?.level != null) meta.appendChild(chip(`Lv ${fmt(md.experience.level)}`)); if (md?.experience?.xp != null) meta.appendChild(chip(`${fmt(md.experience.xp)} XP`)); if (md?.['weapon type']) meta.appendChild(chip(md['weapon type'])); card.appendChild(meta); const wBuff = md?.stats?.buff?.buff; const wAttack = md?.stats?.attack; const details = document.createElement('div'); details.className = 'gq-muted'; details.textContent = wBuff ? `Buff: [${wBuff.join(', ')}]` : (wAttack != null ? `Attack +${fmt(wAttack)}` : ''); card.appendChild(details); if (md?.verbs?.normal || md?.verbs?.critical) { const verbs = document.createElement('div'); verbs.className = 'gq-muted'; verbs.textContent = `Verbs: ${[md.verbs.normal, md.verbs.critical].filter(Boolean).join(' / ')}`; card.appendChild(verbs); } }
+            function renderArtifact(md, card) { const name = md?.name || 'Artifact'; const sr = md?.['star rating']; const header = document.createElement('div'); header.className = 'gq-item-line'; header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`; card.appendChild(header); const meta = document.createElement('div'); meta.className = 'gq-item-meta'; if (md?.experience?.level != null) meta.appendChild(chip(`Lv ${fmt(md.experience.level)}`)); if (md?.family) meta.appendChild(chip(md.family)); card.appendChild(meta); const main = md?.stats?.['main attribute']; const attrs = md?.stats?.attributes || []; const mainBuff = main?.buff ? `[${main.buff.join(', ')}]` : null; if (mainBuff) { const line = document.createElement('div'); line.className = 'gq-muted'; line.textContent = `Main: ${mainBuff}`; card.appendChild(line); } if (Array.isArray(attrs) && attrs.length) { const list = document.createElement('div'); list.className = 'gq-attrs'; attrs.slice(0, 5).forEach(b => { const txt = b?.buff ? `[${b.buff.join(', ')}]` : ''; if (txt) list.appendChild(chip(txt)); }); card.appendChild(list); } }
+            function createItemCard(item) { const card = document.createElement('div'); card.className = `gq-item-card gq-item-${item.type}`; const top = document.createElement('div'); top.className = 'gq-item-top'; top.innerHTML = `<div class="gq-item-type">${ucfirst(item.type)}</div><div class="gq-item-id">#${item.id}</div>`; const rating = document.createElement('div'); rating.className = 'gq-item-rating'; rating.textContent = `Rating: ${fmt(Number(item.rating ?? 0))}`; top.appendChild(rating); card.appendChild(top); const md = safeParse(item.metadata); if (item.type === 'character') renderCharacter(md, card); else if (item.type === 'weapon') renderWeapon(md, card); else if (item.type === 'artifact') renderArtifact(md, card); else { const fallback = document.createElement('div'); fallback.className = 'gq-muted'; fallback.textContent = 'Unknown item type'; card.appendChild(fallback); } if (md?.description) { const desc = document.createElement('div'); desc.className = 'gq-desc'; desc.textContent = md.description; card.appendChild(desc); } return card; }
+            function renderItems(limit = 12) { const grid = document.getElementById('gq-items-grid'); if (!grid) return; grid.innerHTML = ''; const subset = items.slice(0, limit); subset.forEach(it => grid.appendChild(createItemCard(it))); let existing = document.getElementById('gq-items-more'); if (existing) existing.remove(); if (items.length > limit) { const more = document.createElement('button'); more.id = 'gq-items-more'; more.className = 'gq-items-more'; more.textContent = `Show all (${items.length})`; more.onclick = () => renderItems(items.length); grid.parentElement.appendChild(more); } }
+            document.addEventListener('DOMContentLoaded', () => renderItems());
+        </script>
 </div>
 {% endif %}
 {% if account.has_osu %}
