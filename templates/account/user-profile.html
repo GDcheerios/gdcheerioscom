@@ -13,7 +13,7 @@
 <div class="block" style="margin-top: 3%;">
     <div style="display: flex; flex-direction: row; justify-content: space-between; margin-bottom: 10px;">
         <div style="display: flex; flex-direction: row; margin-right: 10px;">
-            <img style="display: block;" src="{{ account.pfp }}">
+<!--            <img style="display: block;" src="{{ account.pfp }}">-->
             <div>
                 <h1 class="username">{{account.username}}</h1>
                 <div id="tags"></div>
@@ -113,27 +113,21 @@
             <div style="border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px; display:grid; grid-template-columns: 140px 1fr 160px; gap:12px; align-items:center;">
                 <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
                     <div style="font-size:12px; opacity:0.75;">Level</div>
-                    <div style="
-                        width:64px; height:64px; border-radius:14px;
-                        display:flex; align-items:center; justify-content:center;
-                        background: linear-gradient(135deg,#2a2a2a,#1a1a1a);
-                        border:1px solid #333; font-weight:900; font-size:22px;">
-                        {{ account.gq_data['metadata']['level'] | int }}
+                    <div id="gq-level-badge" class="gq-level-badge">
+                      <span class="gq-level-text">{{ account.gq_data['metadata']['level'] | int }}</span>
                     </div>
                     <div style="font-size:12px; opacity:0.7;">Total XP</div>
                     <div style="font-weight:700;">{{ "{:,}".format(score_i) }}</div>
                 </div>
                 <div>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="position:relative; flex:1; height:18px; background:#0f0f0f; border:1px solid #272727; border-radius:999px; overflow:hidden;">
-                            <div style="
+                        <div id="gq-level-progress" style="position:relative; flex:1; height:18px; background:#0f0f0f; border:1px solid #272727; border-radius:999px; overflow:hidden;">
+                            <div id="gq-level-progress-fill" style="
                                 position:absolute; height:100%; width: {{ pct }}%;
                                 background: linear-gradient(90deg,#00d2ff,#3a7bd5);
                                 box-shadow: 0 0 12px rgba(0,210,255,0.35);">
                             </div>
-                            <div style="position:absolute; inset:0; background:
-                                repeating-linear-gradient(120deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 8px, transparent 8px, transparent 16px);
-                                mix-blend-mode: overlay;"></div>
+                            <div id="gq-level-progress-overlay"></div>
                         </div>
                         <div style="min-width:46px; text-align:right; font-variant-numeric: tabular-nums; font-weight:700; font-size:12px; opacity:0.9;">
                             {{ pct }}%
@@ -150,6 +144,166 @@
                 </div>
             </div>
         </div>
+        <script>
+            (function () {
+                // Dynamic color and ornamentation based on level
+                const level = Number({{ account.gq_data['metadata']['level'] | int }});
+                const step = 20; // color changes every X levels (adjust X here)
+                const tierIndex = Math.floor(level / step);
+
+                // Define a palette progression
+                const palette = [
+                    ['#7a7f87','#58606a'], // 0-4
+                    ['#36d1dc','#5b86e5'], // 5-9
+                    ['#22e1ff','#1d8fe1'], // 10-14
+                    ['#00f5a0','#00d9f5'], // 15-19
+                    ['#ffd200','#f7971e'], // 20-24
+                    ['#ff7eb3','#ff2a68'], // 25-29
+                    ['#a18cd1','#fbc2eb'], // 30-34
+                    ['#c471f5','#fa71cd'], // 35-39
+                    ['#f953c6','#b91d73'], // 40-44
+                    ['#00c6ff','#0072ff'], // 45-49
+                ];
+                const [c1, c2] = palette[tierIndex % palette.length];
+
+                const badge = document.getElementById('gq-level-badge');
+                const fill = document.getElementById('gq-level-progress-fill');
+                const overlay = document.getElementById('gq-level-progress-overlay');
+
+                if (badge) {
+                    // expose colors for other scripts (sparks)
+                    badge.dataset.c1 = c1;
+                    badge.dataset.c2 = c2;
+
+                    // Badge color by level tier
+                    badge.style.borderColor = c2;
+                    badge.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+                    badge.style.boxShadow = `0 0 16px ${c1}55`;
+                    // Add milestone ornament every 100 levels
+                    const milestones = Math.floor(level / 100);
+                    if (milestones > 0) {
+                        badge.style.position = 'relative';
+                        // crown/star rails
+                        const textEl = badge.querySelector('.gq-level-text');
+                        const crownEl = badge.querySelector('.gq-level-crowns') || document.createElement('span');
+                        crownEl.className = 'gq-level-crowns';
+                        crownEl.style.cssText = 'position:absolute; top:-8px; right:-8px; font-size:14px;';
+                        crownEl.textContent = '✦'.repeat(Math.min(3, milestones));
+                        badge.appendChild(crownEl);
+                    }
+                }
+                if (fill) {
+                    // Progress bar gradient by level tier
+                    fill.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
+                    fill.style.boxShadow = `0 0 12px ${c1}55`;
+                }
+                if (overlay) {
+                    // Extra visual flair every 100 levels
+                    const milestones = Math.floor(level / 100);
+                    if (milestones > 0) {
+                        overlay.style.background = `
+                                radial-gradient(circle at 10% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 30% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 50% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 70% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 90% 50%, ${c1}15 0 6px, transparent 7px)
+                            `;
+                        overlay.style.mixBlendMode = 'screen';
+                        overlay.style.opacity = Math.min(0.25 + milestones * 0.05, 0.5);
+                    }
+                }
+            })();
+        </script>
+        <script>
+            (function () {
+                const level = Number({{ account.gq_data['metadata']['level'] | int }});
+                const badge = document.getElementById('gq-level-badge');
+
+                if (!badge) return;
+
+                const milestones = Math.floor(level / 100); // 1 at 100–199, 2 at 200–299, etc.
+                if (milestones > 0) {
+                    badge.classList.add('aura');
+                    // Intensity scaling: stronger opacity and faster sweep every 100 levels
+                    const auraOpacity = Math.min(0.25 + milestones * 0.08, 0.7);
+                    const flameOpacity = Math.min(0.18 + milestones * 0.05, 0.5);
+                    const auraSpeed = Math.max(6 - milestones, 2);  // faster rotation
+                    const flameSpeed = Math.max(1.6 - milestones * 0.1, 0.8);
+
+                    badge.style.setProperty('--aura-opacity', auraOpacity.toString());
+                    badge.style.setProperty('--flame-opacity', flameOpacity.toString());
+                    badge.style.setProperty('--aura-speed', auraSpeed + 's');
+                    badge.style.setProperty('--flame-speed', flameSpeed + 's');
+
+                    // Remove any accidental shrink: ensure scale is >= 1
+                    const scale = Math.max(1, Math.min(1 + milestones * 0.03, 1.12));
+                    badge.style.transform = `scale(${scale})`;
+                    badge.style.transformOrigin = 'center center';
+                }
+            })();
+        </script>
+        <script>
+            (function () {
+                const level = Number({{ account.gq_data['metadata']['level'] | int }});
+                const badge = document.getElementById('gq-level-badge');
+                if (!badge) return;
+
+                const milestones = Math.floor(level / 100);
+                if (milestones <= 0) return;
+
+                // Create/reuse spark layer
+                let layer = badge.querySelector('.gq-sparks');
+                if (!layer) {
+                    layer = document.createElement('div');
+                    layer.className = 'gq-sparks';
+                    badge.appendChild(layer);
+                }
+
+                // Choose palette cyclically per 100s
+                const palettes = ['el-fire','el-ice','el-light','el-void'];
+                const paletteClass = palettes[(milestones - 1) % palettes.length];
+                layer.className = 'gq-sparks ' + paletteClass;
+
+                // Tie spark colors to the badge gradient colors computed earlier
+                const c1 = badge.dataset.c1, c2 = badge.dataset.c2;
+                if (c1 && c2) {
+                    layer.style.setProperty('--sp-c1', c1);
+                    layer.style.setProperty('--sp-c2', c2);
+                    layer.style.setProperty('--sp-glow', c2 + '99');
+                }
+
+                // Scale particle count/speed/size per milestone (with caps)
+                const count = Math.min(6 + milestones * 4, 40);           // number of sparks
+                const baseSpeed = Math.max(2.4 - milestones * 0.18, 0.9);  // seconds
+                const sizeMin = 3, sizeMax = Math.min(6 + milestones, 10);
+
+                // Regenerate sparks to reflect new intensity
+                layer.innerHTML = '';
+                for (let i = 0; i < count; i++) {
+                    const sp = document.createElement('div');
+                    sp.className = 'gq-spark';
+
+                    // Random horizontal origin near center with spread that grows over time
+                    const spread = 50; // px
+                    const originX = 50 + (Math.random() * spread - spread / 2); // %
+                    const driftX = (Math.random() * 16 - 8) * (2 + milestones * 1); // px
+                    const delay = (Math.random() * baseSpeed).toFixed(2) + 's';
+                    const speed = (baseSpeed * (0.7 + Math.random() * 0.6)).toFixed(2) + 's';
+                    const size = (sizeMin + Math.random() * (sizeMax - sizeMin)).toFixed(1) + 'px';
+
+                    sp.style.setProperty('--sp-x', originX + '%');
+                    sp.style.setProperty('--dx', driftX.toFixed(1) + 'px');
+                    sp.style.setProperty('--sp-delay', delay);
+                    sp.style.setProperty('--sp-speed', speed);
+                    sp.style.setProperty('--sp-size', size);
+
+                    // Slight lateral start offset
+                    sp.style.setProperty('--sx', (Math.random()*6 - 3).toFixed(1) + 'px');
+
+                    layer.appendChild(sp);
+                }
+            })();
+        </script>
             <div id="gq-metrics-chart" style="margin-top:12px; border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="font-weight:700;">Rank Graph</div>
@@ -328,27 +482,49 @@
         </script>
 </div>
 {% endif %}
-{% if account.has_osu %}
-<div id="osu-data" class="block">
-    <h1>OSU!</h1>
-    <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px; margin-top: 10px;">
-        <div style="display: flex; flex-direction: row;">
-            <img src="https://a.ppy.sh/{{ account.osu_id }}">
-            <div style="display: flex; flex-direction: column; margin-left: 10px;">
-                <h2 style="margin-bottom: 0;"><a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{
-                    account.osu_data.username }}</a></h2>
-                <h2>#{{ "{:,}".format(account.osu_data.rank) }}</h2>
+        {% if account.has_osu %}
+        <div id="osu-data" class="block gq-card">
+            <h1 style="margin-top:0">osu!</h1>
+            <div class="osu-section">
+                <!-- Left: profile overview (kept) -->
+                <div class="osu-card">
+                    <div class="osu-overview">
+                        <img class="osu-avatar" src="https://a.ppy.sh/{{ account.osu_id }}" alt="osu avatar">
+                        <div>
+                            <div class="osu-username">
+                                <a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{ account.osu_data.username }}</a>
+                            </div>
+                            <div class="osu-rank-label">Global Rank</div>
+                            <div class="osu-rank-value">#{{ "{:,}".format(account.osu_data.rank) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: concise highlights (no extra stats beyond existing four) -->
+                <div class="osu-card">
+                    <div class="osu-highlights">
+                        <div class="osu-highlight">
+                            <div class="label">Total Score</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.score) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Plays</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.playcount) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Accuracy</div>
+                            <div class="value">{{ account.osu_data.accuracy }}%</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Performance</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.performance) }} pp</div>
+                        </div>
+                        <!-- empty cells auto-flow; layout remains neat on different widths -->
+                    </div>
+                </div>
             </div>
         </div>
-        <div style="display: flex; flex-direction: column; margin-left: 10px;">
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.score) }} score</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.playcount) }} plays</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.accuracy) }} accuracy</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.performance) }} pp</h2>
-        </div>
-    </div>
-</div>
-{% endif %}
+        {% endif %}
 {% endblock %}
 </body>
 </html>
