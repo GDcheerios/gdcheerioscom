@@ -328,27 +328,49 @@
         </script>
 </div>
 {% endif %}
-{% if account.has_osu %}
-<div id="osu-data" class="block">
-    <h1>OSU!</h1>
-    <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px; margin-top: 10px;">
-        <div style="display: flex; flex-direction: row;">
-            <img src="https://a.ppy.sh/{{ account.osu_id }}">
-            <div style="display: flex; flex-direction: column; margin-left: 10px;">
-                <h2 style="margin-bottom: 0;"><a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{
-                    account.osu_data.username }}</a></h2>
-                <h2>#{{ "{:,}".format(account.osu_data.rank) }}</h2>
+        {% if account.has_osu %}
+        <div id="osu-data" class="block gq-card">
+            <h1 style="margin-top:0">osu!</h1>
+            <div class="osu-section">
+                <!-- Left: profile overview (kept) -->
+                <div class="osu-card">
+                    <div class="osu-overview">
+                        <img class="osu-avatar" src="https://a.ppy.sh/{{ account.osu_id }}" alt="osu avatar">
+                        <div>
+                            <div class="osu-username">
+                                <a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{ account.osu_data.username }}</a>
+                            </div>
+                            <div class="osu-rank-label">Global Rank</div>
+                            <div class="osu-rank-value">#{{ "{:,}".format(account.osu_data.rank) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: concise highlights (no extra stats beyond existing four) -->
+                <div class="osu-card">
+                    <div class="osu-highlights">
+                        <div class="osu-highlight">
+                            <div class="label">Total Score</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.score) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Plays</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.playcount) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Accuracy</div>
+                            <div class="value">{{ account.osu_data.accuracy }}%</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Performance</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.performance) }} pp</div>
+                        </div>
+                        <!-- empty cells auto-flow; layout remains neat on different widths -->
+                    </div>
+                </div>
             </div>
         </div>
-        <div style="display: flex; flex-direction: column; margin-left: 10px;">
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.score) }} score</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.playcount) }} plays</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.accuracy) }} accuracy</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.performance) }} pp</h2>
-        </div>
-    </div>
-</div>
-{% endif %}
+        {% endif %}
 {% endblock %}
 </body>
 </html>
