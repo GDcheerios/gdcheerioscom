@@ -10,6 +10,10 @@ PORT = 8080
 SECRET = "MySecret"
 IS_PRODUCTION = 0 OR 1  # TRUE | FALSE
 
+SMTP_HOST = "smtp.gmail.com"
+SMTP_EMAIL = "no-reply@domain.com"
+SMTP_PASSWORD = "password"
+
 DB_HOSTNAME = "hostname"
 DB_PASSWORD = "password"
 DB_USER = "user"
