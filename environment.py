@@ -18,6 +18,7 @@ debug = not is_production  # debugging?
 smtp_host = os.environ['SMTP_HOST']
 smtp_email = os.environ['SMTP_EMAIL']
 smtp_password = os.environ['SMTP_PASSWORD']
+bucket_path = os.environ['BUCKET_PATH']
 print_end()
 
 print_start("setting gq variables")
