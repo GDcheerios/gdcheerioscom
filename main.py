@@ -9,6 +9,9 @@ from flask_bcrypt import Bcrypt
 # environment
 import environment
 
+# util
+from utils import bucket_helper as bucket
+
 # routes
 #   api
 from routes.api.key_routes import key_blueprint
@@ -31,6 +34,12 @@ def create_app():
 
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)
+
+    @app.context_processor
+    def inject_template_vars():
+        return {
+            "bucket": bucket
+        }
 
     # logging config
     log = logging.getLogger('werkzeug')
