@@ -146,12 +146,9 @@
         </div>
         <script>
             (function () {
-                // Dynamic color and ornamentation based on level
                 const level = Number({{ account.gq_data['metadata']['level'] | int }});
-                const step = 20; // color changes every X levels (adjust X here)
+                const step = 20;
                 const tierIndex = Math.floor(level / step);
-
-                // Define a palette progression
                 const palette = [
                     ['#7a7f87','#58606a'], // 0-4
                     ['#36d1dc','#5b86e5'], // 5-9
@@ -188,7 +185,7 @@
                         const crownEl = badge.querySelector('.gq-level-crowns') || document.createElement('span');
                         crownEl.className = 'gq-level-crowns';
                         crownEl.style.cssText = 'position:absolute; top:-8px; right:-8px; font-size:14px;';
-                        crownEl.textContent = '✦'.repeat(Math.min(3, milestones));
+                        crownEl.textContent = '✦'.repeat(milestones);
                         badge.appendChild(crownEl);
                     }
                 }
@@ -221,21 +218,18 @@
 
                 if (!badge) return;
 
-                const milestones = Math.floor(level / 100); // 1 at 100–199, 2 at 200–299, etc.
+                const milestones = Math.floor(level / 100);
                 if (milestones > 0) {
                     badge.classList.add('aura');
-                    // Intensity scaling: stronger opacity and faster sweep every 100 levels
                     const auraOpacity = Math.min(0.25 + milestones * 0.08, 0.7);
                     const flameOpacity = Math.min(0.18 + milestones * 0.05, 0.5);
-                    const auraSpeed = Math.max(6 - milestones, 2);  // faster rotation
+                    const auraSpeed = Math.max(6 - milestones, 2);
                     const flameSpeed = Math.max(1.6 - milestones * 0.1, 0.8);
 
                     badge.style.setProperty('--aura-opacity', auraOpacity.toString());
                     badge.style.setProperty('--flame-opacity', flameOpacity.toString());
                     badge.style.setProperty('--aura-speed', auraSpeed + 's');
                     badge.style.setProperty('--flame-speed', flameSpeed + 's');
-
-                    // Remove any accidental shrink: ensure scale is >= 1
                     const scale = Math.max(1, Math.min(1 + milestones * 0.03, 1.12));
                     badge.style.transform = `scale(${scale})`;
                     badge.style.transformOrigin = 'center center';
@@ -251,7 +245,6 @@
                 const milestones = Math.floor(level / 100);
                 if (milestones <= 0) return;
 
-                // Create/reuse spark layer
                 let layer = badge.querySelector('.gq-sparks');
                 if (!layer) {
                     layer = document.createElement('div');
@@ -259,51 +252,73 @@
                     badge.appendChild(layer);
                 }
 
-                // Choose palette cyclically per 100s
-                const palettes = ['el-fire','el-ice','el-light','el-void'];
-                const paletteClass = palettes[(milestones - 1) % palettes.length];
-                layer.className = 'gq-sparks ' + paletteClass;
+                    const levelBands = [
+                        {% for band in gq_level_colors %}
+                        {{ "" if loop.first else "," }}{
+                            min: {{ band[0] }},
+                            c1: "{{ band[1] }}",
+                            c2: "{{ band[2] }}"
+                        }
+                        {% endfor %}
+                    ];
 
-                // Tie spark colors to the badge gradient colors computed earlier
-                const c1 = badge.dataset.c1, c2 = badge.dataset.c2;
-                if (c1 && c2) {
+                    function getBandForLevel(lvl) {
+                        let eff = lvl % 100;
+                        if (eff === 0) eff = 100;
+
+                        let snapped;
+                        if (eff <= 9) snapped = 1;
+                        else if (eff < 100) snapped = Math.floor(eff / 10) * 10;
+                        else snapped = 100;
+
+                        let chosen = levelBands[0];
+                        for (const band of levelBands) {
+                            if (snapped >= band.min) {
+                                chosen = band;
+                            }
+                        }
+                        return chosen;
+                    }
+
+                    const band = getBandForLevel(level);
+                    const c1 = band.c1;
+                    const c2 = band.c2;
+
+                    const palettes = ['el-fire','el-ice','el-light','el-void'];
+                    const paletteClass = palettes[(milestones - 1) % palettes.length];
+                    layer.className = 'gq-sparks ' + paletteClass;
+
                     layer.style.setProperty('--sp-c1', c1);
                     layer.style.setProperty('--sp-c2', c2);
                     layer.style.setProperty('--sp-glow', c2 + '99');
-                }
 
-                // Scale particle count/speed/size per milestone (with caps)
-                const count = Math.min(6 + milestones * 4, 40);           // number of sparks
-                const baseSpeed = Math.max(2.4 - milestones * 0.18, 0.9);  // seconds
-                const sizeMin = 3, sizeMax = Math.min(6 + milestones, 10);
+                    const count = Math.min(6 + milestones * 4, 40);
+                    const baseSpeed = Math.max(2.4 - milestones * 0.18, 0.9);
+                    const sizeMin = 3, sizeMax = Math.min(6 + milestones, 10);
 
-                // Regenerate sparks to reflect new intensity
-                layer.innerHTML = '';
-                for (let i = 0; i < count; i++) {
-                    const sp = document.createElement('div');
-                    sp.className = 'gq-spark';
+                    layer.innerHTML = '';
+                    for (let i = 0; i < count; i++) {
+                        const sp = document.createElement('div');
+                        sp.className = 'gq-spark';
 
-                    // Random horizontal origin near center with spread that grows over time
-                    const spread = 50; // px
-                    const originX = 50 + (Math.random() * spread - spread / 2); // %
-                    const driftX = (Math.random() * 16 - 8) * (2 + milestones * 1); // px
-                    const delay = (Math.random() * baseSpeed).toFixed(2) + 's';
-                    const speed = (baseSpeed * (0.7 + Math.random() * 0.6)).toFixed(2) + 's';
-                    const size = (sizeMin + Math.random() * (sizeMax - sizeMin)).toFixed(1) + 'px';
+                        const spread = 50; // px
+                        const originX = 50 + (Math.random() * spread - spread / 2); // %
+                        const driftX = (Math.random() * 16 - 8) * (2 + milestones * 1); // px
+                        const delay = (Math.random() * baseSpeed).toFixed(2) + 's';
+                        const speed = (baseSpeed * (0.7 + Math.random() * 0.6)).toFixed(2) + 's';
+                        const size = (sizeMin + Math.random() * (sizeMax - sizeMin)).toFixed(1) + 'px';
 
-                    sp.style.setProperty('--sp-x', originX + '%');
-                    sp.style.setProperty('--dx', driftX.toFixed(1) + 'px');
-                    sp.style.setProperty('--sp-delay', delay);
-                    sp.style.setProperty('--sp-speed', speed);
-                    sp.style.setProperty('--sp-size', size);
+                        sp.style.setProperty('--sp-x', originX + '%');
+                        sp.style.setProperty('--dx', driftX.toFixed(1) + 'px');
+                        sp.style.setProperty('--sp-delay', delay);
+                        sp.style.setProperty('--sp-speed', speed);
+                        sp.style.setProperty('--sp-size', size);
+                        sp.style.setProperty('--sx', (Math.random()*6 - 3).toFixed(1) + 'px');
 
-                    // Slight lateral start offset
-                    sp.style.setProperty('--sx', (Math.random()*6 - 3).toFixed(1) + 'px');
-
-                    layer.appendChild(sp);
-                }
-            })();
-        </script>
+                        layer.appendChild(sp);
+                    }
+                })();
+            </script>
             <div id="gq-metrics-chart" style="margin-top:12px; border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="font-weight:700;">Rank Graph</div>
@@ -424,6 +439,84 @@
                         tooltip.style.display = 'block';
                     });
                     canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+                })();
+            </script>
+            <script>
+                (function () {
+                    const level = Number({{ account.gq_data['metadata']['level'] | int }});
+
+                    // JS view of the backend level color table
+                    const levelBands = [
+                        {% for band in gq_level_colors %}
+                        {{ "" if loop.first else "," }}{
+                            min: {{ band[0] }},
+                            c1: "{{ band[1] }}",
+                            c2: "{{ band[2] }}"
+                        }
+                        {% endfor %}
+                    ];
+
+                    function getBand(lvl) {
+                        let chosen = levelBands[0];
+                        for (const band of levelBands) {
+                            if (lvl >= band.min) {
+                                chosen = band;
+                            }
+                        }
+                        return chosen;
+                    }
+
+                    const band = getBand(level);
+                    const c1 = band.c1;
+                    const c2 = band.c2;
+
+                    const badge = document.getElementById('gq-level-badge');
+                    const fill = document.getElementById('gq-level-progress-fill');
+                    const overlay = document.getElementById('gq-level-progress-overlay');
+
+                    if (badge) {
+                        // expose colors for other scripts (sparks)
+                        badge.dataset.c1 = c1;
+                        badge.dataset.c2 = c2;
+
+                        // Badge color by level band
+                        badge.style.borderColor = c2;
+                        badge.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+                        badge.style.boxShadow = `0 0 16px ${c1}55`;
+
+                        // Add milestone ornament every 100 levels
+                        const milestones = Math.floor(level / 100);
+                        if (milestones > 0) {
+                            badge.style.position = 'relative';
+                            const crownEl = badge.querySelector('.gq-level-crowns') || document.createElement('span');
+                            crownEl.className = 'gq-level-crowns';
+                            crownEl.style.cssText = 'position:absolute; top:-8px; right:-8px; font-size:14px;';
+                            crownEl.textContent = '✦'.repeat(milestones);
+                            badge.appendChild(crownEl);
+                        }
+                    }
+
+                    if (fill) {
+                        // Progress bar gradient by level band
+                        fill.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
+                        fill.style.boxShadow = `0 0 12px ${c1}55`;
+                    }
+
+                    if (overlay) {
+                        // Optional: soft particles using same band colors
+                        const milestones = Math.floor(level / 100);
+                        if (milestones > 0) {
+                            overlay.style.background = `
+                                radial-gradient(circle at 10% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 30% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 50% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 70% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 90% 50%, ${c1}15 0 6px, transparent 7px)
+                            `;
+                            overlay.style.mixBlendMode = 'screen';
+                            overlay.style.opacity = Math.min(0.25 + milestones * 0.05, 0.5);
+                        }
+                    }
                 })();
             </script>
         <div id="gq-items" class="block">
