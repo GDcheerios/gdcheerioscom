@@ -2,6 +2,7 @@ import json
 from flask import Blueprint, render_template, make_response, request, redirect
 
 import environment
+from environment import gq_level_colors
 from objects import Account
 
 account_blueprint = Blueprint("account_blueprint", __name__)
@@ -17,7 +18,8 @@ def account():
 
 
 @account_blueprint.route("/<id>")
-def user(id: int | str): return render_template("account/user-profile.html", account=Account(id), rater=environment.gq_rater)
+def user(id: int | str): return render_template("account/user-profile.html", account=Account(id),
+                                                rater=environment.gq_rater, gq_level_colors=environment.gq_level_colors)
 
 
 @account_blueprint.route("/create")

@@ -21,7 +21,11 @@ def gentrys_quest_home(): return render_template("gentrys quest/home.html")
 
 
 @gentrys_quest_blueprint.route("/levels")
-def gentrys_quest_levels(): return render_template("gentrys quest/levels.html", levels=environment.gq_levels)
+def gentrys_quest_levels(): return render_template(
+    "gentrys quest/levels.html",
+    levels=environment.gq_levels,
+    level_colors=environment.gq_level_colors
+)
 
 
 @gentrys_quest_blueprint.route("/merch")
