@@ -1,16 +1,8 @@
 import environment
+
 from objects.Account import Account
 
-
-def account_create(username, password, email, osu_id=0, about_me=""):
-    """
-    Create a new account.
-    """
-
-    password = str(password)
-    password = str(environment.bcrypt.generate_password_hash(password))[2:-1]  # remove the byte chars
-
-    Account.create(username, password, email, osu_id, about_me)
+from api.key_api import issue_access_token
 
 
 def login(username, password) -> tuple[dict, int]:
@@ -25,9 +17,11 @@ def login(username, password) -> tuple[dict, int]:
     account = Account(username)
     if account.exists:
         if environment.bcrypt.check_password_hash(account.password, password):
+            access_token = issue_access_token(account.id)
             return {
                 "success": True,
-                "data": account.jsonify()
+                "data": account.jsonify(),
+                "access_token": access_token
             }, 200
 
         return {

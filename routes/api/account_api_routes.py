@@ -1,13 +1,15 @@
+import hashlib
 from datetime import datetime, timedelta
 from flask import Blueprint, request, redirect, make_response, render_template, Response
 
+import environment
 from api import account_api
 from objects.Account import Account
 
 account_api_blueprint = Blueprint('account', __name__)
 
 
-@account_api_blueprint.route("/create-account", methods=['POST'])
+@account_api_blueprint.route("/account/create-account", methods=['POST'])
 def create_account() -> Response:
     """
     The account creation POST method.
@@ -28,33 +30,10 @@ def create_account() -> Response:
         osu_id = 0
 
     about_me = request.form.get("am")
-    account_api.account_create(username, password, email, osu_id, about_me)
-    login_result = account_api.login(username, password)
 
-    # Check if the user could be created
-    if login_result[1] == 200:
-        resp = make_response(
-            redirect(
-                '/account'
-            )
-        )
+    Account.queue(username, password, email, osu_id, about_me)
 
-        resp.set_cookie('userID', str(login_result[0]['data']["id"]))
-
-    else:
-        error = ""
-        if login_result[1] == 404:
-            error = "Couldn't find account with that username."
-        elif login_result[1] == 401:
-            error = "Incorrect password."
-
-        resp = make_response(
-            render_template(
-                'account/create.html', warning=error
-            )
-        )
-
-    return resp
+    return redirect("/account/create?msg=Please check your email for a verification link.")
 
 
 @account_api_blueprint.route('/account/login-form', methods=['POST'])
@@ -91,6 +70,51 @@ def login_json():
     return login_result
 
 
+@account_api_blueprint.route("/account/verify")
+def verify_account() -> Response:
+    sid = request.args.get("sid")
+    token = request.args.get("token")
+
+    if not sid or not token:
+        return Response(status=400)
+
+    row = environment.database.fetch_to_dict(
+        "SELECT id, email, username, password, osu_id, about, token, expires FROM pending_accounts WHERE id = %s",
+        params=(sid,)
+    )
+    if not row:
+        return redirect("/account/create?msg=invalid or used")
+
+    environment.database.execute(
+        """
+        DELETE
+        FROM pending_accounts
+        WHERE expires < NOW()
+          OR id = %s
+        """,
+        params=(sid,)
+    )
+
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    if row["token"] != token_hash:
+        return redirect("/account/create?msg=invalid token")
+
+    if Account.name_exists(row["username"]):
+        return redirect("/account/create?msg=username taken")
+
+    account = Account.create(
+        row["username"],
+        row["password"],
+        row["email"],
+        row["osu_id"],
+        row["about"]
+    )
+
+    resp = make_response(redirect(f"/account/{account.id}"))
+    resp.set_cookie('userID', str(account.id), expires=datetime.now() + timedelta(days=360))
+    return resp
+
+
 @account_api_blueprint.route("/account/signout")
 def signout():
     resp = make_response(render_template('account/login.html'))
@@ -107,6 +131,19 @@ def change_username():
         Account.change_username(int(id), username)
 
     return redirect(f'/user/{account.id}')
+
+
+@account_api_blueprint.route("/account/check/username", methods=["GET"])
+def check_username():
+    username = request.args.get("username")
+    return {"exists": Account.name_exists(username)}
+
+
+@account_api_blueprint.route("/account/check/email", methods=["GET"])
+def check_email():
+    email = request.args.get("email")
+    print(email, Account.email_exists(email))
+    return {"exists": Account.email_exists(email)}
 
 
 @account_api_blueprint.route("/account/grab/<identifier>")

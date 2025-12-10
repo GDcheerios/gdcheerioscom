@@ -49,3 +49,61 @@ def get_xp(id: int) -> dict | str:
         }
     else:
         return 'user not found'
+
+
+def rate_user(id: int) -> dict:
+    user_items = environment.database.fetch_all_to_dict(
+        """
+        SELECT type, rating
+        FROM gq_items
+        WHERE owner = %s
+        """,
+        params=(id,)
+    )
+    if user_items:
+        unweighted_rating = sum(item["rating"] for item in user_items if item.get("rating") is not None)
+        weighted_rating = environment.gq_rater.get_user_rating(user_items)
+        rank, tier = environment.gq_rater.get_rank(weighted_rating)
+
+        environment.database.fetch_all_to_dict(
+            """
+            UPDATE gq_rankings
+            SET weighted = %s, unweighted = %s, rank = %s, tier = %s
+            WHERE id = %s
+            RETURNING *
+            """,
+            params=(weighted_rating, unweighted_rating, rank, tier, id)
+        )
+
+        placement = environment.database.fetch_one(
+            """
+            SELECT COUNT(*) + 1
+            FROM gq_rankings
+            WHERE weighted > %s
+            """,
+            params=(weighted_rating,)
+        )[0]
+
+        environment.database.execute(
+            """
+            INSERT INTO gq_metrics (user_id, rank, gp)
+            VALUES (%s, %s, %s)
+            """,
+            params=(id, placement, weighted_rating)
+        )
+
+        return {
+            "weighted": weighted_rating,
+            "unweighted": unweighted_rating,
+            "rank": rank,
+            "tier": tier,
+            "placement": placement
+        }
+
+    return {
+        "weighted": 0,
+        "unweighted": 0,
+        "rank": 'unranked',
+        "tier": '1',
+        "placement": 0
+    }

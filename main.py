@@ -9,9 +9,12 @@ from flask_bcrypt import Bcrypt
 # environment
 import environment
 
+# util
+from utils import bucket_helper as bucket
+
 # routes
 #   api
-from routes.api.token_routes import token_blueprint
+from routes.api.key_routes import key_blueprint
 from routes.api.account_api_routes import account_api_blueprint
 from routes.api.osu_api_routes import osu_api_blueprint
 from routes.api.gentrys_quest_api_routes import gentrys_quest_api_blueprint
@@ -30,12 +33,14 @@ def create_app():
         static_folder='static',  # Name of directory for static files
     )
 
-    @app.context_processor
-    def inject_variables():
-        return {'rater': environment.gq_rater}
-
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)
+
+    @app.context_processor
+    def inject_template_vars():
+        return {
+            "bucket": bucket
+        }
 
     # logging config
     log = logging.getLogger('werkzeug')
@@ -43,14 +48,14 @@ def create_app():
 
     # load blueprints
     #   api
-    # app.register_blueprint(token_blueprint, url_prefix='/api')
+    app.register_blueprint(key_blueprint, url_prefix='/auth')
     app.register_blueprint(account_api_blueprint, url_prefix='/api')
     app.register_blueprint(osu_api_blueprint, url_prefix='/api')
-    # app.register_blueprint(gentrys_quest_api_blueprint, url_prefix='/api')
+    app.register_blueprint(gentrys_quest_api_blueprint, url_prefix='/api')
 
     #   pages
     app.register_blueprint(main_blueprint)
-    # app.register_blueprint(gentrys_quest_blueprint, url_prefix='/gentrys-quest')
+    app.register_blueprint(gentrys_quest_blueprint, url_prefix='/gentrys-quest')
     app.register_blueprint(account_blueprint, url_prefix='/account')
     app.register_blueprint(osu_blueprint, url_prefix='/osu')
 

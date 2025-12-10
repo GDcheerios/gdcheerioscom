@@ -4,47 +4,158 @@
       <title>Levels</title>
       <link rel="stylesheet" href="/static/style.css">
       <link rel="stylesheet" href="/static/gentrys-quest-style.css">
+      <style>
+        .controls { margin: 18px auto 14px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+        .controls input[type="number"] { width: 220px; padding: 8px 10px; border-radius: 6px; border: 1px solid #333; background: #0b0f14; color: #e6f2ff; }
+        .hint { text-align: center; font-size: 12px; color: #8aa; margin-bottom: 12px; }
+        .single-level { margin: 0 auto; width: min(900px, 96%); }
+        .summary { display: flex; justify-content: space-between; gap: 10px; color: #cfe7ff; font-size: 14px; margin-bottom: 8px; flex-wrap: wrap; }
+        .bar-wrapper { position: relative; height: 18px; background: #1a1a1a; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 0 1px #0f1720; }
+        .bar { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: linear-gradient(90deg, #02b3ff, #00e4a8); transition: width 150ms ease; }
+        .bar-text { margin-top: 6px; text-align: right; font-size: 12px; color: #9bd; }
+        .caps { text-align: center; color: #aac3dd; font-size: 12px; margin-top: 10px; opacity: .9; }
+
+        /* Make text over colored level bars more readable */
+        .level-summary {
+          color: #fdfdfd;
+          font-weight: 600;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+        }
+      </style>
     {% endblock %}
-
-    <style>
-      table {
-        margin: auto;
-        border-collapse: collapse;
-        color: white;
-      }
-      th, td {
-        text-align: center;
-        padding: 10px;
-        border: 1px solid #000;
-      }
-      th {
-        background-color: #333;
-      }
-    </style>
-
   </head>
   <body>
     {% include 'navbar.html' %}
     {% block body %}
       <h1>Levels</h1>
-      <table style="margin: auto;">
-        <thead>
-          <tr>
-            <th>level</th>
-            <th>xp</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% set index = namespace(counter=1) %}
+
+      <div class="controls">
+        <input id="xpInput" type="number" placeholder="Type XP (sandbox, live updates)" min="0" inputmode="numeric">
+        <input id="deltaInput" type="number" placeholder="Add/Subtract (e.g., 500 or -250)" inputmode="numeric">
+      </div>
+      <div class="hint">Sandbox mode: type in either box. Total XP = XP + Add/Subtract. No server calls.</div>
+
+      <div class="single-level">
+        <div class="summary">
+          <div id="summaryLevel">Level: 1</div>
+          <div id="summaryXp">0 / 0 xp</div>
+          <div id="summaryTotal">Total XP: 0</div>
+        </div>
+        <div class="bar-wrapper" aria-label="level progress">
+          <div class="bar" id="levelBar"></div>
+        </div>
+        <div class="bar-text" id="barText">0%</div>
+        <div class="caps" id="capsText"></div>
+      </div>
+          <div>
+              {% for level in levels %}
+              {% set level_num = loop.index %}
+
+              {# use a namespace so updates inside the loop persist #}
+              {% set ns = namespace(band=level_colors[0]) %}
+              {% for c in level_colors %}
+                  {% if level_num >= c[0] %}
+                      {% set ns.band = c %}
+                  {% endif %}
+              {% endfor %}
+
+              <div class="single-level"
+                   style="
+                     border-radius: 8px;
+                     padding: 6px 10px;
+                     margin-bottom: 4px;
+                     background: linear-gradient(90deg, {{ ns.band[1] }}, {{ ns.band[2] }});
+                     box-shadow: 0 0 8px {{ ns.band[2] }}33;
+                   ">
+                <div class="summary">
+                  <div class="level-summary">Level: {{ level_num }}</div>
+                  <div class="level-summary">XP: {{ "{:,}".format(level|int) }}</div>
+                </div>
+              </div>
+              {% endfor %}
+          </div>
+      <script>
+        const thresholds = [
+          {% set first = True %}
           {% for level in levels %}
-            <tr>
-              <td>{{ index.counter }}</td>
-              <td>{{ "{:,}".format(level|int) }} xp</td>
-              {% set index.counter = index.counter + 1 %}
-            </tr>
+            {{ "" if loop.first else "," }}{{ level|int }}
           {% endfor %}
-        </tbody>
-      </table>
+        ];
+
+        let baseXp = 0;
+        let deltaXp = 0;
+
+        function formatNumber(n) { try { return Number(n).toLocaleString(); } catch { return n; } }
+
+        function computeLevel(totalXp) {
+          let acc = 0;
+          for (let i = 0; i < thresholds.length; i++) {
+            const req = thresholds[i];
+            if (totalXp < acc + req) {
+              const into = totalXp - acc;
+              return { level: i + 1, intoLevelXp: Math.max(0, into), levelCap: req, completedSum: acc };
+            }
+            acc += req;
+          }
+          const lastCap = thresholds[thresholds.length - 1] || 1;
+          return { level: thresholds.length, intoLevelXp: Math.max(0, totalXp - acc), levelCap: lastCap, completedSum: acc };
+        }
+
+        function clampNonNegative(n) { return Math.max(0, n); }
+
+        function updateUI() {
+          const totalXp = clampNonNegative((baseXp || 0) + (deltaXp || 0));
+
+          const levelEl = document.getElementById("summaryLevel");
+          const xpEl = document.getElementById("summaryXp");
+          const totalEl = document.getElementById("summaryTotal");
+          const bar = document.getElementById("levelBar");
+          const barText = document.getElementById("barText");
+          const capsText = document.getElementById("capsText");
+
+          const { level, intoLevelXp, levelCap } = computeLevel(totalXp);
+          const pct = Math.max(0, Math.min(100, (intoLevelXp / Math.max(1, levelCap)) * 100));
+
+          bar.style.width = pct.toFixed(2) + "%";
+          barText.textContent = pct.toFixed(1) + "%";
+          levelEl.textContent = "Level: " + level;
+          xpEl.textContent = `${formatNumber(intoLevelXp)} / ${formatNumber(levelCap)} xp`;
+          totalEl.textContent = "Total XP: " + formatNumber(totalXp);
+
+          const totalCap = thresholds.reduce((a, b) => a + b, 0);
+          capsText.textContent = `Configured levels: ${thresholds.length} (cumulative cap: ${formatNumber(totalCap)})`;
+        }
+
+        const xpInput = document.getElementById("xpInput");
+        const deltaInput = document.getElementById("deltaInput");
+
+        let t1, t2;
+        xpInput.addEventListener("input", () => {
+          clearTimeout(t1);
+          t1 = setTimeout(() => {
+            const raw = xpInput.value.trim();
+            const x = parseInt(raw || "0", 10);
+            if (!isNaN(x)) {
+              baseXp = clampNonNegative(x);
+              updateUI();
+            }
+          }, 60);
+        });
+
+        deltaInput.addEventListener("input", () => {
+          clearTimeout(t2);
+          t2 = setTimeout(() => {
+            const raw = deltaInput.value.trim();
+            const dx = parseInt(raw || "0", 10);
+            if (!isNaN(dx)) {
+              deltaXp = dx;
+              updateUI();
+            }
+          }, 60);
+        });
+
+        updateUI();
+      </script>
     {% endblock %}
   </body>
 </html>

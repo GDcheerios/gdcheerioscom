@@ -13,7 +13,7 @@
 <div class="block" style="margin-top: 3%;">
     <div style="display: flex; flex-direction: row; justify-content: space-between; margin-bottom: 10px;">
         <div style="display: flex; flex-direction: row; margin-right: 10px;">
-            <img style="display: block;" src="{{ account.pfp }}">
+<!--            <img style="display: block;" src="{{ account.pfp }}">-->
             <div>
                 <h1 class="username">{{account.username}}</h1>
                 <div id="tags"></div>
@@ -65,10 +65,466 @@
         });
     </script>
 </div>
-{% if account.has_gq or account.gq_scores | length > 0 %}
-<div id="gq-data" class="block">
-    <h1>Gentrys Quest</h1>
-    <div id="gq-scores">
+{% if account.gq_data.ranking %}
+    <div id="gq-data" class="block gq-card">
+        <h1>Gentrys Quest</h1>
+
+        <!-- New grouped layout -->
+        {% set score_i = (account.gq_data['metadata']['score'] | int) %}
+        {% set required_i = (account.gq_data['metadata']['required'] | int) %}
+        {% set next_i = (required_i - score_i) if (required_i - score_i) > 0 else 0 %}
+        {% set pct = ((score_i / (required_i if required_i != 0 else 1)) * 100) | round(0, 'floor') | int %}
+
+        <div style="display:grid; grid-template-columns: 280px 1fr; gap:14px;">
+            <!-- Left column: Rank card -->
+            <div style="border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px;">
+                <div
+                    class="gq-rank-badge"
+                    style="
+                        --rank-color: {{ rater.rating_colors[account.gq_data['ranking']['rank']] }};
+                        background:
+                          linear-gradient(
+                            135deg,
+                            color-mix(in srgb, var(--rank-color) 100%, black 0%) 0%,
+                            color-mix(in srgb, var(--rank-color) 85%, black 15%) 45%,
+                            color-mix(in srgb, var(--rank-color) 70%, black 30%) 100%
+                          );
+                        border-radius:10px;
+                        color:#fff;
+                    ">
+                    <div class="gq-rank-title">{{ account.gq_data['ranking']['rank'] }}</div>
+                    <div class="gq-tier">Tier {{ account.gq_data['ranking']['tier'] }}</div>
+                </div>
+                <div class="gq-metrics" style="margin-top:12px; display:grid; grid-template-columns: 1fr; gap:8px;">
+                    <div class="gq-metric" style="display:flex; justify-content:space-between;">
+                        <div class="gq-metric-label">Placement</div>
+                        <div class="gq-metric-value">#{{ "{:,}".format(account.gq_data["ranking"]["placement"]) }}</div>
+                    </div>
+                    <div class="gq-metric" style="display:flex; justify-content:space-between;">
+                        <div class="gq-metric-label">Weighted</div>
+                        <div class="gq-metric-value">{{ "{:,}".format(account.gq_data["ranking"]["weighted"]) }}</div>
+                    </div>
+                    <div class="gq-metric" style="display:flex; justify-content:space-between;">
+                        <div class="gq-metric-label">Unweighted</div>
+                        <div class="gq-metric-value">{{ "{:,}".format(account.gq_data["ranking"]["unweighted"]) }}</div>
+                    </div>
+                </div>
+            </div>
+            <div style="border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px; display:grid; grid-template-columns: 140px 1fr 160px; gap:12px; align-items:center;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <div style="font-size:12px; opacity:0.75;">Level</div>
+                    <div id="gq-level-badge" class="gq-level-badge">
+                      <span class="gq-level-text">{{ account.gq_data['metadata']['level'] | int }}</span>
+                    </div>
+                    <div style="font-size:12px; opacity:0.7;">Total XP</div>
+                    <div style="font-weight:700;">{{ "{:,}".format(score_i) }}</div>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div id="gq-level-progress" style="position:relative; flex:1; height:18px; background:#0f0f0f; border:1px solid #272727; border-radius:999px; overflow:hidden;">
+                            <div id="gq-level-progress-fill" style="
+                                position:absolute; height:100%; width: {{ pct }}%;
+                                background: linear-gradient(90deg,#00d2ff,#3a7bd5);
+                                box-shadow: 0 0 12px rgba(0,210,255,0.35);">
+                            </div>
+                            <div id="gq-level-progress-overlay"></div>
+                        </div>
+                        <div style="min-width:46px; text-align:right; font-variant-numeric: tabular-nums; font-weight:700; font-size:12px; opacity:0.9;">
+                            {{ pct }}%
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:12px; opacity:0.75;">
+                        <span>0</span>
+                        <span>{{ "{:,}".format(required_i) }}</span>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:12px; opacity:0.8;">Next level in</div>
+                    <div style="font-weight:900; font-size:22px;">{{ "{:,}".format(next_i) }} XP</div>
+                </div>
+            </div>
+        </div>
+        <script>
+            (function () {
+                const level = Number({{ account.gq_data['metadata']['level'] | int }});
+                const step = 20;
+                const tierIndex = Math.floor(level / step);
+                const palette = [
+                    ['#7a7f87','#58606a'], // 0-4
+                    ['#36d1dc','#5b86e5'], // 5-9
+                    ['#22e1ff','#1d8fe1'], // 10-14
+                    ['#00f5a0','#00d9f5'], // 15-19
+                    ['#ffd200','#f7971e'], // 20-24
+                    ['#ff7eb3','#ff2a68'], // 25-29
+                    ['#a18cd1','#fbc2eb'], // 30-34
+                    ['#c471f5','#fa71cd'], // 35-39
+                    ['#f953c6','#b91d73'], // 40-44
+                    ['#00c6ff','#0072ff'], // 45-49
+                ];
+                const [c1, c2] = palette[tierIndex % palette.length];
+
+                const badge = document.getElementById('gq-level-badge');
+                const fill = document.getElementById('gq-level-progress-fill');
+                const overlay = document.getElementById('gq-level-progress-overlay');
+
+                if (badge) {
+                    // expose colors for other scripts (sparks)
+                    badge.dataset.c1 = c1;
+                    badge.dataset.c2 = c2;
+
+                    // Badge color by level tier
+                    badge.style.borderColor = c2;
+                    badge.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+                    badge.style.boxShadow = `0 0 16px ${c1}55`;
+                    // Add milestone ornament every 100 levels
+                    const milestones = Math.floor(level / 100);
+                    if (milestones > 0) {
+                        badge.style.position = 'relative';
+                        // crown/star rails
+                        const textEl = badge.querySelector('.gq-level-text');
+                        const crownEl = badge.querySelector('.gq-level-crowns') || document.createElement('span');
+                        crownEl.className = 'gq-level-crowns';
+                        crownEl.style.cssText = 'position:absolute; top:-8px; right:-8px; font-size:14px;';
+                        crownEl.textContent = '✦'.repeat(milestones);
+                        badge.appendChild(crownEl);
+                    }
+                }
+                if (fill) {
+                    // Progress bar gradient by level tier
+                    fill.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
+                    fill.style.boxShadow = `0 0 12px ${c1}55`;
+                }
+                if (overlay) {
+                    // Extra visual flair every 100 levels
+                    const milestones = Math.floor(level / 100);
+                    if (milestones > 0) {
+                        overlay.style.background = `
+                                radial-gradient(circle at 10% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 30% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 50% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 70% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 90% 50%, ${c1}15 0 6px, transparent 7px)
+                            `;
+                        overlay.style.mixBlendMode = 'screen';
+                        overlay.style.opacity = Math.min(0.25 + milestones * 0.05, 0.5);
+                    }
+                }
+            })();
+        </script>
+        <script>
+            (function () {
+                const level = Number({{ account.gq_data['metadata']['level'] | int }});
+                const badge = document.getElementById('gq-level-badge');
+
+                if (!badge) return;
+
+                const milestones = Math.floor(level / 100);
+                if (milestones > 0) {
+                    badge.classList.add('aura');
+                    const auraOpacity = Math.min(0.25 + milestones * 0.08, 0.7);
+                    const flameOpacity = Math.min(0.18 + milestones * 0.05, 0.5);
+                    const auraSpeed = Math.max(6 - milestones, 2);
+                    const flameSpeed = Math.max(1.6 - milestones * 0.1, 0.8);
+
+                    badge.style.setProperty('--aura-opacity', auraOpacity.toString());
+                    badge.style.setProperty('--flame-opacity', flameOpacity.toString());
+                    badge.style.setProperty('--aura-speed', auraSpeed + 's');
+                    badge.style.setProperty('--flame-speed', flameSpeed + 's');
+                    const scale = Math.max(1, Math.min(1 + milestones * 0.03, 1.12));
+                    badge.style.transform = `scale(${scale})`;
+                    badge.style.transformOrigin = 'center center';
+                }
+            })();
+        </script>
+        <script>
+            (function () {
+                const level = Number({{ account.gq_data['metadata']['level'] | int }});
+                const badge = document.getElementById('gq-level-badge');
+                if (!badge) return;
+
+                const milestones = Math.floor(level / 100);
+                if (milestones <= 0) return;
+
+                let layer = badge.querySelector('.gq-sparks');
+                if (!layer) {
+                    layer = document.createElement('div');
+                    layer.className = 'gq-sparks';
+                    badge.appendChild(layer);
+                }
+
+                    const levelBands = [
+                        {% for band in gq_level_colors %}
+                        {{ "" if loop.first else "," }}{
+                            min: {{ band[0] }},
+                            c1: "{{ band[1] }}",
+                            c2: "{{ band[2] }}"
+                        }
+                        {% endfor %}
+                    ];
+
+                    function getBandForLevel(lvl) {
+                        let eff = lvl % 100;
+                        if (eff === 0) eff = 100;
+
+                        let snapped;
+                        if (eff <= 9) snapped = 1;
+                        else if (eff < 100) snapped = Math.floor(eff / 10) * 10;
+                        else snapped = 100;
+
+                        let chosen = levelBands[0];
+                        for (const band of levelBands) {
+                            if (snapped >= band.min) {
+                                chosen = band;
+                            }
+                        }
+                        return chosen;
+                    }
+
+                    const band = getBandForLevel(level);
+                    const c1 = band.c1;
+                    const c2 = band.c2;
+
+                    const palettes = ['el-fire','el-ice','el-light','el-void'];
+                    const paletteClass = palettes[(milestones - 1) % palettes.length];
+                    layer.className = 'gq-sparks ' + paletteClass;
+
+                    layer.style.setProperty('--sp-c1', c1);
+                    layer.style.setProperty('--sp-c2', c2);
+                    layer.style.setProperty('--sp-glow', c2 + '99');
+
+                    const count = Math.min(6 + milestones * 4, 40);
+                    const baseSpeed = Math.max(2.4 - milestones * 0.18, 0.9);
+                    const sizeMin = 3, sizeMax = Math.min(6 + milestones, 10);
+
+                    layer.innerHTML = '';
+                    for (let i = 0; i < count; i++) {
+                        const sp = document.createElement('div');
+                        sp.className = 'gq-spark';
+
+                        const spread = 50; // px
+                        const originX = 50 + (Math.random() * spread - spread / 2); // %
+                        const driftX = (Math.random() * 16 - 8) * (2 + milestones * 1); // px
+                        const delay = (Math.random() * baseSpeed).toFixed(2) + 's';
+                        const speed = (baseSpeed * (0.7 + Math.random() * 0.6)).toFixed(2) + 's';
+                        const size = (sizeMin + Math.random() * (sizeMax - sizeMin)).toFixed(1) + 'px';
+
+                        sp.style.setProperty('--sp-x', originX + '%');
+                        sp.style.setProperty('--dx', driftX.toFixed(1) + 'px');
+                        sp.style.setProperty('--sp-delay', delay);
+                        sp.style.setProperty('--sp-speed', speed);
+                        sp.style.setProperty('--sp-size', size);
+                        sp.style.setProperty('--sx', (Math.random()*6 - 3).toFixed(1) + 'px');
+
+                        layer.appendChild(sp);
+                    }
+                })();
+            </script>
+            <div id="gq-metrics-chart" style="margin-top:12px; border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-weight:700;">Rank Graph</div>
+                </div>
+                <div id="gq-chart" style="height:220px; position:relative;">
+                    <canvas id="gqChartCanvas" height="220" style="width:100%; height:100%;"></canvas>
+                </div>
+            </div>
+            <script>
+                const metrics = {{ account.gq_data["metrics"] | tojson | safe }} || [];
+                (function () {
+                    const nowPoint = {
+                        gp: Number({{ account.gq_data["ranking"]["weighted"] | int }}),
+                        rank: Number({{ account.gq_data["ranking"]["placement"] | int }}),
+                        recorded_at: new Date().toISOString()
+                    };
+                    const raw = (Array.isArray(metrics) ? metrics.slice() : []);
+                    raw.push(nowPoint);
+
+                    const now = new Date();
+                    const yearMs = 365 * 24 * 60 * 60 * 1000;
+                    const tMinDate = new Date(now.getTime() - yearMs);
+                    const data = raw
+                        .map(d => ({ ...d, t: new Date(d.recorded_at) }))
+                        .filter(d => !isNaN(d.t) && d.t >= tMinDate && d.t <= now)
+                        .sort((a,b) => a.t - b.t);
+
+                    const canvas = document.getElementById('gqChartCanvas');
+                    if (!canvas || !data.length) return;
+
+                    const gpVals = data.map(d => Number(d.gp || 0));
+                    const rankVals = data.map(d => Number(d.rank || 0));
+                    const labels = data.map(d => d.t);
+
+                    const ctx = canvas.getContext('2d');
+                    const DPR = window.devicePixelRatio || 1;
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width * DPR;
+                    canvas.height = rect.height * DPR;
+                    ctx.scale(DPR, DPR);
+
+                    const pad = { top: 16, right: 40, bottom: 24, left: 40 };
+                    const w = rect.width - pad.left - pad.right;
+                    const h = rect.height - pad.top - pad.bottom;
+
+                    const tMin = tMinDate.getTime();
+                    const tMax = now.getTime();
+                    const tRange = Math.max(1, tMax - tMin);
+
+                    const minGP = Math.min(...gpVals), maxGP = Math.max(...gpVals);
+                    const gpRange = (maxGP - minGP) || 1;
+
+                    const minRank = Math.min(...rankVals), maxRank = Math.max(...rankVals);
+                    const rankMinForScale = Math.min(minRank, 1);
+                    const rankMaxForScale = Math.max(maxRank, minRank + 1);
+                    const rRange = (rankMaxForScale - rankMinForScale) || 1;
+
+                    const xTime = (t) => pad.left + ((t - tMin) / tRange) * w;
+                    const yGP = (v) => pad.top + (1 - (v - minGP) / gpRange) * h;
+                    const yRank = (v) => pad.top + ((v - rankMinForScale) / rRange) * h;
+
+                    ctx.fillStyle = '#111'; ctx.fillRect(0,0,rect.width,rect.height);
+                    ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = 1; ctx.beginPath();
+                    for (let i = 0; i <= 4; i++) { const yy = pad.top + (i/4)*h; ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + w, yy); }
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                    ctx.fillText(maxGP.toLocaleString() + ' GP', 8, yGP(maxGP));
+                    ctx.fillText(minGP.toLocaleString() + ' GP', 8, yGP(minGP));
+
+                    ctx.textAlign = 'right';
+                    ctx.fillText('#' + rankMinForScale, pad.left + w + 36, yRank(rankMinForScale));
+                    ctx.fillText('#' + rankMaxForScale, pad.left + w + 36, yRank(rankMaxForScale));
+
+                    const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    ctx.fillText(fmt(tMinDate), pad.left, pad.top + h + 6);
+                    ctx.fillText(fmt(now), pad.left + w, pad.top + h + 6);
+
+                    ctx.strokeStyle = '#00d2ff'; ctx.lineWidth = 2; ctx.beginPath();
+                    data.forEach((d,i) => { const px = xTime(d.t.getTime()); const py = yGP(gpVals[i]); if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+                    ctx.stroke();
+
+                    ctx.setLineDash([4,3]); ctx.strokeStyle = '#ffae00'; ctx.beginPath();
+                    data.forEach((d,i) => { const px = xTime(d.t.getTime()); const py = yRank(rankVals[i]); if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+                    ctx.stroke(); ctx.setLineDash([]);
+
+                    function drawPoints(color, yFn, vals) {
+                        ctx.fillStyle = color;
+                        data.forEach((d,i) => { const px = xTime(d.t.getTime()); const py = yFn(vals[i]); ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2); ctx.fill(); });
+                    }
+                    drawPoints('#00d2ff', yGP, gpVals);
+                    drawPoints('#ffae00', yRank, rankVals);
+
+                    const legendX = pad.left + 8, legendY = pad.top + 8;
+                    ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.font='12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+                    ctx.fillStyle='#00d2ff'; ctx.fillRect(legendX, legendY - 5, 10, 10);
+                    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('GP', legendX + 16, legendY);
+                    const ry = legendY + 16; ctx.fillStyle='#ffae00'; ctx.fillRect(legendX, ry - 5, 10, 10);
+                    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('Rank', legendX + 16, ry);
+
+                    const tooltip = document.createElement('div');
+                    Object.assign(tooltip.style, { position:'absolute', pointerEvents:'none', background:'rgba(0,0,0,0.85)', border:'1px solid #2b2b2b', borderRadius:'8px', padding:'6px 8px', fontSize:'12px', color:'#fff', transform:'translate(-50%, -120%)', display:'none' });
+                    canvas.parentElement.style.position = 'relative'; canvas.parentElement.appendChild(tooltip);
+
+                    canvas.addEventListener('mousemove', (e) => {
+                        const bounds = canvas.getBoundingClientRect();
+                        const cx = (e.clientX - bounds.left);
+                        const tx = tMin + ((cx - pad.left) / Math.max(1, w)) * tRange;
+                        let idx = 0, best = Infinity;
+                        data.forEach((d,i) => { const dist = Math.abs(d.t.getTime() - tx); if (dist < best) { best = dist; idx = i; } });
+                        const px = xTime(data[idx].t.getTime());
+                        const gp = gpVals[idx], rk = rankVals[idx], dt = labels[idx];
+                        tooltip.textContent = `${dt.toLocaleString()}\nGP: ${gp.toLocaleString()}\nRank: #${rk}`;
+                        tooltip.style.left = px + 'px';
+                        tooltip.style.top = (yGP(gp) - 8) + 'px';
+                        tooltip.style.display = 'block';
+                    });
+                    canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+                })();
+            </script>
+            <script>
+                (function () {
+                    const level = Number({{ account.gq_data['metadata']['level'] | int }});
+
+                    // JS view of the backend level color table
+                    const levelBands = [
+                        {% for band in gq_level_colors %}
+                        {{ "" if loop.first else "," }}{
+                            min: {{ band[0] }},
+                            c1: "{{ band[1] }}",
+                            c2: "{{ band[2] }}"
+                        }
+                        {% endfor %}
+                    ];
+
+                    function getBand(lvl) {
+                        let chosen = levelBands[0];
+                        for (const band of levelBands) {
+                            if (lvl >= band.min) {
+                                chosen = band;
+                            }
+                        }
+                        return chosen;
+                    }
+
+                    const band = getBand(level);
+                    const c1 = band.c1;
+                    const c2 = band.c2;
+
+                    const badge = document.getElementById('gq-level-badge');
+                    const fill = document.getElementById('gq-level-progress-fill');
+                    const overlay = document.getElementById('gq-level-progress-overlay');
+
+                    if (badge) {
+                        // expose colors for other scripts (sparks)
+                        badge.dataset.c1 = c1;
+                        badge.dataset.c2 = c2;
+
+                        // Badge color by level band
+                        badge.style.borderColor = c2;
+                        badge.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+                        badge.style.boxShadow = `0 0 16px ${c1}55`;
+
+                        // Add milestone ornament every 100 levels
+                        const milestones = Math.floor(level / 100);
+                        if (milestones > 0) {
+                            badge.style.position = 'relative';
+                            const crownEl = badge.querySelector('.gq-level-crowns') || document.createElement('span');
+                            crownEl.className = 'gq-level-crowns';
+                            crownEl.style.cssText = 'position:absolute; top:-8px; right:-8px; font-size:14px;';
+                            crownEl.textContent = '✦'.repeat(milestones);
+                            badge.appendChild(crownEl);
+                        }
+                    }
+
+                    if (fill) {
+                        // Progress bar gradient by level band
+                        fill.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
+                        fill.style.boxShadow = `0 0 12px ${c1}55`;
+                    }
+
+                    if (overlay) {
+                        // Optional: soft particles using same band colors
+                        const milestones = Math.floor(level / 100);
+                        if (milestones > 0) {
+                            overlay.style.background = `
+                                radial-gradient(circle at 10% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 30% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 50% 50%, ${c1}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 70% 50%, ${c2}15 0 6px, transparent 7px),
+                                radial-gradient(circle at 90% 50%, ${c1}15 0 6px, transparent 7px)
+                            `;
+                            overlay.style.mixBlendMode = 'screen';
+                            overlay.style.opacity = Math.min(0.25 + milestones * 0.05, 0.5);
+                        }
+                    }
+                })();
+            </script>
+        <div id="gq-items" class="block">
+            <h1 style="text-align:center; font-size:24px; margin: 20px 0;">Items</h1>
+            <h2 style="text-align: center;">${{account.gq_data.metadata.money}}</h2>
+            <div class="gq-items-grid" id="gq-items-grid"></div>
+        </div>
+        <div id="gq-scores">
         <div id="leaderboard-container">
             <h1 style="text-align: center; font-size: 24px; margin-bottom: 20px;">Scores</h1>
             <select id="leaderboard-toggle" style="margin: 10px auto; display: block;" onchange="renderLeaderboard()"></select>
@@ -76,7 +532,7 @@
         </div>
     </div>
     <script>
-        const leaderboardData = {{ account.gq_scores | safe }};
+        const leaderboardData = {{ account.gq_data["scores"] | safe }};
 
         function initializeLeaderboard() {
             const dropdown = document.getElementById('leaderboard-toggle');
@@ -109,29 +565,248 @@
 
         document.addEventListener('DOMContentLoaded', initializeLeaderboard);
     </script>
+        <script>
+            // Replace items rendering with normalized mapping to the new data shape
+
+            const items = ({{ account.gq_data["items"] | tojson | safe }} || []).map(raw => {
+                // Normalize server-provided shape to the renderer’s expected structure
+                const t = (raw.type || '').toLowerCase();
+                const md = raw.metadata || {};
+                if (t === 'character') {
+                    const weapon = md.CurrentWeapon ? {
+                        name: md.CurrentWeapon.Name,
+                        'star rating': md.CurrentWeapon.StarRating,
+                        experience: { level: md.CurrentWeapon.Level, xp: md.CurrentWeapon.CurrentXp },
+                        stats: {
+                            attack: undefined,
+                            buff: md.CurrentWeapon.Buff ? { buff: [ `#${md.CurrentWeapon.Buff.BuffID}`, md.CurrentWeapon.Buff.IsPercent ? 'percent' : 'flat', `Lv ${md.CurrentWeapon.Buff.Level}` ] } : undefined
+                        }
+                    } : null;
+
+                    const artifacts = Array.isArray(md.Artifacts) ? md.Artifacts.filter(Boolean).map(a => ({
+                        name: a.Name,
+                        family: a.FamilyName,
+                        'star rating': a.StarRating,
+                        experience: { level: a.Level, xp: a.CurrentXp },
+                        stats: { 'main attribute': a.MainBuff ? { buff: [ `#${a.MainBuff.BuffID}`, a.MainBuff.IsPercent ? 'percent' : 'flat', `Lv ${a.MainBuff.Level}` ] } : undefined }
+                    })) : [];
+
+                    return {
+                        ...raw,
+                        metadata: {
+                            name: md.Name,
+                            'star rating': md.StarRating,
+                            experience: { level: md.Level, xp: md.CurrentXp },
+                            equips: { weapon, artifacts }
+                        }
+                    };
+                } else if (t === 'weapon') {
+                    return {
+                        ...raw,
+                        metadata: {
+                            name: md.Name,
+                            'star rating': md.StarRating,
+                            experience: { level: md.Level, xp: md.CurrentXp },
+                            stats: {
+                                buff: md.Buff ? { buff: [ `#${md.Buff.BuffID}`, md.Buff.IsPercent ? 'percent' : 'flat', `Lv ${md.Buff.Level}` ] } : undefined
+                            }
+                        }
+                    };
+                }
+                return raw;
+            });
+
+            const ucfirst = s => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+            function safeParse(md) { if (!md) return null; if (typeof md === 'object') return md; try { return JSON.parse(md); } catch { return null; } }
+            function fmt(num) { return typeof num === 'number' ? num.toLocaleString() : num ?? '-'; }
+            function chip(label) { const el = document.createElement('span'); el.className = 'gq-chip'; el.textContent = label; return el; }
+
+            function renderCharacter(md, card) {
+                const name = md?.name || 'Character';
+                const sr = md?.['star rating'];
+                const exp = md?.experience;
+
+                const header = document.createElement('div');
+                header.className = 'gq-item-line';
+                header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`;
+                card.appendChild(header);
+
+                const meta = document.createElement('div');
+                meta.className = 'gq-item-meta';
+                if (exp?.level != null) meta.appendChild(chip(`Lv ${fmt(exp.level)}`));
+                if (exp?.xp != null) meta.appendChild(chip(`${fmt(exp.xp)} XP`));
+                card.appendChild(meta);
+
+                const weapon = md?.equips?.weapon;
+                if (weapon) {
+                    const w = document.createElement('div');
+                    w.className = 'gq-subsection';
+                    w.innerHTML = `
+                          <div class="gq-subtitle">Weapon</div>
+                          <div class="gq-item-line"><strong>${weapon.name || 'Weapon'}</strong>${weapon['star rating'] ? ` • ${'★'.repeat(Math.min(5, weapon['star rating']))}` : ''}</div>
+                          <div class="gq-item-meta"></div>
+                          <div class="gq-muted"></div>
+                        `;
+                    const meta = w.querySelector('.gq-item-meta');
+                    if (weapon.experience?.level != null) meta.appendChild(chip(`Lv ${fmt(weapon.experience.level)}`));
+                    if (weapon.experience?.xp != null) meta.appendChild(chip(`${fmt(weapon.experience.xp)} XP`));
+                    const muted = w.querySelector('.gq-muted');
+                    const wBuff = weapon.stats?.buff?.buff;
+                    muted.textContent = wBuff ? `Buff: [${wBuff.join(', ')}]` : '';
+                    card.appendChild(w);
+                }
+
+                const arts = md?.equips?.artifacts || [];
+                if (Array.isArray(arts) && arts.length) {
+                    const sec = document.createElement('div');
+                    sec.className = 'gq-subsection';
+                    sec.innerHTML = `<div class="gq-subtitle">Artifacts (${arts.length})</div>`;
+                    const grid = document.createElement('div');
+                    grid.className = 'gq-art-grid';
+                    arts.forEach(a => {
+                        const el = document.createElement('div');
+                        el.className = 'gq-art';
+                        el.innerHTML = `
+                              <div class="gq-item-line"><strong>${a.name || 'Artifact'}</strong>${a['star rating'] ? ` • ${'★'.repeat(Math.min(5, a['star rating']))}` : ''}</div>
+                              <div class="gq-muted">${a.stats?.['main attribute']?.buff ? `[${a.stats['main attribute'].buff.join(', ')}]` : ''}</div>
+                            `;
+                        const m = document.createElement('div');
+                        m.className = 'gq-item-meta';
+                        if (a.experience?.level != null) m.appendChild(chip(`Lv ${fmt(a.experience.level)}`));
+                        if (a.family) m.appendChild(chip(a.family));
+                        el.appendChild(m);
+                        grid.appendChild(el);
+                    });
+                    sec.appendChild(grid);
+                    card.appendChild(sec);
+                }
+            }
+
+            function renderWeapon(md, card) {
+                const name = md?.name || 'Weapon';
+                const sr = md?.['star rating'];
+
+                const header = document.createElement('div');
+                header.className = 'gq-item-line';
+                header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`;
+                card.appendChild(header);
+
+                const meta = document.createElement('div');
+                meta.className = 'gq-item-meta';
+                if (md?.experience?.level != null) meta.appendChild(chip(`Lv ${fmt(md.experience.level)}`));
+                if (md?.experience?.xp != null) meta.appendChild(chip(`${fmt(md.experience.xp)} XP`));
+                card.appendChild(meta);
+
+                const wBuff = md?.stats?.buff?.buff;
+                if (wBuff) {
+                    const details = document.createElement('div');
+                    details.className = 'gq-muted';
+                    details.textContent = `Buff: [${wBuff.join(', ')}]`;
+                    card.appendChild(details);
+                }
+            }
+
+            function renderArtifact(md, card) {
+                // kept for compatibility if artifact items are present
+                const name = md?.name || 'Artifact';
+                const sr = md?.['star rating'];
+                const header = document.createElement('div');
+                header.className = 'gq-item-line';
+                header.innerHTML = `<strong>${name}</strong> ${sr ? ` • ${'★'.repeat(Math.min(5, sr))}` : ''}`;
+                card.appendChild(header);
+            }
+
+            function createItemCard(item) {
+                const card = document.createElement('div');
+                card.className = `gq-item-card gq-item-${item.type}`;
+
+                const top = document.createElement('div');
+                top.className = 'gq-item-top';
+                top.innerHTML = `
+                        <div class="gq-item-type">${ucfirst(item.type)}</div>
+                        <div class="gq-item-id">#${item.id}</div>
+                        <div class="gq-item-rating">Rating: ${fmt(Number(item.rating ?? 0))}</div>
+                    `;
+                card.appendChild(top);
+
+                const md = safeParse(item.metadata);
+                if (item.type === 'character') renderCharacter(md, card);
+                else if (item.type === 'weapon') renderWeapon(md, card);
+                else if (item.type === 'artifact') renderArtifact(md, card);
+                else {
+                    const fallback = document.createElement('div');
+                    fallback.className = 'gq-muted';
+                    fallback.textContent = 'Unknown item type';
+                    card.appendChild(fallback);
+                }
+                return card;
+            }
+
+            function renderItems(limit = 12) {
+                const grid = document.getElementById('gq-items-grid');
+                if (!grid) return;
+                grid.innerHTML = '';
+                const subset = items.slice(0, limit);
+                subset.forEach(it => grid.appendChild(createItemCard(it)));
+
+                let existing = document.getElementById('gq-items-more');
+                if (existing) existing.remove();
+                if (items.length > limit) {
+                    const more = document.createElement('button');
+                    more.id = 'gq-items-more';
+                    more.className = 'gq-items-more';
+                    more.textContent = `Show all (${items.length})`;
+                    more.onclick = () => renderItems(items.length);
+                    grid.parentElement.appendChild(more);
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => renderItems());
+        </script>
 </div>
 {% endif %}
-{% if account.has_osu %}
-<div id="osu-data" class="block">
-    <h1>OSU!</h1>
-    <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px; margin-top: 10px;">
-        <div style="display: flex; flex-direction: row;">
-            <img src="https://a.ppy.sh/{{ account.osu_id }}">
-            <div style="display: flex; flex-direction: column; margin-left: 10px;">
-                <h2 style="margin-bottom: 0;"><a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{
-                    account.osu_data.username }}</a></h2>
-                <h2>#{{ "{:,}".format(account.osu_data.rank) }}</h2>
+        {% if account.has_osu %}
+        <div id="osu-data" class="block gq-card">
+            <h1 style="margin-top:0">osu!</h1>
+            <div class="osu-section">
+                <div class="osu-card">
+                    <div class="osu-overview">
+                        <img class="osu-avatar" src="https://a.ppy.sh/{{ account.osu_id }}" alt="osu avatar">
+                        <div>
+                            <div class="osu-username">
+                                <a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{ account.osu_data.username }}</a>
+                            </div>
+                            <div class="osu-rank-label">Global Rank</div>
+                            <div class="osu-rank-value">#{{ "{:,}".format(account.osu_data.rank) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: concise highlights (no extra stats beyond existing four) -->
+                <div class="osu-card">
+                    <div class="osu-highlights">
+                        <div class="osu-highlight">
+                            <div class="label">Total Score</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.score) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Plays</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.playcount) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Accuracy</div>
+                            <div class="value">{{ account.osu_data.accuracy }}%</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">Performance</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.performance) }} pp</div>
+                        </div>
+                        <!-- empty cells auto-flow; layout remains neat on different widths -->
+                    </div>
+                </div>
             </div>
         </div>
-        <div style="display: flex; flex-direction: column; margin-left: 10px;">
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.score) }} score</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.playcount) }} plays</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.accuracy) }} accuracy</h2>
-            <h2 style="margin-bottom: 0;">{{ "{:,}".format(account.osu_data.performance) }} pp</h2>
-        </div>
-    </div>
-</div>
-{% endif %}
+        {% endif %}
 {% endblock %}
 </body>
 </html>
