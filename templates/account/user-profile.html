@@ -349,9 +349,10 @@
 
                     if (!data.length) return;
 
-                    // tMinDate = earliest metric date within the last year
                     const tMinDate = data[0].t;
                     const maxDaysAgo = Math.ceil((now.getTime() - tMinDate.getTime()) / MS_PER_DAY);
+
+                    console.log(tMinDate, maxDaysAgo)
 
                     const canvas = document.getElementById('gqChartCanvas');
                     if (!canvas) return;
