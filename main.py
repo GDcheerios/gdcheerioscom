@@ -4,6 +4,7 @@ import os
 
 # flask packages
 from flask import Flask
+from flask_socketio import SocketIO
 from flask_bcrypt import Bcrypt
 
 # environment
@@ -65,9 +66,6 @@ def create_app():
 if __name__ == "__main__":
     server_port = os.environ.get('PORT', environment.port)
 
-    create_app().run(
-        host='0.0.0.0',
-        port=server_port,
-        debug=environment.debug,
-        use_reloader=environment.debug,
-    )
+    app = create_app()
+    socketio = SocketIO(app)
+    socketio.run(app, host='0.0.0.0', port=server_port, debug=environment.debug)
