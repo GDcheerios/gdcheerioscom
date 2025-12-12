@@ -117,6 +117,12 @@ def extract_info(data):
     """
 
     try:
+        try:
+            if data['error'] is None:
+                return None
+        except KeyError:
+            pass
+
         if data:
             extracted_info = {
                 'id': data['id'],
@@ -140,14 +146,14 @@ def extract_info(data):
                 db.execute(
                     """
                     UPDATE osu_users
-                    SET username = %s,
-                        score = %s,
-                        playcount = %s,
-                        accuracy = %s,
-                        performance = %s,
-                        rank = %s,
-                        avatar = %s,
-                        background = %s,
+                    SET username     = %s,
+                        score        = %s,
+                        playcount    = %s,
+                        accuracy     = %s,
+                        performance  = %s,
+                        rank         = %s,
+                        avatar       = %s,
+                        background   = %s,
                         last_refresh = now()
                     WHERE id = %s
                     """,
@@ -167,7 +173,7 @@ def extract_info(data):
                 db.execute(
                     """
                     INSERT INTO osu_users
-                        (id, username, score, playcount, accuracy, performance, rank, avatar, background, last_refresh)
+                    (id, username, score, playcount, accuracy, performance, rank, avatar, background, last_refresh)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                     """,
                     params=(
@@ -187,17 +193,22 @@ def extract_info(data):
         else:
             print("user info not found")
             return None
-    except KeyError:
+    except KeyError as e:
         return data
 
 
 def fetch_osu_data(user_id):
     return extract_info(get_user_info(user_id))
 
+
 # <editor-fold desc="osu score farm">
 
 def get_matches():
-    return environment.database.fetch_all_to_dict("SELECT * FROM osu_match_users where \"user\" = %s")
-
+    current_matches = environment.database.fetch_all_to_dict("SELECT * FROM osu_matches where ended = false")
+    old_matches = environment.database.fetch_all_to_dict("SELECT * FROM osu_matches where ended = true")
+    return {
+        "current": current_matches,
+        "old": old_matches
+    }
 
 # </editor-fold>

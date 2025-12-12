@@ -4,7 +4,7 @@ import os
 
 # flask packages
 from flask import Flask
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_bcrypt import Bcrypt
 
 # environment
@@ -25,6 +25,30 @@ from routes.pages.main_routes import main_blueprint
 from routes.pages.gentrys_quest_routes import gentrys_quest_blueprint
 from routes.pages.account_routes import account_blueprint
 from routes.pages.osu_routes import osu_blueprint
+
+
+def match_room(match_id: str) -> str:
+    return f"match:{match_id}"
+
+
+def register_socket_handlers(socketio):
+    @socketio.on("join_match")
+    def on_join_match(data):
+        match_id = str((data or {}).get("match_id", "")).strip()
+        if not match_id:
+            emit("error", {"message": "match_id is required"})
+            return
+
+        join_room(match_room(match_id))
+        emit("joined_match", {"match_id": match_id})
+
+    @socketio.on("leave_match")
+    def on_leave_match(data):
+        match_id = str((data or {}).get("match_id", "")).strip()
+        if not match_id:
+            return
+        leave_room(match_room(match_id))
+        emit("left_match", {"match_id": match_id})
 
 
 def create_app():
@@ -68,4 +92,6 @@ if __name__ == "__main__":
 
     app = create_app()
     socketio = SocketIO(app)
+    register_socket_handlers(socketio)
+    environment.socket = socketio
     socketio.run(app, host='0.0.0.0', port=server_port, debug=environment.debug)

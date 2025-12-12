@@ -251,3 +251,66 @@ input::placeholder {
     display: flex;
     flex-direction: row;
 }
+
+/* Matches search + filter */
+.matches-toolbar {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 10px 0 20px 0;
+}
+
+.matches-toolbar #matchSearch {
+    width: min(720px, 92vw);
+}
+
+.match-filter {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 10px 14px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #ffffffaa;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.filter-btn.is-active {
+    border-color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Column list styling for match links */
+#matches [data-section] {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+a.match-link {
+    display: block;              /* makes each match take its own row */
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 12px 14px;
+    border-radius: 12px;
+
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid #ffffff22;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+a.match-link:hover {
+    border-color: #ffffff66;
+    background: rgba(0, 0, 0, 0.7);
+    text-decoration: none;
+}

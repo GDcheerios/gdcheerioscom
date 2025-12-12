@@ -22,6 +22,29 @@
                 animation: fadeSlideIn 0.4s ease-out forwards;
                 transition: transform 0.35s ease, opacity 0.35s ease;
             }
+
+            /* --- NEW: score bump + row move animations --- */
+            @keyframes scoreBumpUp {
+                0%   { transform: scale(1);   filter: none; }
+                35%  { transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(60, 255, 160, 0.55)); }
+                100% { transform: scale(1);   filter: none; }
+            }
+            @keyframes scoreBumpDown {
+                0%   { transform: scale(1);   filter: none; }
+                35%  { transform: scale(0.98); filter: drop-shadow(0 0 10px rgba(255, 90, 90, 0.45)); }
+                100% { transform: scale(1);   filter: none; }
+            }
+            .player-score-value.score-up {
+                animation: scoreBumpUp 520ms ease-out;
+            }
+            .player-score-value.score-down {
+                animation: scoreBumpDown 520ms ease-out;
+            }
+
+            /* Smooth “move up/down” (FLIP) */
+            .player-row {
+                will-change: transform;
+            }
         </style>
         {% endblock %}
     </head>
@@ -43,44 +66,88 @@
                     <!-- filled by JS -->
                 </div>
             </div>
-
+            <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
             <script>
                 const players = {{ players | tojson }};
                 const currentOsuId = {{ current_osu_id|tojson }};  // may be null
+                const matchId = {{ match.id | tojson }};
+                const matchEnded = {{ match.ended | tojson }};
 
-                // compute match-relative score
-                for (const player of players) {
-                    if ({{ match.ended | tojson }}) {
-                        player.score = player.ending_score - player.starting_score;
-                    } else {
-                        player.score = player.score - player.starting_score;
+                function applyMatchRelativeScores(playersArr) {
+                    for (const player of playersArr) {
+                        if (matchEnded) {
+                            player.score = (player.ending_score - player.starting_score);
+                        } else {
+                            player.score = (player.score - player.starting_score);
+                        }
                     }
                 }
 
-                function canRefreshPlayer(player) {
-                    // must be logged in AND same osu id
-                    if (!currentOsuId) return false;
-                    if (String(player.id) !== String(currentOsuId)) return false;
+                applyMatchRelativeScores(players);
 
-                    // need last_refresh from DB; if missing, allow refresh
-                    if (!player.last_refresh) return true;
+                // --- NEW: helpers for animations ---
+                function easeOutCubic(t) {
+                    return 1 - Math.pow(1 - t, 3);
+                }
 
-                    try {
-                        const last = new Date(player.last_refresh); // UTC string from DB
-                        if (isNaN(last.getTime())) return true; // can't parse? allow
+                function animateNumber(el, from, to, durationMs = 650) {
+                    if (!el) return;
+                    const start = performance.now();
+                    const safeFrom = Number.isFinite(from) ? from : 0;
+                    const safeTo = Number.isFinite(to) ? to : 0;
 
-                        const nowMs = Date.now();
-                        const diffMs = nowMs - last.getTime();
-                        return diffMs >= 60_000; // >= 1 minute
-                    } catch (e) {
-                        return true;
+                    function tick(now) {
+                        const t = Math.min(1, (now - start) / durationMs);
+                        const v = Math.round(safeFrom + (safeTo - safeFrom) * easeOutCubic(t));
+                        el.textContent = v.toLocaleString();
+
+                        if (t < 1) requestAnimationFrame(tick);
                     }
+                    requestAnimationFrame(tick);
+                }
+
+                function bumpScore(el, direction) {
+                    if (!el) return;
+                    // restart animation reliably
+                    el.classList.remove("score-up", "score-down");
+                    void el.offsetWidth;
+                    el.classList.add(direction > 0 ? "score-up" : "score-down");
+                }
+
+                function captureRowPositions() {
+                    const map = new Map();
+                    document.querySelectorAll("#match-info .player-row[data-player-id]").forEach(row => {
+                        map.set(row.dataset.playerId, row.getBoundingClientRect());
+                    });
+                    return map;
+                }
+
+                function animateRowReorder(prevRects) {
+                    document.querySelectorAll("#match-info .player-row[data-player-id]").forEach(row => {
+                        const id = row.dataset.playerId;
+                        const prev = prevRects.get(id);
+                        if (!prev) return;
+
+                        const next = row.getBoundingClientRect();
+                        const dy = prev.top - next.top;
+                        if (Math.abs(dy) < 1) return;
+
+                        row.style.transition = "none";
+                        row.style.transform = `translateY(${dy}px)`;
+                        // next frame: animate to 0
+                        requestAnimationFrame(() => {
+                            row.style.transition = "transform 420ms cubic-bezier(0.2, 0.9, 0.2, 1)";
+                            row.style.transform = "translateY(0)";
+                            // cleanup
+                            setTimeout(() => {
+                                row.style.transition = "";
+                                row.style.transform = "";
+                            }, 460);
+                        });
+                    });
                 }
 
                 async function refreshPlayer(player, buttonEl) {
-                    if (!canRefreshPlayer(player)) {
-                        return;
-                    }
 
                     buttonEl.disabled = true;
                     buttonEl.textContent = "Refreshing...";
@@ -93,9 +160,15 @@
                         if (!response.ok) {
                             throw new Error("Failed to refresh");
                         }
+                        else {
+                            setTimeout(() => {
+                                buttonEl.disabled = false
+                                buttonEl.textContent = "Refresh";
+                            }, 5000);
+                        }
 
-                        // Server updates osu_users + last_refresh; easiest is full reload
-                        window.location.reload();
+                        // Server will emit socket update; also keep this as fallback
+                        // window.location.reload();
                     } catch (e) {
                         console.error(e);
                         buttonEl.disabled = false;
@@ -107,6 +180,8 @@
                 function createPlayerRow(player, index) {
                     const row = document.createElement('div');
                     row.className = 'player-row';
+                    // --- NEW: stable identity for FLIP ---
+                    row.dataset.playerId = String(player.id);
 
                     const rankText = document.createElement('div');
                     rankText.className = 'player-rank';
@@ -157,6 +232,9 @@
 
                     const scoreValueEl = document.createElement('div');
                     scoreValueEl.className = 'player-score-value';
+                    // --- NEW: stable identity for score element ---
+                    scoreValueEl.dataset.scoreFor = String(player.id);
+
                     const score = player.score != null ? player.score : 0;
                     scoreValueEl.textContent = Number(score).toLocaleString();
                     scoreWrapper.appendChild(scoreValueEl);
@@ -167,7 +245,7 @@
                     scoreWrapper.appendChild(scoreLabelEl);
 
                     // Add refresh button if allowed
-                    if (canRefreshPlayer(player)) {
+                    if (String(player.id) === String(currentOsuId)) {
                         const refreshBtn = document.createElement('button');
                         refreshBtn.className = 'player-refresh-button';
                         refreshBtn.textContent = 'Refresh';
@@ -247,13 +325,11 @@
                     });
                 }
 
-                document.addEventListener('DOMContentLoaded', () => {
+                function renderAll() {
                     const matchInfo = document.getElementById('match-info');
-                    const loading = document.getElementById('loading-indicator');
-                    if (loading) loading.remove();
+                    matchInfo.innerHTML = "";
 
-                    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-
+                    const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
                     sortedPlayers.forEach((player, index) => {
                         const row = createPlayerRow(player, index);
                         matchInfo.appendChild(row);
@@ -261,6 +337,75 @@
 
                     const teams = buildTeams(sortedPlayers);
                     renderTeamsOverview(teams);
+                }
+
+                // --- NEW: render with FLIP reorder + animated score for changed player(s)
+                function renderAllAnimated(scoreDiffsById) {
+                    const prevRects = captureRowPositions();
+                    renderAll();
+                    animateRowReorder(prevRects);
+
+                    if (!scoreDiffsById) return;
+                    for (const [userId, diff] of scoreDiffsById.entries()) {
+                        const el = document.querySelector(`.player-score-value[data-score-for="${CSS.escape(String(userId))}"]`);
+                        if (!el) continue;
+
+                        const p = players.find(x => String(x.id) === String(userId));
+                        if (!p) continue;
+
+                        // animate from (new - diff) to new
+                        const to = Number(p.score || 0);
+                        const from = to - Number(diff || 0);
+
+                        if (diff !== 0) {
+                            bumpScore(el, diff);
+                            animateNumber(el, from, to, 650);
+                        } else {
+                            el.textContent = to.toLocaleString();
+                        }
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    const loading = document.getElementById('loading-indicator');
+                    if (loading) loading.remove();
+
+                    renderAll();
+
+                    // Socket.IO: join match room + listen for score updates
+                    const socket = io({
+                        transports: ["websocket", "polling"],
+                    });
+
+                    socket.on("connect", () => {
+                        socket.emit("join_match", { match_id: String(matchId) });
+                    });
+
+                    socket.on("match_user_score_updated", (payload) => {
+                        console.log("Socket update:", payload);
+                        if (!payload) return;
+                        if (String(payload.match_id) !== String(matchId)) return;
+
+                        const userId = String(payload.player.id);
+                        const newScore = Number(payload.player.score);
+
+                        const p = players.find(x => String(x.id) === userId);
+                        if (!p) return;
+
+                        console.log(p.score)
+                        console.log(`Player ${userId} score changed to ${newScore}`);
+
+                        const oldRel = Number(p.score || 0);
+                        p.score = newScore - p.starting_score;
+                        const newRel = Number(p.score || 0);
+
+                        console.log(`Player ${userId} score changed from ${oldRel} to ${newRel}`);
+
+                        const diffs = new Map();
+                        diffs.set(userId, newRel - oldRel);
+
+                        renderAllAnimated(diffs);
+                    });
                 });
             </script>
         {% endblock %}

@@ -71,6 +71,8 @@
                 playerData = data;
               });
 
+            if (playerData.error) return alert(playerData.error)
+
             if (!playerData || !playerData.id) return;
 
             // Don't add duplicate player
@@ -368,6 +370,93 @@
           }
         </script>
       {% endif %}
+
+      <!-- Matches list + search/filter (visible to everyone) -->
+      <div id="matches" class="matches-panel">
+        <div class="matches-toolbar">
+          <input id="matchSearch" type="text" placeholder="Search matches by name...">
+          <div class="match-filter">
+            <button type="button" class="filter-btn is-active" data-filter="all">All</button>
+            <button type="button" class="filter-btn" data-filter="ongoing">Ongoing</button>
+            <button type="button" class="filter-btn" data-filter="ended">Ended</button>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column;">
+          <div id="section-ongoing" style="flex-direction: column;" data-section="ongoing">
+            <h1 style="text-align: center">Current matches</h1>
+            {% for match in matches["current"] %}
+            <a class="match-link" data-status="ongoing" data-name="{{ match.name }}" href="/osu/match/{{ match.id }}">{{ match.name }}</a>
+            {% endfor %}
+          </div>
+
+          <div id="section-ended" style="flex-direction: column;" data-section="ended">
+            <h1>Finished matches</h1>
+            {% for match in matches["old"] %}
+            <a class="match-link" data-status="ended" data-name="{{ match.name }}" href="/osu/match/{{ match.id }}">{{ match.name }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const searchInput = document.getElementById('matchSearch');
+          const filterButtons = document.querySelectorAll('.filter-btn');
+          const matchLinks = Array.from(document.querySelectorAll('a.match-link'));
+
+          const sectionOngoing = document.getElementById('section-ongoing');
+          const sectionEnded = document.getElementById('section-ended');
+
+          let activeFilter = 'all';
+
+          function setActiveButton(filter) {
+            filterButtons.forEach(btn => {
+              const isActive = btn.getAttribute('data-filter') === filter;
+              btn.classList.toggle('is-active', isActive);
+            });
+          }
+
+          function applyFilters() {
+            const q = (searchInput?.value || '').trim().toLowerCase();
+
+            matchLinks.forEach(a => {
+              const name = (a.getAttribute('data-name') || '').toLowerCase();
+              const status = a.getAttribute('data-status') || '';
+
+              const matchesText = !q || name.includes(q);
+              const matchesStatus = (activeFilter === 'all') || (status === activeFilter);
+
+              a.style.display = (matchesText && matchesStatus) ? '' : 'none';
+            });
+
+            // Hide section headings if their section has no visible links
+            function sectionHasVisibleLinks(sectionEl) {
+              return Array.from(sectionEl.querySelectorAll('a.match-link'))
+                .some(a => a.style.display !== 'none');
+            }
+
+            if (sectionOngoing) sectionOngoing.style.display = sectionHasVisibleLinks(sectionOngoing) ? '' : 'none';
+            if (sectionEnded) sectionEnded.style.display = sectionHasVisibleLinks(sectionEnded) ? '' : 'none';
+          }
+
+          filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+              activeFilter = btn.getAttribute('data-filter') || 'all';
+              setActiveButton(activeFilter);
+              applyFilters();
+            });
+          });
+
+          if (searchInput) {
+            searchInput.addEventListener('input', applyFilters);
+          }
+
+          // Initialize
+          setActiveButton(activeFilter);
+          applyFilters();
+        })();
+      </script>
     </div>
   </body>
 </html>

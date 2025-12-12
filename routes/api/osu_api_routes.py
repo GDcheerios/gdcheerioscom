@@ -3,10 +3,27 @@ import urllib
 import requests
 from flask import Blueprint, request, redirect
 
+from decimal import Decimal
+from datetime import date, datetime
+
 import environment
 from api import osu_api
 
 osu_api_blueprint = Blueprint('osu_api_blueprint', __name__)
+
+
+def _json_safe(value):
+    if isinstance(value, Decimal):
+        # choose one:
+        # return float(value)   # if you want numeric
+        return int(value) if value == value.to_integral_value() else float(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
 
 
 @osu_api_blueprint.route('/code_grab')
@@ -43,12 +60,29 @@ def code_grab():
 
 @osu_api_blueprint.get('/osu/fetch-user/<id>')
 def osu_user(id):
-    data = osu_api.extract_info(osu_api.get_user_info(id))
-    if data:
-        ids = environment.database.fetch_all("select match from osu_match_users where id = %s", params=(id,))
+    data = osu_api.fetch_osu_data(id)
 
-        # for id in ids:
-        # TODO: use sockets to update on frontend for other users
+    if not data:
+        return {"error": "user not found"}
+
+    match_rows = environment.database.fetch_all(
+        "select match from osu_match_users where \"user\" = %s",
+        params=(data["id"],)
+    )
+
+    safe_player = _json_safe(data)
+
+    print(f"emitting {safe_player} to\n{match_rows}")
+    for (match_id,) in match_rows:
+        match_id = str(match_id)
+        environment.socket.emit(
+            "match_user_score_updated",
+            {
+                "match_id": match_id,
+                "player": safe_player,
+            },
+            room=f"match:{match_id}"
+        )
 
     return data
 
@@ -58,7 +92,6 @@ def create_match():
     global team_name
     team_name = None
     data = request.json
-    print(data)
     match_id = environment.database.fetch_one("INSERT INTO osu_matches (name) values (%s) returning id",
                                                   params=(data["matchName"],))[0]
     for player in data["players"]:

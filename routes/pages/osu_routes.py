@@ -9,7 +9,7 @@ osu_blueprint = Blueprint('osu_blueprint', __name__)
 
 @osu_blueprint.route("/")
 def osu():
-    return render_template("osu/index.html", matches=get_matches)
+    return render_template("osu/index.html", matches=get_matches())
 
 
 @osu_blueprint.route("/match/<id>")
