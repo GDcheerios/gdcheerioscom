@@ -89,7 +89,7 @@ def create_app():
 
 if __name__ == "__main__":
     server_port = os.environ.get('PORT', environment.port)
-
+    
     app = create_app()
     socketio = SocketIO(app)
     register_socket_handlers(socketio)

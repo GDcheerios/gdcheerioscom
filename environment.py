@@ -51,6 +51,7 @@ for level in range(400):
 
 gq_levels[0] = 10000
 gq_level_colors = [
+
     [1, "#444444", "#2e2e2e"],
     [10, "#9c1b1b", "#5f1010"],
     [20, "#c45f14", "#7a3a0d"],

@@ -73,7 +73,6 @@ def verify_api_key_header():
 
     g.current_user_id = str(row["user_id"])
     g.current_scopes = row["scopes"]
-
     environment.database.execute(
         """
              UPDATE api_keys
@@ -84,7 +83,6 @@ def verify_api_key_header():
              """,
         params=(key_id,)
     )
-
     return g.current_user_id
 
 
