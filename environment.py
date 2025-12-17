@@ -14,15 +14,22 @@ port = os.environ['PORT']  # the port
 secret = os.environ['SECRET']
 is_production = int(os.environ['IS_PRODUCTION']) == 1
 debug = not is_production  # debugging?
+
 smtp_host = os.environ['SMTP_HOST']
 smtp_email = os.environ['SMTP_EMAIL']
 smtp_password = os.environ['SMTP_PASSWORD']
+
 bucket_path = os.environ['BUCKET_PATH']
+
 db_user = os.environ['DB_USER']
 db_password = os.environ['DB_PASSWORD']
 db_hostname = os.environ['DB_HOSTNAME']
 db_port = 5432
 db = os.environ['DB']
+
+osu_secret = os.environ['OSU_SECRET']
+osu_api_key = os.environ['OSU_API_KEY']
+osu_client_id = os.environ['CLIENT_ID']
 print_end()
 # endregion
 
