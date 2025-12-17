@@ -15,7 +15,7 @@
         <h2>Set big scores to become the highest in the lobby!</h2>
     </div>
     <div class="matches">
-      {% if request.cookies.get('userID') == 1|string %}
+      {% if account.osu_id %}
       <div style="display: flex; flex-direction: row; justify-content: space-evenly;">
           <div id="player-config">
             <div class="create">
@@ -49,7 +49,6 @@
           </div>
           <div id="match-config" class="block">
             <h1>Match Settings</h1>
-            <!-- You can later add options here that depend on teams if needed -->
           </div>
         </div>
         <script>

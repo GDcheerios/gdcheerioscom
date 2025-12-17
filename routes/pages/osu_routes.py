@@ -9,7 +9,9 @@ osu_blueprint = Blueprint('osu_blueprint', __name__)
 
 @osu_blueprint.route("/")
 def osu():
-    return render_template("osu/index.html", matches=get_matches())
+    request_id = request.cookies.get("userID")
+    account = Account(request_id)
+    return render_template("osu/index.html", matches=get_matches(), account=account)
 
 
 @osu_blueprint.route("/match/<id>")
