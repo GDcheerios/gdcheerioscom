@@ -25,7 +25,12 @@ def osu_match(id):
     )
     current_osu_id = None
     request_id = request.cookies.get("userID")
+    is_creator = request_id == str(match["opener"])
     if request_id:
         current_osu_id = Account(request_id).osu_id
 
-    return render_template('osu/match.html', match=match, players=players, current_osu_id=current_osu_id)
+    return render_template('osu/match.html', match=match, players=players, current_osu_id=current_osu_id, is_creator=is_creator)
+
+
+@osu_blueprint.route("/loading/<reason>/<id>")
+def osu_loading(reason, id): return render_template("osu/loading.html", reason=reason, id=id, msg="")

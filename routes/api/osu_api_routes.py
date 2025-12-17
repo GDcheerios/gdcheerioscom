@@ -65,23 +65,23 @@ def osu_user(id):
     if not data:
         return {"error": "user not found"}
 
-    match_rows = environment.database.fetch_all(
-        "select match from osu_match_users where \"user\" = %s",
+    match_rows = environment.database.fetch_all_to_dict(
+        "select * from osu_match_users where \"user\" = %s",
         params=(data["id"],)
     )
 
     safe_player = _json_safe(data)
 
-    print(f"emitting {safe_player} to\n{match_rows}")
-    for (match_id,) in match_rows:
-        match_id = str(match_id)
+    print(f"emitting {safe_player} to\n{len(match_rows)} matches")
+    for (match) in match_rows:
+        match = _json_safe(match)
         environment.socket.emit(
             "match_user_score_updated",
             {
-                "match_id": match_id,
-                "player": safe_player,
+                "match": match,
+                "player": safe_player
             },
-            room=f"match:{match_id}"
+            room=f"match:{match["match"]}"
         )
 
     return data
@@ -92,8 +92,18 @@ def create_match():
     global team_name
     team_name = None
     data = request.json
-    match_id = environment.database.fetch_one("INSERT INTO osu_matches (name) values (%s) returning id",
-                                                  params=(data["matchName"],))[0]
+    user_id = request.cookies.get("userID")
+    match_id = environment.database.fetch_one(
+        """
+        INSERT INTO osu_matches
+        (name,
+         opener)
+        values (%s,
+                %s)
+        returning id
+        """,
+        params=(data["matchName"], user_id)
+    )[0]
     for player in data["players"]:
         in_team = False
         for team in data["teams"]:
@@ -113,3 +123,30 @@ def create_match():
     return {
         "id": match_id
     }
+
+
+@osu_api_blueprint.post('/osu/end-match/<id>')
+def end_match(id):
+    match = environment.database.fetch_to_dict("SELECT * FROM osu_matches WHERE id = %s", params=(id,))
+    if request.cookies.get("userID") != str(match["opener"]):
+        return {"error": "not your match"}
+
+    match_users = environment.database.fetch_all("SELECT \"user\" FROM osu_match_users WHERE match = %s", params=(id,))
+    print(match_users)
+    environment.database.execute("UPDATE osu_matches SET ended = true WHERE id = %s", params=(id,))
+    for user in match_users:
+        user = user[0]
+        user = osu_api.fetch_osu_data(user)
+        environment.database.execute(
+            """
+                UPDATE osu_match_users
+                SET
+                    ending_score = %s,
+                    ending_playcount = %s
+                WHERE \"user\" = %s
+                  AND match = %s;
+            """,
+            params=(user["score"], user["playcount"], user["id"], id)
+        )
+
+    return {"success": True}

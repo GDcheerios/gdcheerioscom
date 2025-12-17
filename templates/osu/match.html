@@ -45,6 +45,23 @@
             .player-row {
                 will-change: transform;
             }
+
+            .match-actions {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                margin: 10px 0 18px 0;
+            }
+
+            .end-match-button {
+                padding: 10px 14px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                background: rgba(255, 90, 90, 0.18);
+                color: white;
+                cursor: pointer;
+                font-weight: 600;
+            }
         </style>
         {% endblock %}
     </head>
@@ -52,6 +69,14 @@
         {% include 'navbar.html' %}
         {% block body %}
             <h1 style="text-align: center">{{ match.name }}</h1>
+
+            {% if is_creator and not match.ended %}
+                <div class="match-actions">
+                    <button id="end-match-btn" class="end-match-button" onclick="endMatch()" type="button">
+                        End match
+                    </button>
+                </div>
+            {% endif %}
 
             <div class="match-layout">
                 <!-- LEFT: players -->
@@ -73,28 +98,86 @@
                 const matchId = {{ match.id | tojson }};
                 const matchEnded = {{ match.ended | tojson }};
 
-                function applyMatchRelativeScores(playersArr) {
-                    for (const player of playersArr) {
-                        if (matchEnded) {
-                            player.score = (player.ending_score - player.starting_score);
-                        } else {
-                            player.score = (player.score - player.starting_score);
+                console.log("[match] script loaded", {
+                    matchId,
+                    matchEnded,
+                    currentOsuId,
+                    playersCount: Array.isArray(players) ? players.length : null,
+                });
+
+                async function endMatch() {
+                    if (matchEnded) return;
+
+                    const ok = confirm("End this match now? This will lock in ending scores/playcounts.");
+                    if (!ok) return;
+
+                    const btn = document.getElementById("end-match-btn");
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.textContent = "Ending...";
+                    }
+
+                    try {
+                        const res = await fetch(`/api/osu/end-match/${encodeURIComponent(String(matchId))}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                        });
+
+                        if (!res.ok) {
+                            let msg = "Failed to end match.";
+                            try {
+                                const data = await res.json();
+                                if (data && data.error) msg = data.error;
+                            } catch (_) {}
+                            throw new Error(msg);
+                        }
+
+                        window.location.reload();
+                    } catch (e) {
+                        alert(e?.message || "Failed to end match.");
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = "End match";
                         }
                     }
                 }
 
+                function applyMatchRelativeScores(playersArr) {
+                    console.log("[match] applyMatchRelativeScores() start");
+                    for (const player of playersArr) {
+                        if (matchEnded) {
+                            player.score = (player.ending_score - player.starting_score);
+                            player.playcount = player.ending_playcount - player.starting_playcount;
+                        } else {
+                            player.score = (player.score - player.starting_score);
+                            player.playcount = player.playcount - player.starting_playcount;
+                        }
+                    }
+                    console.log("[match] applyMatchRelativeScores() done");
+                }
+
                 applyMatchRelativeScores(players);
 
-                // --- NEW: helpers for animations ---
+                // --- helpers for animations ---
                 function easeOutCubic(t) {
                     return 1 - Math.pow(1 - t, 3);
                 }
 
                 function animateNumber(el, from, to, durationMs = 650) {
-                    if (!el) return;
+                    if (!el) {
+                        console.warn("[anim] animateNumber called with null el");
+                        return;
+                    }
                     const start = performance.now();
                     const safeFrom = Number.isFinite(from) ? from : 0;
                     const safeTo = Number.isFinite(to) ? to : 0;
+
+                    console.log("[anim] animateNumber", {
+                        target: el.dataset,
+                        from: safeFrom,
+                        to: safeTo,
+                        durationMs
+                    });
 
                     function tick(now) {
                         const t = Math.min(1, (now - start) / durationMs);
@@ -108,7 +191,6 @@
 
                 function bumpScore(el, direction) {
                     if (!el) return;
-                    // restart animation reliably
                     el.classList.remove("score-up", "score-down");
                     void el.offsetWidth;
                     el.classList.add(direction > 0 ? "score-up" : "score-down");
@@ -119,10 +201,12 @@
                     document.querySelectorAll("#match-info .player-row[data-player-id]").forEach(row => {
                         map.set(row.dataset.playerId, row.getBoundingClientRect());
                     });
+                    console.log("[render] captured row positions:", map.size);
                     return map;
                 }
 
                 function animateRowReorder(prevRects) {
+                    let moved = 0;
                     document.querySelectorAll("#match-info .player-row[data-player-id]").forEach(row => {
                         const id = row.dataset.playerId;
                         const prev = prevRects.get(id);
@@ -131,20 +215,20 @@
                         const next = row.getBoundingClientRect();
                         const dy = prev.top - next.top;
                         if (Math.abs(dy) < 1) return;
+                        moved++;
 
                         row.style.transition = "none";
                         row.style.transform = `translateY(${dy}px)`;
-                        // next frame: animate to 0
                         requestAnimationFrame(() => {
                             row.style.transition = "transform 420ms cubic-bezier(0.2, 0.9, 0.2, 1)";
                             row.style.transform = "translateY(0)";
-                            // cleanup
                             setTimeout(() => {
                                 row.style.transition = "";
                                 row.style.transform = "";
                             }, 460);
                         });
                     });
+                    console.log("[render] animateRowReorder moved rows:", moved);
                 }
 
                 async function refreshPlayer(player, buttonEl) {
@@ -166,9 +250,6 @@
                                 buttonEl.textContent = "Refresh";
                             }, 5000);
                         }
-
-                        // Server will emit socket update; also keep this as fallback
-                        // window.location.reload();
                     } catch (e) {
                         console.error(e);
                         buttonEl.disabled = false;
@@ -180,7 +261,6 @@
                 function createPlayerRow(player, index) {
                     const row = document.createElement('div');
                     row.className = 'player-row';
-                    // --- NEW: stable identity for FLIP ---
                     row.dataset.playerId = String(player.id);
 
                     const rankText = document.createElement('div');
@@ -232,7 +312,6 @@
 
                     const scoreValueEl = document.createElement('div');
                     scoreValueEl.className = 'player-score-value';
-                    // --- NEW: stable identity for score element ---
                     scoreValueEl.dataset.scoreFor = String(player.id);
 
                     const score = player.score != null ? player.score : 0;
@@ -244,8 +323,50 @@
                     scoreLabelEl.textContent = 'SCORE';
                     scoreWrapper.appendChild(scoreLabelEl);
 
-                    // Add refresh button if allowed
-                    if (String(player.id) === String(currentOsuId)) {
+                    const statsEl = document.createElement('div');
+                    statsEl.className = 'player-score-stats';
+
+                    const pc = Number(player.playcount || 0);
+                    const safeScore = Number(player.score || 0);
+                    const avg = pc > 0 ? Math.round(safeScore / pc) : 0;
+
+                    // Plays: <span>[number]</span>
+                    const playcountEl = document.createElement('div');
+                    playcountEl.className = 'player-score-stat';
+
+                    const playcountLabel = document.createElement('span');
+                    playcountLabel.className = 'player-score-stat-label';
+                    playcountLabel.textContent = 'Plays: ';
+
+                    const playcountValue = document.createElement('span');
+                    playcountValue.className = 'player-score-stat-value';
+                    playcountValue.dataset.playcountFor = String(player.id);
+                    playcountValue.textContent = pc.toLocaleString();
+
+                    playcountEl.appendChild(playcountLabel);
+                    playcountEl.appendChild(playcountValue);
+                    statsEl.appendChild(playcountEl);
+
+                    // Avg: <span>[number]</span>
+                    const avgEl = document.createElement('div');
+                    avgEl.className = 'player-score-stat';
+
+                    const avgLabel = document.createElement('span');
+                    avgLabel.className = 'player-score-stat-label';
+                    avgLabel.textContent = 'Avg: ';
+
+                    const avgValue = document.createElement('span');
+                    avgValue.className = 'player-score-stat-value';
+                    avgValue.dataset.avgFor = String(player.id);
+                    avgValue.textContent = avg.toLocaleString();
+
+                    avgEl.appendChild(avgLabel);
+                    avgEl.appendChild(avgValue);
+                    statsEl.appendChild(avgEl);
+
+                    scoreWrapper.appendChild(statsEl);
+
+                    if (String(player.id) === String(currentOsuId) && !matchEnded) {
                         const refreshBtn = document.createElement('button');
                         refreshBtn.className = 'player-refresh-button';
                         refreshBtn.textContent = 'Refresh';
@@ -326,6 +447,7 @@
                 }
 
                 function renderAll() {
+                    console.log("[render] renderAll() start");
                     const matchInfo = document.getElementById('match-info');
                     matchInfo.innerHTML = "";
 
@@ -337,74 +459,152 @@
 
                     const teams = buildTeams(sortedPlayers);
                     renderTeamsOverview(teams);
+                    console.log("[render] renderAll() done", {
+                        renderedPlayers: sortedPlayers.length,
+                        teams: teams.length
+                    });
                 }
 
-                // --- NEW: render with FLIP reorder + animated score for changed player(s)
-                function renderAllAnimated(scoreDiffsById) {
+                // changeMap: Map(userId -> { scoreFrom, scoreTo, playFrom, playTo, avgFrom, avgTo })
+                function renderAllAnimated(changeMap) {
+                    console.log("[render] renderAllAnimated() called", {
+                        hasChangeMap: Boolean(changeMap),
+                        changeKeys: changeMap ? Array.from(changeMap.keys()) : []
+                    });
+
                     const prevRects = captureRowPositions();
                     renderAll();
+                    renderTeamsOverview(teams);
                     animateRowReorder(prevRects);
 
-                    if (!scoreDiffsById) return;
-                    for (const [userId, diff] of scoreDiffsById.entries()) {
-                        const el = document.querySelector(`.player-score-value[data-score-for="${CSS.escape(String(userId))}"]`);
-                        if (!el) continue;
+                    if (!changeMap) return;
 
-                        const p = players.find(x => String(x.id) === String(userId));
-                        if (!p) continue;
+                    for (const [userId, c] of changeMap.entries()) {
+                        const scoreEl = document.querySelector(
+                            `.player-score-value[data-score-for="${CSS.escape(String(userId))}"]`
+                        );
+                        const playEl = document.querySelector(
+                            `.player-score-stat-value[data-playcount-for="${CSS.escape(String(userId))}"]`
+                        );
+                        const avgEl = document.querySelector(
+                            `.player-score-stat-value[data-avg-for="${CSS.escape(String(userId))}"]`
+                        );
 
-                        // animate from (new - diff) to new
-                        const to = Number(p.score || 0);
-                        const from = to - Number(diff || 0);
+                        console.log("[render] elements found?", {
+                            userId,
+                            scoreEl: Boolean(scoreEl),
+                            playEl: Boolean(playEl),
+                            avgEl: Boolean(avgEl)
+                        });
 
-                        if (diff !== 0) {
-                            bumpScore(el, diff);
-                            animateNumber(el, from, to, 650);
-                        } else {
-                            el.textContent = to.toLocaleString();
+                        if (scoreEl) {
+                            const diff = Number(c.scoreTo) - Number(c.scoreFrom);
+                            if (diff !== 0) bumpScore(scoreEl, diff);
+                            animateNumber(scoreEl, c.scoreFrom, c.scoreTo, 650);
                         }
+                        if (playEl) animateNumber(playEl, c.playFrom, c.playTo, 650);
+                        if (avgEl) animateNumber(avgEl, c.avgFrom, c.avgTo, 650);
                     }
                 }
 
                 document.addEventListener('DOMContentLoaded', () => {
+                    console.log("[match] DOMContentLoaded");
+
                     const loading = document.getElementById('loading-indicator');
                     if (loading) loading.remove();
 
                     renderAll();
 
-                    // Socket.IO: join match room + listen for score updates
+                    console.log("[socket] initializing socket.io");
                     const socket = io({
                         transports: ["websocket", "polling"],
                     });
 
                     socket.on("connect", () => {
+                        console.log("[socket] connected", {
+                            id: socket.id,
+                            transport: socket.io.engine?.transport?.name
+                        });
+                        console.log("[socket] joining match room", { matchId: String(matchId) });
                         socket.emit("join_match", { match_id: String(matchId) });
                     });
 
-                    socket.on("match_user_score_updated", (payload) => {
-                        console.log("Socket update:", payload);
-                        if (!payload) return;
-                        if (String(payload.match_id) !== String(matchId)) return;
+                    socket.on("disconnect", (reason) => {
+                        console.warn("[socket] disconnected", { reason });
+                    });
 
-                        const userId = String(payload.player.id);
-                        const newScore = Number(payload.player.score);
+                    socket.on("connect_error", (err) => {
+                        console.error("[socket] connect_error", err);
+                    });
+
+                    socket.onAny((eventName, ...args) => {
+                        if (eventName !== "match_user_score_updated") return;
+                        console.log("[socket] event received:", eventName, args?.[0]);
+                    });
+
+                    socket.on("match_user_score_updated", (payload) => {
+                        if (!payload) return;
+                        if (String(payload.match.match) !== String(matchId)) return;
+
+                        const userId = String(payload.player?.id);
+                        const newScoreAbs = Number(payload.player?.score);
+                        const newPlayAbs = Number(payload.player?.playcount);
 
                         const p = players.find(x => String(x.id) === userId);
                         if (!p) return;
 
-                        console.log(p.score)
-                        console.log(`Player ${userId} score changed to ${newScore}`);
+                        console.log("[socket] match_user_score_updated - current player state:", {
+                            userId,
+                            matchEnded,
+                            payload: payload,
+                            currentPlayer: {
+                                score: p.score,
+                                playcount: p.playcount,
+                                starting_score: p.starting_score,
+                                starting_playcount: p.starting_playcount,
+                                ending_score: p.ending_score,
+                                ending_playcount: p.ending_playcount
+                            }
+                        });
 
-                        const oldRel = Number(p.score || 0);
-                        p.score = newScore - p.starting_score;
-                        const newRel = Number(p.score || 0);
+                        const oldScoreRel = Number(p.score || 0);
+                        const oldPlayRel = Number(p.playcount || 0);
+                        const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
 
-                        console.log(`Player ${userId} score changed from ${oldRel} to ${newRel}`);
+                        const startingScore = Number(payload.match.starting_score || 0);
+                        const startingPlaycount = Number(payload.match.starting_playcount || 0);
 
-                        const diffs = new Map();
-                        diffs.set(userId, newRel - oldRel);
+                        const endingScore = Number(payload.match.ending_score || 0);
+                        const endingPlaycount = Number(payload.match.ending_playcount || 0);
 
-                        renderAllAnimated(diffs);
+                        // IMPORTANT: your requested rule
+                        // - not ended: current - starting
+                        // - ended:     starting - ending (ending is what we receive in payload in this case)
+                        const newScoreRel = matchEnded
+                            ? (startingScore - endingScore)
+                            : (newScoreAbs - startingScore);
+
+                        const newPlayRel = matchEnded
+                            ? (startingPlaycount - endingPlaycount)
+                            : (newPlayAbs - startingPlaycount);
+
+                        const newAvg = newPlayRel > 0 ? Math.round(newScoreRel / newPlayRel) : 0;
+
+                        // keep local state in sync (these are match-relative)
+                        p.score = newScoreRel;
+                        p.playcount = newPlayRel;
+
+                        const changeMap = new Map();
+                        changeMap.set(userId, {
+                            scoreFrom: oldScoreRel,
+                            scoreTo: newScoreRel,
+                            playFrom: oldPlayRel,
+                            playTo: newPlayRel,
+                            avgFrom: oldAvg,
+                            avgTo: newAvg,
+                        });
+
+                        renderAllAnimated(changeMap);
                     });
                 });
             </script>

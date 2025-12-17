@@ -156,6 +156,30 @@
     opacity: 0.8;
 }
 
+/* NEW: small “important” stats next to the score */
+.player-score-stats {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.player-score-stat {
+    line-height: 1.05;
+    white-space: nowrap;
+}
+
+.player-score-stat-label {
+    opacity: 0.85;
+}
+
+.player-score-stat-value {
+    font-variant-numeric: tabular-nums;
+}
+
 /* Small refresh button on player card */
 .player-refresh-button {
     padding: 6px 10px;

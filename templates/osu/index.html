@@ -390,7 +390,7 @@
           </div>
 
           <div id="section-ended" style="flex-direction: column;" data-section="ended">
-            <h1>Finished matches</h1>
+            <h1 style="text-align: center">Finished matches</h1>
             {% for match in matches["old"] %}
             <a class="match-link" data-status="ended" data-name="{{ match.name }}" href="/osu/match/{{ match.id }}">{{ match.name }}</a>
             {% endfor %}
