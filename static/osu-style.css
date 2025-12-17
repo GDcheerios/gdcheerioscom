@@ -1,0 +1,340 @@
+.matches {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 0;
+}
+
+.match {
+
+}
+
+/* --- MATCH LAYOUT: players left, teams right --- */
+.match-layout {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 20px;
+    padding: 0 5%;
+}
+
+/* Left column: player list */
+.match-players-column {
+    flex: 2;
+}
+
+/* Right column: teams overview */
+.teams-overview {
+    flex: 1;
+    color: #ffffff;
+}
+
+.teams-overview h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* Individual team card */
+.team-card {
+    background: rgba(0, 0, 0, 0.65);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border: 2px solid #ffffff22;
+}
+
+.team-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.team-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.team-score {
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.team-player-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* --- existing player styles --- */
+
+.player-listing {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 4px solid #ffffff;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.player {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 4px solid #ffffff;
+    padding: 10px;
+    margin-bottom: 10px;
+    width: 100%;
+    margin-left: 0;
+}
+
+/* Row containing rank text + player card */
+.player-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+/* Simple white rank indicator on the left */
+.player-rank {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-align: right;
+    width: 2.5ch;
+}
+
+.player-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(8px);
+    transform: scale(1.05);
+    z-index: 0;
+}
+
+.player-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* LEFT: everything except score */
+.player-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* RIGHT: only score, very emphasized */
+.player-score {
+    margin-left: auto;
+    text-align: right;
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 1);
+}
+
+.player-score-value {
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+}
+
+.player-score-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+/* NEW: small “important” stats next to the score */
+.player-score-stats {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.player-score-stat {
+    line-height: 1.05;
+    white-space: nowrap;
+}
+
+.player-score-stat-label {
+    opacity: 0.85;
+}
+
+.player-score-stat-value {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Small refresh button on player card */
+.player-refresh-button {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    border: 2px solid #ffffffaa;
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.player-refresh-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Text block next to avatar */
+.player-text {
+    color: #ffffff;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+.player-text-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.player-text-meta {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.player-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 2px solid #000000;
+}
+
+.create {
+    background: #333333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 16px;
+    margin-bottom: 10px;
+}
+
+.create-players {
+    color: #fff;
+    padding: 10px;
+    border-radius: 16px;
+    border: 2px solid #333333;
+}
+
+.create-players-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+input {
+    padding: 10px 15px;
+    font-size: 24px;
+    color: #fff;
+    background-color: #7f7f7f;
+    border: 2px solid #232323;
+    /*margin-right: 10px;*/
+    font-weight: bold;
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input:focus {
+    border-color: #000;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+.config-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.checkbox-container {
+    display: flex;
+    flex-direction: row;
+}
+
+/* Matches search + filter */
+.matches-toolbar {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 10px 0 20px 0;
+}
+
+.matches-toolbar #matchSearch {
+    width: min(720px, 92vw);
+}
+
+.match-filter {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 10px 14px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #ffffffaa;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.filter-btn.is-active {
+    border-color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Column list styling for match links */
+#matches [data-section] {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+a.match-link {
+    display: block;              /* makes each match take its own row */
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 12px 14px;
+    border-radius: 12px;
+
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid #ffffff22;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+a.match-link:hover {
+    border-color: #ffffff66;
+    background: rgba(0, 0, 0, 0.7);
+    text-decoration: none;
+}
