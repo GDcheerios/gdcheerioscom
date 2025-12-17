@@ -10,7 +10,10 @@ osu_blueprint = Blueprint('osu_blueprint', __name__)
 @osu_blueprint.route("/")
 def osu():
     request_id = request.cookies.get("userID")
-    account = Account(request_id)
+    account = None
+    if request_id:
+        account = Account(request_id)
+
     return render_template("osu/index.html", matches=get_matches(), account=account)
 
 
