@@ -1,6 +1,7 @@
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+
+from datetime import datetime, timedelta, timezone
 
 import environment
 
@@ -175,6 +176,16 @@ class Account:
 
     @staticmethod
     def queue(username: str, password: str, email: str, osu_id: int, about: str):
+
+        now = datetime.now(tz=timezone.utc)
+        database.execute(
+            """
+            DELETE
+            FROM pending_accounts
+            WHERE expires < %s;
+            """,
+            params=(now,)
+        )
         raw_token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         password = str(password)
@@ -262,7 +273,6 @@ class Account:
 
     def update_osu_data(self):
         data = None
-
         try:
             last_refresh = \
                 database.fetch_one("SELECT last_refresh FROM osu_users WHERE id = %s", params=(self.osu_id,))[0]

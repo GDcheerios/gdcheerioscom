@@ -19,6 +19,14 @@
         </ul>
       </li>
 <!--      <li><a href="/osu">Osu</a></li>-->
+
+      <!-- Osu dropdown -->
+      <li class="dropdown">
+        <a href="/osu">Osu</a>
+        <ul class="dropdown-content">
+        </ul>
+
+      <!-- Account dropdown -->
       <li class="dropdown">
         {% if request.cookies.get('userID') != None %}
           <a href="/account/{{request.cookies.get('userID')}}">Profile</a>
