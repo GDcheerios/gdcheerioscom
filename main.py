@@ -94,4 +94,4 @@ if __name__ == "__main__":
     socketio = SocketIO(app)
     register_socket_handlers(socketio)
     environment.socket = socketio
-    socketio.run(app, host='0.0.0.0', port=server_port, debug=environment.debug)
+    socketio.run(app, host='0.0.0.0', port=server_port, debug=environment.debug, allow_unsafe_werkzeug=True)
