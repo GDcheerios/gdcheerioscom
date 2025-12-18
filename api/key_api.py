@@ -154,13 +154,7 @@ def verify_api_key_header():
     """
 
     auth = request.headers.get("Authorization", "")
-    prefix = "Authorization ApiKey "
-
-    if not auth.startswith(prefix):
-        print(f"[API] Missing Authorization header")
-        return None
-
-    combined = auth[len(prefix):].strip()
+    combined = auth.strip()
     if "." not in combined:
         print(f"[API] Missing key ID/secret")
         return None
@@ -184,15 +178,6 @@ def verify_api_key_header():
 
     g.current_user_id = str(row["user_id"])
     g.current_scopes = row["scopes"]
-    environment.database.execute(
-        """
-        UPDATE api_keys
-        SET last_used_at = now(),
-            last_used_ip = %s
-        WHERE key_id = %s
-        """,
-        params=(key_id,)
-    )
     return g.current_user_id
 
 
@@ -230,6 +215,8 @@ def require_scopes(required: list[str]):
             if not uid:
                 return jsonify({"error": "unauthorized"}), 401
             have = set(g.get("current_scopes", []))
+            if "admin" in have:
+                return fn(*args, **kwargs)
             if not set(required).issubset(have):
                 return jsonify({"error": "forbidden", "missing_scopes": list(set(required) - have)}), 403
             return fn(*args, **kwargs)

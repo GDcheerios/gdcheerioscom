@@ -23,6 +23,7 @@ class Account:
     gq_scores: list
     osu_data: dict
     exists: bool
+    is_admin: bool
 
     def __init__(self, identifier):
         print(f"Loading account {identifier}")
@@ -46,6 +47,7 @@ class Account:
                 is_supporter,
                 last_support,
                 supporter_lasts,
+                is_admin,
                 EXISTS (
                     SELECT 1
                     FROM gq_data
@@ -77,6 +79,7 @@ class Account:
             self.tags = database.fetch_all_to_dict("SELECT * FROM account_tags WHERE account = %s",
                                                    params=(self.id,)) or []
             self.exists = True
+            self.is_admin = result["is_admin"]
         except TypeError:
             self.id = 0
             self.username = "User not found"
@@ -94,6 +97,7 @@ class Account:
             self.supporter_lasts = None
             self.tags = []
             self.exists = False
+            self.is_admin = False
 
         self.osu_data = {}
         self.gq_data = {}
