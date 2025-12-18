@@ -19,8 +19,39 @@
                 <div id="tags"></div>
             </div>
         </div>
-        <div style="display: flex; flex-direction: row;">
+        <div style="display: flex; flex-direction: column;">
             <h2 class="about">{{ account.about|safe }}</h2>
+            {% if request.cookies.get("userID") == account.id | string %}
+                <hr style="height: 0;">
+                <h4 style="text-align: right;">Edit your information</h4>
+                <form action="/api/account/change-username" method="POST"
+                      style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <input type="text" name="username" placeholder="New username" required
+                           style="padding: 8px; border: 1px solid #2b2b2b; border-radius: 4px; background: #111; color: #fff;">
+                    <button type="submit"
+                            style="padding: 8px 16px; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                        Change Username
+                    </button>
+                </form>
+                <form action="/api/account/change-about" method="POST"
+                      style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <textarea name="about_me" placeholder="Update about me" rows="4"
+                              style="padding: 8px; border: 1px solid #2b2b2b; border-radius: 4px; background: #111; color: #fff; resize: vertical;"></textarea>
+                    <button type="submit"
+                            style="padding: 8px 16px; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                        Update About Me
+                    </button>
+                </form>
+                <form action="/api/account/set-osu" method="POST"
+                      style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <input type="text" name="osu_id" placeholder="osu! User ID/Username" required
+                           style="padding: 8px; border: 1px solid #2b2b2b; border-radius: 4px; background: #111; color: #fff;">
+                    <button type="submit"
+                            style="padding: 8px 16px; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                        Link osu! Account
+                    </button>
+                </form>
+            {% endif %}
         </div>
     </div>
     <script>

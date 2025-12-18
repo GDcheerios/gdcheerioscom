@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import environment
 
 database = environment.database
-from api.osu_api import get_user_info
+from api.osu_api import fetch_osu_data
 from objects.EmailManager import EmailManager
 
 
@@ -213,6 +213,14 @@ class Account:
 
         database.execute(f"update accounts set username = %s where id = %s;", params=(new_username, id))
 
+    @staticmethod
+    def change_about(id: int, new_about: str):
+        """
+        Change about
+        """
+
+        database.execute(f"update accounts set about = %s where id = %s;", params=(new_about, id))
+
     # </editor-fold>
 
     # <editor-fold desc="Checks">
@@ -241,83 +249,20 @@ class Account:
 
     # <editor-fold desc="Osu">
 
-    def fetch_osu_data(self):
-        if self.has_osu:
-            try:
-                data = get_user_info(self.osu_id)
-                return {
-                    'username': data['username'],
-                    'score': data['statistics']['total_score'],
-                    'playcount': data['statistics']['play_count'],
-                    'accuracy': data['statistics']['hit_accuracy'],
-                    'performance': data['statistics']['pp'],
-                    'rank': data['statistics']['global_rank'],
-                }
-            except KeyError:
-                print("User doesn't exist on osu!")
-                database.execute("UPDATE accounts SET osu_id = 0 WHERE id = %s", params=(self.id,))
+    def set_osu_id(self, osu_id: int):
+        data = fetch_osu_data(osu_id)
+        if data:
+            database.execute("UPDATE accounts SET osu_id = %s where id = %s;", params=(osu_id, self.id))
+            return data
 
         return None
 
     def get_osu_data(self):
-        if self.has_osu:
-            data = database.fetch_to_dict("SELECT * FROM osu_users WHERE id = %s", params=(self.osu_id,))
-            if not data:
-                if not self.update_osu_data():
-                    return None
-                return self.get_osu_data()
-            else:
-                return data
+        data = database.fetch_to_dict("SELECT * FROM osu_users WHERE id = %s;", params=(self.osu_id,))
+        if data:
+            return data
 
         return None
-
-    def update_osu_data(self):
-        data = None
-        try:
-            last_refresh = \
-                database.fetch_one("SELECT last_refresh FROM osu_users WHERE id = %s", params=(self.osu_id,))[0]
-            right_now = (last_refresh + timedelta(minutes=1))
-            can_refresh = right_now < datetime.now()
-            print(f"last refresh: {last_refresh}\n"
-                  f"now: {right_now}\n"
-                  f"{can_refresh}")
-        except TypeError:
-            can_refresh = True
-
-        if can_refresh:
-            data = self.fetch_osu_data()
-            if not data:
-                return False
-
-        result = database.fetch_one("SELECT id FROM osu_users WHERE id = %s", params=(self.osu_id,))
-        if result:
-            database.execute(
-                "UPDATE osu_users SET username = %s, score = %s, playcount = %s, accuracy = %s, performance = %s, rank = %s, last_refresh = now() WHERE id = %s",
-                params=(
-                    data['username'],
-                    data['score'],
-                    data['playcount'],
-                    data['accuracy'],
-                    data['performance'],
-                    data['rank'],
-                    self.osu_id
-                )
-            )
-        else:
-            database.execute(
-                "INSERT INTO osu_users (id, username, score, playcount, accuracy, performance, rank) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                params=(
-                    self.osu_id,
-                    data['username'],
-                    data['score'],
-                    data['playcount'],
-                    data['accuracy'],
-                    data['performance'],
-                    data['rank']
-                )
-            )
-
-        return True
 
     # </editor-fold>
 
