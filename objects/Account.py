@@ -253,10 +253,10 @@ class Account:
 
     # <editor-fold desc="Osu">
 
-    def set_osu_id(self, osu_id: int):
+    def set_osu_id(self, osu_id):
         data = fetch_osu_data(osu_id)
         if data:
-            database.execute("UPDATE accounts SET osu_id = %s where id = %s;", params=(osu_id, self.id))
+            database.execute("UPDATE accounts SET osu_id = %s where id = %s;", params=(data["id"], self.id))
             return data
 
         return None

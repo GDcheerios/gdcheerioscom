@@ -161,16 +161,13 @@ def grab_account(identifier):
     return Account(identifier).jsonify()
 
 
-@account_api_blueprint.post("/account/set-osu/<id>")
-def set_osu(id):
+@account_api_blueprint.post("/account/set-osu")
+def set_osu():
+    id = request.form["osu_id"]
     user_id = request.cookies.get("userID")
     if user_id:
         user = Account(user_id)
         user.set_osu_id(id)
-        return {
-            "success": True
-        }
+        return redirect(f"/user/{user_id}")
 
-    return {
-        "success": False
-    }
+    return redirect(f"/user/{user_id}")
