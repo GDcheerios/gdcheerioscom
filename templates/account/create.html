@@ -14,19 +14,6 @@
   {% endif %}
   <div class="account-form">
       <form id="create-form" action="/api/account/create-account" method="POST" novalidate>
-          {% if osu_info == None %}
-          <p><h1><a href=https://osu.ppy.sh/oauth/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&response_type=code&scope=public+identify&state=randomval">Link osu account here</a></h1></p>
-          <input type="text" value="0" name="id" style="display: none;" readonly>
-          {% else %}
-          <h1>Linked osu account:</h1>
-          <div class="linked-osu-account" style="background-image: url({{osu_info['background url']}}); display: flex; width: 60%; height: 20%; margin: auto; margin-top: 5px;">
-              <div class="linked-osu-account-content">
-                  <img src="{{osu_info['avatar']}}">
-                  <h1>{{osu_info['username']}}</h1>
-              </div>
-          </div>
-          <input type="text" value="{{osu_info['id']}}" name="id" style="display: none;" readonly>
-          {% endif %}
           <p><h1>Enter email</h1></p>
           <p>
               <input
