@@ -4,6 +4,8 @@ import environment
 from api.key_api import *
 import base64, json, hmac, hashlib, time, logging  # debug helpers
 
+from objects import Account
+
 key_blueprint = Blueprint('key', __name__)
 
 
@@ -84,6 +86,8 @@ def create_key():
         logging.warning("[keys] Unauthorized: could not resolve user from Authorization header")
         return jsonify({"error": "unauthorized"}), 401
 
+    user_account = Account(user_id)
+
     payload = request.get_json(silent=True) or {}
     logging.debug("[keys] Request JSON received (fields: %s)", list(payload.keys()))
     name = payload.get("name") or "Unnamed key"
@@ -93,6 +97,10 @@ def create_key():
     if not isinstance(scopes, list):
         logging.warning("[keys] scopes is not a list")
         return jsonify({"error": "scopes_must_be_list"}), 400
+
+    if 'admin' in scopes and not user_account.is_admin:
+        logging.warning("[keys] Unauthorized: user is not an admin")
+        return jsonify({"error": "unauthorized"}), 401
 
     key_id, secret, combined = generate_key_pair()
     secret_hash = hash_secret(secret)
