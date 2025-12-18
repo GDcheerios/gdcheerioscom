@@ -158,6 +158,65 @@ class Account:
             self.gq_data["metadata"]["level"] = level
             self.gq_data["metadata"]["required"] = environment.gq_levels[level]
 
+        self.osu_data = {}
+        self.gq_data = {}
+
+        if self.has_osu:
+            self.osu_data = self.get_osu_data()
+
+        if self.has_gq:
+            gq_scores = database.fetch_all_to_dict(
+                """
+                SELECT id,
+                       score,
+                       (SELECT gq_leaderboards.name
+                        from gq_leaderboards
+                        where gq_leaderboards.id = gq_scores.leaderboard) as name
+                FROM gq_scores
+                WHERE "user" = %s
+                """,
+                params=(self.id,)
+            ) or []
+
+            leaderboards = {}
+            for score in gq_scores:
+                if score["name"] not in leaderboards:
+                    leaderboards[score["name"]] = []
+
+            for score in gq_scores:
+                leaderboards[score["name"]].append({
+                    "score": score["score"],
+                    "id": score["id"]
+                })
+
+            self.gq_data = {
+                "scores": leaderboards,
+                "metrics": environment.database.fetch_all_to_dict("SELECT * FROM gq_metrics WHERE user_id = %s ORDER BY recorded_at desc", params=(self.id,)),
+                "metadata": environment.database.fetch_to_dict("SELECT * FROM gq_data WHERE id = %s", params=(self.id,)),
+                "ranking": environment.database.fetch_to_dict("SELECT * FROM gq_rankings WHERE id = %s", params=(self.id,)),
+                "items": environment.database.fetch_all_to_dict("SELECT * FROM gq_items WHERE owner = %s", params=(self.id,))
+            }
+            if self.gq_data["ranking"]:
+                self.gq_data["ranking"]["placement"] = environment.database.fetch_one(
+                    """
+                    SELECT COUNT(*) + 1
+                    FROM gq_rankings r2
+                    WHERE r2.weighted > (SELECT weighted
+                                         FROM gq_rankings r1
+                                         WHERE r1.id = %s)
+                    """,
+                    params=(self.id,)
+                )[0]
+
+            level = 0
+            for i, threshold in enumerate(environment.gq_levels):
+                if self.gq_data["metadata"]["score"] >= threshold:
+                    level = i + 1
+                else:
+                    break
+            self.gq_data["metadata"]["level"] = level
+            self.gq_data["metadata"]["required"] = environment.gq_levels[level]
+
     # <editor-fold desc="Modifiers">
     @staticmethod
     def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":

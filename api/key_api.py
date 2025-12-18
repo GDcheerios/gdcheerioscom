@@ -3,6 +3,7 @@ import time, base64, hmac, hashlib, os, json
 from flask import request, jsonify, g
 from functools import wraps
 
+
 JWT_SECRET = environment.secret
 JWT_TTL = 3600
 
