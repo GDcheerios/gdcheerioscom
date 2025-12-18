@@ -133,6 +133,16 @@ def change_username():
     return redirect(f'/user/{account.id}')
 
 
+@account_api_blueprint.route("/account/change-about", methods=["POST"])
+def change_about():
+    id = request.cookies.get("userID")
+    account = Account(id)
+    about_me = request.form.get("about_me")
+    Account.change_about(int(id), about_me)
+
+    return redirect(f'/user/{account.id}')
+
+
 @account_api_blueprint.route("/account/check/username", methods=["GET"])
 def check_username():
     username = request.args.get("username")
@@ -149,3 +159,15 @@ def check_email():
 @account_api_blueprint.route("/account/grab/<identifier>")
 def grab_account(identifier):
     return Account(identifier).jsonify()
+
+
+@account_api_blueprint.post("/account/set-osu")
+def set_osu():
+    id = request.form["osu_id"]
+    user_id = request.cookies.get("userID")
+    if user_id:
+        user = Account(user_id)
+        user.set_osu_id(id)
+        return redirect(f"/user/{user_id}")
+
+    return redirect(f"/user/{user_id}")
