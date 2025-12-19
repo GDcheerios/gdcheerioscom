@@ -59,6 +59,15 @@ class Account:
             params=(identifier,)
         )
 
+        if result["supporter_lasts"]:
+            if datetime.now(tz=timezone.utc) > result["supporter_lasts"]:
+                database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}", params=(identifier,))
+                self.supporter = False
+            else:
+                self.supporter = True
+        else:
+            self.supporter = result["is_supporter"]
+
         self.pfp = "https://storage.cloud.google.com/gdcheerioscombucket/profile-pictures/huh.png"
 
         try:
@@ -73,7 +82,6 @@ class Account:
             self.about = result["about"]
             self.status = result["status"]
             self.created = result["created"]
-            self.supporter = result["is_supporter"]
             self.last_support = result["last_support"]
             self.supporter_lasts = result["supporter_lasts"]
             self.tags = database.fetch_all_to_dict("SELECT * FROM account_tags WHERE account = %s",
@@ -167,8 +175,7 @@ class Account:
     def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":
         query = """
                 INSERT INTO accounts (username, password, email, osu_id, about)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id
+                VALUES (%s, %s, %s, %s, %s) RETURNING id
                 """
 
         params = (
@@ -201,8 +208,7 @@ class Account:
         pending_id = database.fetch_one(
             """
             INSERT INTO pending_accounts (username, password, email, osu_id, about, token)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
             """,
             params=(username, password, email, osu_id, about, token_hash)
         )[0]
@@ -228,6 +234,24 @@ class Account:
         """
 
         database.execute(f"update accounts set about = %s where id = %s;", params=(new_about, id))
+
+    @staticmethod
+    def make_supporter(id: int, weeks: int = 1):
+        """
+        Grants supporter status to an account.
+        If the user is already a supporter, adds time to the expiration date.
+        Otherwise, sets expiration to NOW + weeks.
+        """
+        database.execute(
+            """
+            UPDATE accounts
+            SET is_supporter    = TRUE,
+                last_support    = NOW(),
+                supporter_lasts = GREATEST(COALESCE(supporter_lasts, NOW()), NOW()) + (INTERVAL '1 week' * %s)
+            WHERE id = %s
+            """,
+            params=(weeks, id)
+        )
 
     # </editor-fold>
 

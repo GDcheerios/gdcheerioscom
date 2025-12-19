@@ -171,3 +171,4 @@ def set_osu():
         return redirect(f"/user/{user_id}")
 
     return redirect(f"/user/{user_id}")
+

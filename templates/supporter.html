@@ -1,10 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    {% block head %}
+        <title>Supporter</title>
+        <link rel="stylesheet" href="/static/style.css">
+    {% endblock %}
 </head>
 <body>
-$END$
+{% include 'navbar.html' %}
+{% block body %}
+    <section class="block" id="supporter" aria-labelledby="supporter">
+        <div class="center">
+            <h2>Support GDcheerios.com</h2>
+            <div style="margin: 10px 20%;">
+                <p>
+                    I love being able to create things for people to use,
+                    and I have so much fun creating these projects.
+                    Letting people experience them for free is a big part of what makes me happy.
+                    <br><br>
+                    Unfortunately, keeping the servers running isn't free, and I do have to pay for them.
+                </p>
+                <h3>Where your money goes</h3>
+                <p>
+                    Your money goes towards server costs, paying the development team, and outside contributors/resources.
+                </p>
+                <h3>What you get with being a supporter</h3>
+                <ul>
+                    <li>Supporter role in the <a href="/discord">GDcheerios Discord</a>, if your discord is linked to your account.</li>
+                    <li>Cool supporter tag on your profile</li>
+                    <li>More features coming soon</li>
+                </ul>
+            </div>
+            <form action="/payment/create-checkout-session" method="POST">
+                <label for="weeks-slider" style="display: block; margin-bottom: 10px;">How long do you want supporter status?</label>
+                <input type="range" class="supporter-slider" id="weeks-slider" name="weeks" min="1" max="104" value="1">
+                <div id="time-display">1 week</div>
+                <button type="submit" class="supporter-button">Buy Supporter</button>
+            </form>
+            <script>
+                const slider = document.getElementById('weeks-slider');
+                const display = document.getElementById('time-display');
+
+                function updateSliderVisuals() {
+                    const min = parseInt(slider.min, 10);
+                    const max = parseInt(slider.max, 10);
+                    const val = parseInt(slider.value, 10);
+
+                    const percent = ((val - min) / (max - min)) * 100;
+
+                    slider.style.background = `linear-gradient(to right,
+                        #00d98f 0%,
+                        #00d98f ${percent}%,
+                        #1a1a1a ${percent}%,
+                        #1a1a1a 100%
+                    )`;
+                }
+
+                slider.addEventListener('input', function () {
+                    const totalWeeks = parseInt(this.value);
+                    const years = Math.floor(totalWeeks / 52);
+                    const months = Math.floor((totalWeeks % 52) / 4.33);
+                    const weeks = Math.round(totalWeeks % 52 % 4.33);
+
+                    let parts = [];
+
+                    if (years > 0) {
+                        parts.push(years + (years === 1 ? ' year' : ' years'));
+                    }
+                    if (months > 0) {
+                        parts.push(months + (months === 1 ? ' month' : ' months'));
+                    }
+                    if (weeks > 0 || parts.length === 0) {
+                        parts.push(weeks + (weeks === 1 ? ' week' : ' weeks'));
+                    }
+
+                    let text = parts.join(', ');
+                    if (parts.length > 1) {
+                        const lastPart = parts.pop();
+                        text = parts.join(', ') + ', and ' + lastPart;
+                    }
+
+                    display.textContent = text;
+
+                    // Update the green fill based on current value
+                    updateSliderVisuals();
+                });
+
+                // Initialize visuals on page load
+                updateSliderVisuals();
+            </script>
+        </div>
+    </section>
+{% endblock %}
 </body>
 </html>
