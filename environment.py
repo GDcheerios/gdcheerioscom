@@ -30,6 +30,10 @@ db = os.environ['DB']
 osu_secret = os.environ['OSU_SECRET']
 osu_api_key = os.environ['OSU_API_KEY']
 osu_client_id = os.environ['CLIENT_ID']
+
+stripe_public_key = os.environ['STRIPE_PUBLIC_KEY']
+stripe_secret_key = os.environ['STRIPE_SECRET_KEY']
+stripe_webhook_secret = os.environ['STRIPE_WEBHOOK_SECRET']
 print_end()
 # endregion
 
@@ -109,5 +113,11 @@ Database.execute(
     """,
     params=(now,)
 )
+print_end()
+# endregion
+
+# region Payment Setup
+print_start("Payment Setup")
+weekly_cost = 100  # cents
 print_end()
 # endregion
