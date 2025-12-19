@@ -467,6 +467,11 @@ img {
     border-color: #9c0505;
 }
 
+.tag-supporter {
+    background-color: #FF1493;
+    border-color: #FFB6D9;
+}
+
 /* OSU specific metrics (separate from GQ) */
 .osu-metrics {
     display: grid;

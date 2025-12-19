@@ -19,6 +19,7 @@ from routes.api.key_routes import key_blueprint
 from routes.api.account_api_routes import account_api_blueprint
 from routes.api.osu_api_routes import osu_api_blueprint
 from routes.api.gentrys_quest_api_routes import gentrys_quest_api_blueprint
+from routes.api.payment_api_routes import payments_api_blueprint
 
 #   pages
 from routes.pages.main_routes import main_blueprint
@@ -77,6 +78,7 @@ def create_app():
     app.register_blueprint(account_api_blueprint, url_prefix='/api')
     app.register_blueprint(osu_api_blueprint, url_prefix='/api')
     app.register_blueprint(gentrys_quest_api_blueprint, url_prefix='/api')
+    app.register_blueprint(payments_api_blueprint, url_prefix='/payment')
 
     #   pages
     app.register_blueprint(main_blueprint)

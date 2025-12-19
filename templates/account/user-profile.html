@@ -62,13 +62,21 @@
             "dev": 2,
             "unique": 3,
             "rare": 4,
-            "event": 5
+            "supporter": 5,
+            "event": 6
         };
         const userStatusTag = {
             "account": {{ account.id }},
             "id": 1,
             "title": "{{ account.status }}",
             "type": "{{ account.status }}"
+        }
+
+        const supporterTag = {
+            "account": {{ account.id }},
+            "id": 1,
+            "title": "Supporter",
+            "type": "supporter"
         }
 
 
@@ -91,6 +99,7 @@
         }
 
         if (userStatusTag.type === "restricted") addTag(userStatusTag);
+        if ({{ account.supporter | tojson }}) addTag(supporterTag);
         sortedTags.forEach((tag) => {
             addTag(tag);
         });
