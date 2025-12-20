@@ -22,7 +22,28 @@ def gentrys_quest_home(): return render_template("gentrys quest/home.html")
 
 
 @gentrys_quest_blueprint.route("/leaderboard")
-def gentrys_quest_leaderboard(): return render_template("gentrys quest/leaderboard.html")
+def gentrys_quest_leaderboard():
+    players = get_top_players()
+    id = request.cookies.get("userID")
+    if id:
+        id = int(id)
+    found_you = False
+
+    placement = 1
+    for player in players:
+        player["placement"] = placement
+        placement += 1
+
+        player["you"] = False
+        if player["id"] == id:
+            player["you"] = True
+            found_you = True
+
+    if not found_you and id is not None:
+        players.append(Account(id).gq_data["ranking"])
+
+
+    return render_template("gentrys quest/leaderboard.html", players=players)
 
 
 @gentrys_quest_blueprint.route("/levels")
