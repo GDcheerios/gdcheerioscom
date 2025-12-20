@@ -88,6 +88,14 @@ class Account:
                                                    params=(self.id,)) or []
             self.exists = True
             self.is_admin = result["is_admin"]
+            if result["supporter_lasts"]:
+                if datetime.now(tz=timezone.utc) > result["supporter_lasts"]:
+                    database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}", params=(identifier,))
+                    self.supporter = False
+                else:
+                    self.supporter = True
+            else:
+                self.supporter = result["is_supporter"]
         except TypeError:
             self.id = 0
             self.username = "User not found"
