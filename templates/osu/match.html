@@ -53,14 +53,21 @@
                 margin: 10px 0 18px 0;
             }
 
-            .end-match-button {
+            .match-button {
                 padding: 10px 14px;
                 border-radius: 10px;
                 border: 1px solid rgba(255, 255, 255, 0.18);
-                background: rgba(255, 90, 90, 0.18);
                 color: white;
                 cursor: pointer;
                 font-weight: 600;
+            }
+
+            .match-button--end {
+                background: rgba(255, 90, 90, 0.18);
+            }
+
+            .match-button--refresh {
+                background: rgba(60, 255, 160, 0.18);
             }
         </style>
         {% endblock %}
@@ -72,8 +79,11 @@
 
             {% if is_creator and not match.ended %}
                 <div class="match-actions">
-                    <button id="end-match-btn" class="end-match-button" onclick="endMatch()" type="button">
+                    <button id="end-match-btn" class="match-button match-button--end" onclick="endMatch()" type="button">
                         End match
+                    </button>
+                    <button id="refresh-match-btn" class="match-button match-button--refresh" onclick="refreshMatch()" type="button">
+                        Refresh match
                     </button>
                 </div>
             {% endif %}
@@ -139,6 +149,17 @@
                             btn.disabled = false;
                             btn.textContent = "End match";
                         }
+                    }
+                }
+
+                async function refreshMatch() {
+                    try {
+                        res = await fetch(`/api/osu/refresh-match/${encodeURIComponent(String(matchId))}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                        });
+                    } catch (e) {
+                        alert("Failed to refresh match data.");
                     }
                 }
 
