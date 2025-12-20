@@ -330,15 +330,16 @@
             <script>
                 const metrics = {{ account.gq_data["metrics"] | tojson | safe }} || [];
                 (function () {
+                    const nowUTC = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), new Date().getUTCHours(), new Date().getUTCMinutes(), new Date().getUTCSeconds());
                     const nowPoint = {
                         gp: Number({{ account.gq_data["ranking"]["weighted"] | int }}),
                         rank: Number({{ account.gq_data["ranking"]["placement"] | int }}),
-                        recorded_at: new Date().toISOString()
+                        recorded_at: new Date(nowUTC).toISOString()
                     };
                     const raw = (Array.isArray(metrics) ? metrics.slice() : []);
                     raw.push(nowPoint);
 
-                    const now = new Date();
+                    const now = new Date(nowUTC);
                     const MS_PER_DAY = 24 * 60 * 60 * 1000;
                     const yearAgo = new Date(now.getTime() - 365 * MS_PER_DAY);
 
