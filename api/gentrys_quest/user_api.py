@@ -1,3 +1,6 @@
+import datetime
+import logging
+
 import environment
 from environment import database
 
@@ -51,7 +54,9 @@ def get_xp(id: int) -> dict | str:
         return 'user not found'
 
 
-def rate_user(id: int) -> dict:
+def rate_user(id: int, custom_rating: int = None) -> dict:
+    print(f"rate_user called for user_id={id}, custom_rating={custom_rating}")
+    today = datetime.datetime.now(tz=datetime.timezone.utc).date()
     user_items = environment.database.fetch_all_to_dict(
         """
         SELECT type, rating
@@ -60,10 +65,18 @@ def rate_user(id: int) -> dict:
         """,
         params=(id,)
     )
+    print(f"Fetched {len(user_items)} items for user_id={id}")
     if user_items:
-        unweighted_rating = sum(item["rating"] for item in user_items if item.get("rating") is not None)
-        weighted_rating = environment.gq_rater.get_user_rating(user_items)
+        if custom_rating is None:
+            unweighted_rating = sum(item["rating"] for item in user_items if item.get("rating") is not None)
+            weighted_rating = environment.gq_rater.get_user_rating(user_items)
+        else:
+            weighted_rating = custom_rating
+            unweighted_rating = custom_rating
+
+        print(f"Calculated ratings for user_id={id}: weighted={weighted_rating}, unweighted={unweighted_rating}")
         rank, tier = environment.gq_rater.get_rank(weighted_rating)
+        print(f"Determined rank={rank}, tier={tier} for user_id={id}")
 
         environment.database.fetch_all_to_dict(
             """
@@ -74,6 +87,7 @@ def rate_user(id: int) -> dict:
             """,
             params=(weighted_rating, unweighted_rating, rank, tier, id)
         )
+        print(f"Updated gq_rankings for user_id={id}")
 
         placement = environment.database.fetch_one(
             """
@@ -83,23 +97,102 @@ def rate_user(id: int) -> dict:
             """,
             params=(weighted_rating,)
         )[0]
+        print(f"Calculated placement={placement} for user_id={id}")
 
-        environment.database.execute(
+        has_today_metrics = environment.database.fetch_one(
             """
-            INSERT INTO gq_metrics (user_id, rank, gp)
-            VALUES (%s, %s, %s)
+            SELECT COUNT(*) > 0
+            FROM gq_metrics
+            WHERE user_id = %s AND recorded_at = %s
             """,
-            params=(id, placement, weighted_rating)
-        )
+            params=(id, today)
+        )[0]
 
-        return {
+        if not has_today_metrics:
+            print(f"Inserting new gq_metrics for user_id={id}, date={today}")
+            environment.database.execute(
+                """
+                INSERT INTO gq_metrics (user_id, rank, gp)
+                VALUES (%s, %s, %s)
+                """,
+                params=(id, placement, weighted_rating)
+            )
+        else:
+            print(f"Updating existing gq_metrics for user_id={id}, date={today}")
+            environment.database.execute(
+                """
+                UPDATE gq_metrics
+                SET rank = %s,
+                    gp   = %s
+                WHERE user_id = %s
+                  AND recorded_at = %s
+                """,
+                params=(placement, weighted_rating, id, today)
+            )
+
+        affected_players = environment.database.fetch_all_to_dict(
+            """
+            SELECT id, weighted
+            FROM gq_rankings
+            WHERE id != %s
+              AND weighted <= %s
+            """,
+            params=(id, weighted_rating)
+        )
+        print(f"Found {len(affected_players)} affected players for user_id={id}")
+
+        for player in affected_players:
+            print(f"Processing affected player_id={player['id']}")
+            player_placement = environment.database.fetch_one(
+                """
+                SELECT COUNT(*) + 1
+                FROM gq_rankings
+                WHERE weighted > %s
+                """,
+                params=(player["weighted"],)
+            )[0]
+
+            player_has_today_metrics = environment.database.fetch_one(
+                """
+                SELECT COUNT(*) > 0
+                FROM gq_metrics
+                WHERE user_id = %s
+                  AND recorded_at = %s
+                """,
+                params=(player["id"], today)
+            )[0]
+
+            if not player_has_today_metrics:
+                environment.database.execute(
+                    """
+                    INSERT INTO gq_metrics (user_id, rank, gp)
+                    VALUES (%s, %s, %s)
+                    """,
+                    params=(player["id"], player_placement, player["weighted"])
+                )
+            else:
+                environment.database.execute(
+                    """
+                    UPDATE gq_metrics
+                    SET rank = %s,
+                        gp   = %s
+                    WHERE user_id = %s
+                      AND recorded_at = %s
+                    """,
+                    params=(player_placement, player["weighted"], player["id"], today)
+                )
+
+        result = {
             "weighted": weighted_rating,
             "unweighted": unweighted_rating,
             "rank": rank,
             "tier": tier,
             "placement": placement
         }
+        print(f"rate_user completed for user_id={id}, result={result}")
+        return result
 
+    print(f"No items found for user_id={id}, returning default unranked result")
     return {
         "weighted": 0,
         "unweighted": 0,
