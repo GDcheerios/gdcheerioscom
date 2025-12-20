@@ -1,29 +1,34 @@
-{% extends 'base.html' %}
 <html>
   <head>
     {% block head %}
     <title>Leaderboard</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/gentrys-quest-style.css">
     {% endblock %}
   </head>
   <body style="background-color: black;">
+    {% include 'navbar.html' %}
     {% block body %}
-		<h1 style="font-size: 300%;">{{classic_header}}</h1>
-	  	{% set count = namespace(value=1) %}
-	  	{% for player in players %}
-            <div class="gentry-card">
-                <div class="count">
-                    #{{count.value}}
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <h1 style="font-size: 300%;">Gentry's Quest Leaderboard</h1>
+    	  	{% for player in players %}
+                <div class="score-card"
+                     {% if player["you"] %}style="border: 3px solid {{ rater.rating_colors[player["rank"]] }}; box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);"{% endif %}>
+                    <div class="rank-badge" style="background-color: {{ rater.rating_colors[player["rank"]] }};">
+                        #{{ player["placement"] }}
+                    </div>
+                    <div class="score-details">
+                        <div class="player-name">
+                            {{ player["username"] }}{% if player["you"] %}
+                                <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(You)</span>{% endif %}
+                        </div>
+                        <div class="player-score">
+                            {{ "{:,}".format(player["weighted"]|int) }} GP
+                        </div>
+                    </div>
                 </div>
-                <div class="playername">
-                    <a href="/user/{{player[0]}}">{{player[1]}}</a>
-                </div>
-                <div class="ranking" style="background-color: {{get_color(player[3])}};">
-                    {{ player[2] }} gp
-                </div>
-            </div>
-            {% set count.value = count.value + 1 %}
-	  	{% endfor %}
+    	  	{% endfor %}
+        </div>
   	{% endblock %}
   </body>
 </html>

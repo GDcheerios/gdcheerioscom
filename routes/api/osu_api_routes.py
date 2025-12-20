@@ -59,7 +59,7 @@ def code_grab():
 
 
 @osu_api_blueprint.get('/osu/fetch-user/<id>')
-def osu_user(id):
+def fetch_osu_user(id):
     data = osu_api.fetch_osu_data(id)
 
     if not data:
@@ -123,6 +123,15 @@ def create_match():
     return {
         "id": match_id
     }
+
+
+@osu_api_blueprint.post('/osu/refresh-match/<id>')
+def refresh_all_in_match(id: int):
+    users = environment.database.fetch_all("SELECT \"user\" FROM osu_match_users WHERE match = %s", params=(id,))
+    for user in users:
+        fetch_osu_user(user[0])
+
+    return {"success": True}
 
 
 @osu_api_blueprint.post('/osu/end-match/<id>')

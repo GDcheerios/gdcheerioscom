@@ -1,57 +1,60 @@
-{% extends 'base.html' %}
 <html>
-  <head>
+<head>
     {% block head %}
-    <title>Ranking Info</title>
-    <link rel="stylesheet" href="/static/style.css">
+        <title>Ranking Info</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <link rel="stylesheet" href="/static/gentrys-quest-style.css">
     {% endblock %}
-  </head>
-  <body>
-    {% block body %}
-        <div id="screen" style="display: flex; flex-direction: row; justify-content: space-evenly;">
-          {% set user = gqc_rank(request.cookies.get('userID'), true) %}
-          {% if user.weighted is not none %}
+</head>
+<body>
+{% include 'navbar.html' %}
+
+{% block body %}
+    <div id="screen" style="display: flex; flex-direction: row; justify-content: space-evenly;">
+        {% set tiers = rater.get_tiers() %}
+        {% if user_ranking is not none %}
             <div id="your-ranking">
-              <h1>Your Ranking</h1>
-              <div class="ranking-box" id="gqc-ranking" style="background-color: #082b3b; color: white;">
-                <h2 style="margin: 6px;">Gentry's Quest Classic</h2>
-                <div id="gqc-ranking-info-container" style="display: flex; flex-direction: column; justify-content: space-evenly; box-shadow: 1px 1px 9px 1px #000000; border-radius: 2vw;">
-                  <div id="top-gqc-rank-info" style="display: flex; flex-direction: top; justify-content: space-evenly; margin-top: 10px;">
-                    <h2>#{{ user.placement }}</h2>
-                    <h2>{{ user.rank }}</h2>
-                    <h2>{{ user.tier }}</h2>
-                  </div>
-                  <div id="bottom-gqc-rank-info" style="display: flex; flex-direction: top; justify-content: space-evenly; margin-top: 10px;">
-                    <h2>{{user.weighted}}</h2>
-                    <h2>{{user.unweighted}}</h2>
-                    <h3 style="margin: 1px;">GP</h3>
-                  </div>
+                <h1>Your Ranking</h1>
+                <div class="ranking-box" id="gqc-ranking" style="background-color: #082b3b; color: white;">
+                    <h2 style="margin: 6px;">Gentry's Quest</h2>
+                    <div id="gqc-ranking-info-container"
+                         style="display: flex; flex-direction: column; justify-content: space-evenly; box-shadow: 1px 1px 9px 1px #000000; border-radius: 2vw;">
+                        <div id="top-gqc-rank-info"
+                             style="display: flex; flex-direction: top; justify-content: space-evenly; margin-top: 10px;">
+                            <h2>#{{ user_ranking.placement }}</h2>
+                            <h2>{{ user_ranking.rank }}</h2>
+                            <h2>{{ user_ranking.tier }}</h2>
+                        </div>
+                        <div id="bottom-gqc-rank-info"
+                             style="display: flex; flex-direction: top; justify-content: space-evenly; margin-top: 10px;">
+                            <h2>{{ user_ranking.weighted }} GP</h2>
+                        </div>
+                    </div>
                 </div>
-              </div>
             </div>
-          {% endif %}
-          <div id="rankings">
-            {% for key in ranking_info.keys() %}
-              <div class="ranking-box" id="{{ key }}">
-                  <h1>{{ key }}</h1>
-                  <div class="ranking-info-container">
-                    {% for tier in ranking_info[key].keys() %}
-                      <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin: 2px;">
-                        <h2>{{ tier }}</h2>
-                        <h2>{{ ranking_info[key][tier] }} gp</h2>
-                      </div>
-                    {% endfor %}
-                  </div>
-              </div>
+        {% endif %}
+        <div id="rankings">
+            {% for key in tiers.keys() %}
+                <div class="ranking-box" id="{{ key }}">
+                    <h1>{{ key }}</h1>
+                    <div class="ranking-info-container">
+                        {% for tier in tiers[key].keys() %}
+                            <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin: 2px;">
+                                <h2>{{ tier }}</h2>
+                                <h2>{{ tiers[key][tier] }} gp</h2>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
             {% endfor %}
-          </div>
         </div>
+    </div>
 
-      <script>
-        let colorList = JSON.parse('{{ colors|tojson }}')
+    <script>
+        let colorList = JSON.parse('{{ rater.rating_colors|tojson }}')
 
-        function color_el(el, rank){
-          el.style.backgroundColor = colorList[rank];
+        function color_el(el, rank) {
+            el.style.backgroundColor = colorList[rank];
         }
 
         color_el(document.getElementById('unranked'), "unranked")
@@ -64,9 +67,9 @@
         color_el(document.getElementById('champion'), "champion")
         color_el(document.getElementById('gentry warrior'), "gentry warrior")
         {% if user is not none %}
-          color_el(document.getElementById('gqc-ranking'), "{{user.rank}}")
+            color_el(document.getElementById('gqc-ranking'), "{{user_ranking.rank}}")
         {% endif %}
-      </script>
-    {% endblock %}
-  </body>
+    </script>
+{% endblock %}
+</body>
 </html>

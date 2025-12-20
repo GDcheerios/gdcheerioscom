@@ -165,7 +165,12 @@ def verify_api_key_header():
         "SELECT user_id, secret_hash, scopes, status, expires_at FROM api_keys WHERE key_id = %s",
         params=(key_id,)
     )
-    if not row or row["status"] != "active":
+    
+    if row is None:
+        print(f"[API] Invalid key ID")
+        return None
+
+    if row["status"] != "active":
         print(f"[API] {row[key_id]} inactive")
         return None
 
