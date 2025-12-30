@@ -126,8 +126,9 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
         print(f"Inserting new gq_metrics for user_id={id}, date={today}")
         environment.database.execute(
             """
-            INSERT INTO gq_metrics (user_id, rank, gp)
-            VALUES (%s, %s, %s)
+            SELECT COUNT(*) > 0
+            FROM gq_metrics
+            WHERE user_id = %s AND recorded_at = %s
             """,
             params=(id, placement, weighted_rating)
         )
