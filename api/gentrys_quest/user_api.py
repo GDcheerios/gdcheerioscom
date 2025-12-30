@@ -130,7 +130,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
             FROM gq_metrics
             WHERE user_id = %s AND recorded_at = %s
             """,
-            params=(id, placement, weighted_rating)
+            params=(id, today)
         )
     else:
         print(f"Updating existing gq_metrics for user_id={id}, date={today}")
