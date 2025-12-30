@@ -7,6 +7,7 @@ import environment
 
 database = environment.database
 from api.osu_api import fetch_osu_data
+from api.gentrys_quest.user_api import get_placement
 from objects.EmailManager import EmailManager
 
 
@@ -158,16 +159,10 @@ class Account:
                                                                 params=(self.id,))
             }
             if self.gq_data["ranking"]:
-                self.gq_data["ranking"]["placement"] = environment.database.fetch_one(
-                    """
-                    SELECT COUNT(*) + 1
-                    FROM gq_rankings r2
-                    WHERE r2.weighted > (SELECT weighted
-                                         FROM gq_rankings r1
-                                         WHERE r1.id = %s)
-                    """,
-                    params=(self.id,)
-                )[0]
+                self.gq_data["ranking"]["placement"] = get_placement(
+                    self.gq_data["ranking"]["weighted"],
+                    self.gq_data["metadata"]["score"]
+                )
 
             level = 0
             for i, threshold in enumerate(environment.gq_levels):

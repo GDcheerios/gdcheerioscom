@@ -16,8 +16,9 @@ def get_top_players(start: int = 0, amount: int = 50, online: bool = False):
                 gq_rankings.weighted, gq_rankings.rank, gq_rankings.tier
                 FROM gq_rankings
                 INNER JOIN accounts ON gq_rankings.id = accounts.id
+                INNER JOIN gq_data d ON gq_rankings.id = d.id
                 WHERE accounts.status NOT IN ('restricted', 'test') {f"AND accounts.status = 'gq_online'" if online else ""}
-                ORDER BY weighted desc
+                ORDER BY weighted desc, d.score desc
                 LIMIT %s OFFSET %s;
             """
 

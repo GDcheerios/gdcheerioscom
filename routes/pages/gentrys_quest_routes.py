@@ -40,8 +40,9 @@ def gentrys_quest_leaderboard():
             found_you = True
 
     if not found_you and id is not None:
-        players.append(Account(id).gq_data["ranking"])
-
+        account = Account(id)
+        if account.has_gq:
+            players.append(Account(id).gq_data["ranking"])
 
     return render_template("gentrys quest/leaderboard.html", players=players)
 
