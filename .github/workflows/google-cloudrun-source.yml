@@ -3,7 +3,7 @@ name: Cloud Run Deployment
 on:
   push:
     branches:
-      - master
+      - main
 
 env:
   PROJECT_ID: gdcheerioscom
@@ -13,7 +13,7 @@ env:
 
 jobs:
   Production:
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: 'read'
       id-token: 'write'
