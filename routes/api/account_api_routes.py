@@ -8,8 +8,6 @@ from objects.Account import Account
 
 account_api_blueprint = Blueprint('account', __name__)
 
-@account_api_blueprint.after_request
-
 
 @account_api_blueprint.post("/account/create-account")
 def create_account() -> Response:
