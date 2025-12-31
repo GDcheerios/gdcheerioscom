@@ -362,290 +362,359 @@
             <div id="gq-metrics-chart" style="margin-top:12px; border:1px solid #2b2b2b; border-radius:12px; background:#111; padding:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="font-weight:700;">Rank Graph</div>
+                        <div id="gq-timeframe-toggle" style="display:flex; gap:4px;">
+                            <button type="button" data-range="30" class="gq-timeframe-btn">30d</button>
+                            <button type="button" data-range="90" class="gq-timeframe-btn">90d</button>
+                            <button type="button" data-range="365" class="gq-timeframe-btn gq-timeframe-btn-active">1y</button>
+                            <button type="button" data-range="all" class="gq-timeframe-btn">All</button>
+                        </div>
+                    </div>
+                    <div id="gq-chart" style="height:220px; position:relative;">
+                        <canvas id="gqChartCanvas" height="220" style="width:100%; height:100%;"></canvas>
+                    </div>
                 </div>
-                <div id="gq-chart" style="height:220px; position:relative;">
-                    <canvas id="gqChartCanvas" height="220" style="width:100%; height:100%;"></canvas>
-                </div>
-            </div>
-            <script>
-                const metrics = {{ account.gq_data["metrics"] | tojson | safe }} || [];
-                (function () {
-                    const nowUTC = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), new Date().getUTCHours(), new Date().getUTCMinutes(), new Date().getUTCSeconds());
-                    const nowPoint = {
-                        gp: Number({{ account.gq_data["ranking"]["weighted"] | int }}),
-                        rank: Number({{ account.gq_data["ranking"]["placement"] | int }}),
-                        recorded_at: new Date(nowUTC).toISOString()
-                    };
-                    const raw = (Array.isArray(metrics) ? metrics.slice() : []);
-                    raw.push(nowPoint);
+                <!-- Load Chart.js once -->
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script>
+                    const metrics = {{ account.gq_data["metrics"] | tojson | safe }} || [];
 
-                    const now = new Date(nowUTC);
-                    const MS_PER_DAY = 24 * 60 * 60 * 1000;
-                    const yearAgo = new Date(now.getTime() - 365 * MS_PER_DAY);
+                    (function () {
+                        const nowUTC = Date.UTC(
+                            new Date().getUTCFullYear(),
+                            new Date().getUTCMonth(),
+                            new Date().getUTCDate(),
+                            new Date().getUTCHours(),
+                            new Date().getUTCMinutes(),
+                            new Date().getUTCSeconds()
+                        );
 
-                    const data = raw
-                        .map(d => ({ ...d, t: new Date(d.recorded_at) }))
-                        .filter(d => !isNaN(d.t) && d.t >= yearAgo && d.t <= now)
-                        .sort((a, b) => a.t - b.t);
+                        const nowPoint = {
+                            gp: Number({{ account.gq_data["ranking"]["weighted"] | int }}),
+                            rank: Number({{ account.gq_data["ranking"]["placement"] | int }}),
+                            recorded_at: new Date(nowUTC).toISOString()
+                        };
 
-                    if (!data.length) return;
+                        const raw = (Array.isArray(metrics) ? metrics.slice() : []);
+                        raw.push(nowPoint);
 
-                    const tMinDate = data[0].t;
-                    const maxDaysAgo = Math.ceil((now.getTime() - tMinDate.getTime()) / MS_PER_DAY);
+                        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+                        const now = new Date(nowUTC);
 
-                    console.log(tMinDate, maxDaysAgo)
+                        const parsed = raw
+                            .map(d => ({ ...d, t: new Date(d.recorded_at) }))
+                            .filter(d => !isNaN(d.t))
+                            .sort((a, b) => a.t - b.t);
 
-                    const canvas = document.getElementById('gqChartCanvas');
-                    if (!canvas) return;
+                        if (!parsed.length) return;
 
-                    const gpVals = data.map(d => Number(d.gp || 0));
-                    const rankVals = data.map(d => Number(d.rank || 0));
-                    const labels = data.map(d => d.t);
+                        const canvas = document.getElementById('gqChartCanvas');
+                        if (!canvas) return;
 
-                    const ctx = canvas.getContext('2d');
-                    const DPR = window.devicePixelRatio || 1;
-                    const rect = canvas.getBoundingClientRect();
-                    canvas.width = rect.width * DPR;
-                    canvas.height = rect.height * DPR;
-                    ctx.scale(DPR, DPR);
+                        let gqChart = null;
 
-                    const pad = { top: 16, right: 40, bottom: 24, left: 40 };
-                    const w = rect.width - pad.left - pad.right;
-                    const h = rect.height - pad.top - pad.bottom;
-
-                    const tMin = tMinDate.getTime();
-                    const tMax = now.getTime();
-                    const tRange = Math.max(1, tMax - tMin);
-
-                    const minGP = Math.min(...gpVals), maxGP = Math.max(...gpVals);
-                    const gpRange = (maxGP - minGP) || 1;
-
-                    const minRank = Math.min(...rankVals), maxRank = Math.max(...rankVals);
-                    const rankMinForScale = Math.min(minRank, 1);
-                    const rankMaxForScale = Math.max(maxRank, minRank + 1);
-                    const rRange = (rankMaxForScale - rankMinForScale) || 1;
-
-                    const xTime = (t) => pad.left + ((t - tMin) / tRange) * w;
-                    const yGP = (v) => pad.top + (1 - (v - minGP) / gpRange) * h;
-                    const yRank = (v) => pad.top + ((v - rankMinForScale) / rRange) * h;
-
-                    ctx.fillStyle = '#111'; ctx.fillRect(0,0,rect.width,rect.height);
-                    ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = 1; ctx.beginPath();
-                    for (let i = 0; i <= 4; i++) { const yy = pad.top + (i/4)*h; ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + w, yy); }
-                    ctx.stroke();
-
-                    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-                    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-                    ctx.fillText(maxGP.toLocaleString() + ' GP', 8, yGP(maxGP));
-                    ctx.fillText(minGP.toLocaleString() + ' GP', 8, yGP(minGP));
-
-                    ctx.textAlign = 'right';
-                    ctx.fillText('#' + rankMinForScale, pad.left + w + 36, yRank(rankMinForScale));
-                    ctx.fillText('#' + rankMaxForScale, pad.left + w + 36, yRank(rankMaxForScale));
-
-                    const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                    ctx.fillText(Math.round(maxDaysAgo) + 'd ago', pad.left, pad.top + h + 6);
-                    ctx.fillText('0d ago', pad.left + w, pad.top + h + 6);
-
-                    // Helper functions for date calculations
-                    function getDaysAgo(date) {
-                        return Math.floor((now.getTime() - date.getTime()) / MS_PER_DAY);
-                    }
-
-                    function xFromDaysAgo(days) {
-                        return pad.left + (1 - days / maxDaysAgo) * w;
-                    }
-
-                    ctx.strokeStyle = '#00d2ff';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    data.forEach((d, i) => {
-                        const daysAgo = getDaysAgo(d.t);
-                        const px = xFromDaysAgo(daysAgo);
-                        const py = yGP(gpVals[i]);
-                        if (i === 0) ctx.moveTo(px, py);
-                        else ctx.lineTo(px, py);
-                    });
-                    ctx.stroke();
-
-                    ctx.setLineDash([4, 3]);
-                    ctx.strokeStyle = '#ffae00';
-                    ctx.beginPath();
-                    data.forEach((d, i) => {
-                        const daysAgo = getDaysAgo(d.t);
-                        const px = xFromDaysAgo(daysAgo);
-                        const py = yRank(rankVals[i]);
-                        if (i === 0) ctx.moveTo(px, py);
-                        else ctx.lineTo(px, py);
-                    });
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-
-                    function drawPoints(color, yFn, vals) {
-                        ctx.fillStyle = color;
-                        data.forEach((d, i) => {
-                            const px = xFromDaysAgo(getDaysAgo(d.t));
-                            const py = yFn(vals[i]);
-                            ctx.beginPath();
-                            ctx.arc(px, py, 3, 0, Math.PI * 2);
-                            ctx.fill();
-                        });
-                    }
-                    drawPoints('#00d2ff', yGP, gpVals);
-                    drawPoints('#ffae00', yRank, rankVals);
-
-                    const legendX = pad.left + 8, legendY = pad.top + 8;
-                    ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.font='12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-                    ctx.fillStyle='#00d2ff'; ctx.fillRect(legendX, legendY - 5, 10, 10);
-                    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('GP', legendX + 16, legendY);
-                    const ry = legendY + 16; ctx.fillStyle='#ffae00'; ctx.fillRect(legendX, ry - 5, 10, 10);
-                    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillText('Rank', legendX + 16, ry);
-
-                    const tooltip = document.createElement('div');
-                    Object.assign(tooltip.style, { position:'absolute', pointerEvents:'none', background:'rgba(0,0,0,0.85)', border:'1px solid #2b2b2b', borderRadius:'8px', padding:'6px 8px', fontSize:'12px', color:'#fff', transform:'translate(-50%, -120%)', display:'none' });
-                    canvas.parentElement.style.position = 'relative'; canvas.parentElement.appendChild(tooltip);
-
-                    canvas.addEventListener('mousemove', (e) => {
-                        const bounds = canvas.getBoundingClientRect();
-                        const cx = (e.clientX - bounds.left);
-                        const tx = tMin + ((cx - pad.left) / Math.max(1, w)) * tRange;
-                        let idx = 0, best = Infinity;
-                        data.forEach((d,i) => { const dist = Math.abs(d.t.getTime() - tx); if (dist < best) { best = dist; idx = i; } });
-                        const px = xTime(data[idx].t.getTime());
-                        const gp = gpVals[idx], rk = rankVals[idx], dt = labels[idx];
-                        tooltip.textContent = `${getDaysAgo(dt)} days ago\nGP: ${gp.toLocaleString()}\nRank: #${rk}`;
-                        tooltip.style.left = px + 'px';
-                        tooltip.style.top = (yGP(gp) - 8) + 'px';
-                        tooltip.style.display = 'block';
-                    });
-                    canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
-                })();
-            </script>
-            <script>
-                (function () {
-                    const level = Number({{ account.gq_data['metadata']['level'] | int }});
-
-                    // JS view of the backend level color table
-                    const levelBands = [
-                        {% for band in gq_level_colors %}
-                        {{ "" if loop.first else "," }}{
-                            min: {{ band[0] }},
-                            c1: "{{ band[1] }}",
-                            c2: "{{ band[2] }}"
+                        function getDaysAgo(date) {
+                            return Math.floor((now.getTime() - date.getTime()) / MS_PER_DAY);
                         }
-                        {% endfor %}
-                    ];
 
-                    function getBand(lvl) {
-                        let chosen = levelBands[0];
-                        for (const band of levelBands) {
-                            if (lvl >= band.min) {
-                                chosen = band;
+                        function filterData(range) {
+                            if (range === 'all') {
+                                return parsed.slice();
                             }
+                            const maxDays = Number(range) || 365;
+                            return parsed.filter(d => getDaysAgo(d.t) <= maxDays);
                         }
-                        return chosen;
+
+                        function buildDataset(data) {
+                            const labels = data.map(d => {
+                                const days = getDaysAgo(d.t);
+                                return days === 0 ? '0d ago' : `${days}d ago`;
+                            });
+
+                            const gpVals = data.map(d => Number(d.gp || 0));
+                            const rankVals = data.map(d => Number(d.rank || 0));
+
+                            const minGP = Math.min(...gpVals);
+                            const maxGP = Math.max(...gpVals);
+                            const minRank = Math.min(...rankVals);
+                            const maxRank = Math.max(...rankVals);
+
+                            return {
+                                labels,
+                                datasets: [
+                                    {
+                                        label: 'GP',
+                                        data: gpVals,
+                                        borderColor: '#00d2ff',
+                                        backgroundColor: 'rgba(0,210,255,0.2)',
+                                        tension: 0.3,
+                                        yAxisID: 'yGP',
+                                        pointRadius: 3,
+                                        pointHoverRadius: 4
+                                    },
+                                    {
+                                        label: 'Rank',
+                                        data: rankVals,
+                                        borderColor: '#ffae00',
+                                        backgroundColor: 'rgba(255,174,0,0.15)',
+                                        borderDash: [4, 3],
+                                        tension: 0.3,
+                                        yAxisID: 'yRank',
+                                        pointRadius: 3,
+                                        pointHoverRadius: 4
+                                    }
+                                ],
+                                minGP,
+                                maxGP,
+                                minRank,
+                                maxRank
+                            };
+                        }
+
+                        function renderChart(range) {
+                            const data = filterData(range);
+                            if (!data.length) return;
+
+                            const { labels, datasets, minGP, maxGP, minRank, maxRank } = buildDataset(data);
+
+                            const ctx = canvas.getContext('2d');
+
+                            if (gqChart) {
+                                gqChart.destroy();
+                            }
+
+                            gqChart = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels,
+                                    datasets
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    interaction: {
+                                        mode: 'nearest',
+                                        intersect: false
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: 'rgba(255,255,255,0.9)'
+                                            }
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                title: (items) => {
+                                                    const idx = items[0].dataIndex;
+                                                    const d = data[idx];
+                                                    const days = getDaysAgo(d.t);
+                                                    return `${days}d ago (${d.t.toLocaleDateString()})`;
+                                                },
+                                                label: (item) => {
+                                                    if (item.dataset.yAxisID === 'yGP') {
+                                                        return `GP: ${Number(item.raw || 0).toLocaleString()}`;
+                                                    }
+                                                    return `Rank: #${Number(item.raw || 0).toLocaleString()}`;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            ticks: {
+                                                color: 'rgba(255,255,255,0.6)'
+                                            },
+                                            grid: {
+                                                color: '#2b2b2b'
+                                            }
+                                        },
+                                        yGP: {
+                                            position: 'left',
+                                            ticks: {
+                                                color: 'rgba(255,255,255,0.7)',
+                                                callback: (v) => v.toLocaleString()
+                                            },
+                                            grid: {
+                                                color: '#2b2b2b'
+                                            },
+                                            suggestedMin: minGP,
+                                            suggestedMax: maxGP
+                                        },
+                                        yRank: {
+                                            position: 'right',
+                                            reverse: true, // lower rank (better) at the top
+                                            ticks: {
+                                                color: '#ffae00',
+                                                callback: (v) => `#${Number(v).toLocaleString()}`
+                                            },
+                                            grid: {
+                                                drawOnChartArea: false
+                                            },
+                                            suggestedMin: minRank,
+                                            suggestedMax: maxRank
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        function setupTimeframeButtons() {
+                            const container = document.getElementById('gq-timeframe-toggle');
+                            if (!container) return;
+
+                            container.querySelectorAll('.gq-timeframe-btn').forEach(btn => {
+                                btn.addEventListener('click', () => {
+                                    const range = btn.getAttribute('data-range');
+
+                                    container.querySelectorAll('.gq-timeframe-btn')
+                                        .forEach(b => b.classList.remove('gq-timeframe-btn-active'));
+                                    btn.classList.add('gq-timeframe-btn-active');
+
+                                    renderChart(range);
+                                });
+                            });
+                        }
+
+                        // Initial render: 1 year
+                        setupTimeframeButtons();
+                        renderChart('365');
+                    })();
+                </script>
+        <script>
+            (function () {
+                const level = Number({{ account.gq_data['metadata']['level'] | int }});
+
+                // JS view of the backend level color table
+                const levelBands = [
+                    {% for band in gq_level_colors %}
+                        {{ "" if loop.first else "," }}{
+                        min: {{ band[0] }},
+                        c1: "{{ band[1] }}",
+                        c2: "{{ band[2] }}"
                     }
+                    {% endfor %}
+                ];
 
-                    const band = getBand(level);
-                    const c1 = band.c1;
-                    const c2 = band.c2;
-
-                    const badge = document.getElementById('gq-level-badge');
-                    const fill = document.getElementById('gq-level-progress-fill');
-                    const overlay = document.getElementById('gq-level-progress-overlay');
-
-                    if (badge) {
-                        // expose colors for other scripts (sparks)
-                        badge.dataset.c1 = c1;
-                        badge.dataset.c2 = c2;
-
-                        // Badge color by level band
-                        badge.style.borderColor = c2;
-                        badge.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
-                        badge.style.boxShadow = `0 0 16px ${c1}55`;
-
-                        // Add milestone ornament every 100 levels
-                        const milestones = Math.floor(level / 100);
-                        if (milestones > 0) {
-                            badge.style.position = 'relative';
-                            const crownEl = badge.querySelector('.gq-level-crowns') || document.createElement('span');
-                            crownEl.className = 'gq-level-crowns';
-                            crownEl.style.cssText = 'position:absolute; top:-8px; right:-8px; font-size:14px;';
-                            crownEl.textContent = '✦'.repeat(milestones);
-                            badge.appendChild(crownEl);
+                function getBand(lvl) {
+                    let chosen = levelBands[0];
+                    for (const band of levelBands) {
+                        if (lvl >= band.min) {
+                            chosen = band;
                         }
                     }
+                    return chosen;
+                }
 
-                    if (fill) {
-                        // Progress bar gradient by level band
-                        fill.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
-                        fill.style.boxShadow = `0 0 12px ${c1}55`;
-                    }
+                const band = getBand(level);
+                const c1 = band.c1;
+                const c2 = band.c2;
 
-                    if (overlay) {
-                        // Optional: soft particles using same band colors
-                        const milestones = Math.floor(level / 100);
-                        if (milestones > 0) {
-                            overlay.style.background = `
-                                radial-gradient(circle at 10% 50%, ${c1}15 0 6px, transparent 7px),
-                                radial-gradient(circle at 30% 50%, ${c2}15 0 6px, transparent 7px),
-                                radial-gradient(circle at 50% 50%, ${c1}15 0 6px, transparent 7px),
-                                radial-gradient(circle at 70% 50%, ${c2}15 0 6px, transparent 7px),
-                                radial-gradient(circle at 90% 50%, ${c1}15 0 6px, transparent 7px)
-                            `;
-                            overlay.style.mixBlendMode = 'screen';
-                            overlay.style.opacity = Math.min(0.25 + milestones * 0.05, 0.5);
-                        }
+                const badge = document.getElementById('gq-level-badge');
+                const fill = document.getElementById('gq-level-progress-fill');
+                const overlay = document.getElementById('gq-level-progress-overlay');
+
+                if (badge) {
+                    // expose colors for other scripts (sparks)
+                    badge.dataset.c1 = c1;
+                    badge.dataset.c2 = c2;
+
+                    // Badge color by level band
+                    badge.style.borderColor = c2;
+                    badge.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+                    badge.style.boxShadow = `0 0 16px ${c1}55`;
+
+                    // Add milestone ornament every 100 levels
+                    const milestones = Math.floor(level / 100);
+                    if (milestones > 0) {
+                        badge.style.position = 'relative';
+                        const crownEl = badge.querySelector('.gq-level-crowns') || document.createElement('span');
+                        crownEl.className = 'gq-level-crowns';
+                        crownEl.style.cssText = 'position:absolute; top:-8px; right:-8px; font-size:14px;';
+                        crownEl.textContent = '✦'.repeat(milestones);
+                        badge.appendChild(crownEl);
                     }
-                })();
-            </script>
+                }
+
+                if (fill) {
+                    // Progress bar gradient by level band
+                    fill.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
+                    fill.style.boxShadow = `0 0 12px ${c1}55`;
+                }
+
+                if (overlay) {
+                    // Optional: soft particles using same band colors
+                    const milestones = Math.floor(level / 100);
+                    if (milestones > 0) {
+                        overlay.style.background = `
+                                        radial-gradient(circle at 10% 50%, ${c1}15 0 6px, transparent 7px),
+                                        radial-gradient(circle at 30% 50%, ${c2}15 0 6px, transparent 7px),
+                                        radial-gradient(circle at 50% 50%, ${c1}15 0 6px, transparent 7px),
+                                        radial-gradient(circle at 70% 50%, ${c2}15 0 6px, transparent 7px),
+                                        radial-gradient(circle at 90% 50%, ${c1}15 0 6px, transparent 7px)
+                                    `;
+                        overlay.style.mixBlendMode = 'screen';
+                        overlay.style.opacity = Math.min(0.25 + milestones * 0.05, 0.5);
+                    }
+                }
+            })();
+        </script>
+
         <div id="gq-items" class="block">
             <h1 style="text-align:center; font-size:24px; margin: 20px 0;">Items</h1>
             <h2 style="text-align: center;">${{account.gq_data.metadata.money}}</h2>
             <div class="gq-items-grid" id="gq-items-grid"></div>
         </div>
+
         <div id="gq-scores">
-        <div id="leaderboard-container">
-            <h1 style="text-align: center; font-size: 24px; margin-bottom: 20px;">Scores</h1>
-            <select id="leaderboard-toggle" style="margin: 10px auto; display: block;" onchange="renderLeaderboard()"></select>
-            <div id="leaderboard-list" class="leaderboard-list"></div>
+            <div id="leaderboard-container">
+                <h1 style="text-align: center; font-size: 24px; margin-bottom: 20px;">Scores</h1>
+                <select id="leaderboard-toggle" style="margin: 10px auto; display: block;" onchange="renderLeaderboard()"></select>
+                <div id="leaderboard-list" class="leaderboard-list"></div>
+            </div>
         </div>
-    </div>
-    <script>
-        const leaderboardData = {{ account.gq_data["scores"] | safe }};
 
-        function initializeLeaderboard() {
-            const dropdown = document.getElementById('leaderboard-toggle');
-            for (const leaderboardName of Object.keys(leaderboardData)) {
-                const option = document.createElement('option');
-                option.value = leaderboardName;
-                option.textContent = leaderboardName;
-                dropdown.appendChild(option);
+        <script>
+            const leaderboardData = {{ account.gq_data["scores"] | safe }};
+
+            function initializeLeaderboard() {
+                const dropdown = document.getElementById('leaderboard-toggle');
+                if (!dropdown || !leaderboardData) return;
+
+                for (const leaderboardName of Object.keys(leaderboardData)) {
+                    const option = document.createElement('option');
+                    option.value = leaderboardName;
+                    option.textContent = leaderboardName;
+                    dropdown.appendChild(option);
+                }
+                renderLeaderboard();
             }
-            renderLeaderboard();
-        }
 
-        function renderLeaderboard() {
-            const selectedLeaderboard = document.getElementById('leaderboard-toggle').value;
-            const scores = leaderboardData[selectedLeaderboard];
-            const leaderboardList = document.getElementById('leaderboard-list');
-            leaderboardList.innerHTML = '';
-            if (scores) {
-                scores.sort((a, b) => b.score - a.score).forEach((entry, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'leaderboard-entry';
-                    item.innerHTML = `
-                    <div class="rank">${index + 1}</div>
-                    <div class="score">${entry.score.toLocaleString()}</div>
-                `;
-                    leaderboardList.appendChild(item);
-                });
+            function renderLeaderboard() {
+                const toggle = document.getElementById('leaderboard-toggle');
+                const leaderboardList = document.getElementById('leaderboard-list');
+                if (!toggle || !leaderboardList || !leaderboardData) return;
+
+                const selectedLeaderboard = toggle.value;
+                const scores = leaderboardData[selectedLeaderboard];
+
+                leaderboardList.innerHTML = '';
+                if (scores) {
+                    scores
+                        .slice()
+                        .sort((a, b) => b.score - a.score)
+                        .forEach((entry, index) => {
+                            const item = document.createElement('div');
+                            item.className = 'leaderboard-entry';
+                            item.innerHTML = `
+                                    <div class="rank">${index + 1}</div>
+                                    <div class="score">${entry.score.toLocaleString()}</div>
+                                `;
+                            leaderboardList.appendChild(item);
+                        });
+                }
             }
-        }
 
-        document.addEventListener('DOMContentLoaded', initializeLeaderboard);
-    </script>
+            document.addEventListener('DOMContentLoaded', initializeLeaderboard);
+        </script>
         <script>
             // Replace items rendering with normalized mapping to the new data shape
 
