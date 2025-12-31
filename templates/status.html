@@ -1,0 +1,476 @@
+<html>
+    <head>
+        {% block head %}
+            <title>Status</title>
+            <link rel="stylesheet" href="/static/style.css">
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        {% endblock %}
+    </head>
+    <body>
+        {% include 'navbar.html' %}
+        {% block body %}
+            <div class="container">
+                <!-- Header -->
+                <section class="block" style="display:grid;gap:6px;align-items:center">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+                        <div>
+                            <h1 style="margin:0">System Status</h1>
+                            <p class="muted" style="margin:0">Real-time status of GDcheerios.com services.</p>
+                        </div>
+                        <span id="status-last-updated" class="muted" style="font-size:12px;white-space:nowrap;"></span>
+                    </div>
+                </section>
+
+                <!-- Compact cards row -->
+                <section class="block" style="padding:10px;">
+                    <div
+                        id="status-cards"
+                        style="
+                            display:grid;
+                            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                            gap:10px;
+                        "
+                    >
+                        <div id="status-core" class="panel" style="padding:10px;">
+                            <h3 style="margin:0 0 6px 0;">Core</h3>
+                            <p class="muted" style="margin:0;">Loading...</p>
+                        </div>
+                        <div id="status-gq" class="panel" style="padding:10px;">
+                            <h3 style="margin:0 0 6px 0;">Gentry's Quest</h3>
+                            <p class="muted" style="margin:0;">Loading...</p>
+                        </div>
+                        <div id="status-osu" class="panel" style="padding:10px;">
+                            <h3 style="margin:0 0 6px 0;">osu! Integration</h3>
+                            <p class="muted" style="margin:0;">Loading...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Charts row -->
+                <section class="block" style="padding:10px;">
+                    <div
+                        style="
+                            display:grid;
+                            grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr);
+                            gap:10px;
+                        "
+                    >
+                        <!-- Left: Requests over time -->
+                        <div class="panel" style="padding:10px; min-height:0;">
+                            <h3 style="margin:0 0 8px 0;">Requests (last 24 hours)</h3>
+                            <div style="position:relative; height:220px; max-height:220px;">
+                                <canvas id="requestsChart" style="width:100%; height:100%;"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Right: two fixed-height endpoint charts -->
+                        <div style="display:grid; grid-template-rows: auto auto; gap:10px; min-height:0;">
+                            <div class="panel" style="padding:10px; min-height:0;">
+                                <h3 style="margin:0 0 8px 0;">Top Endpoint Categories</h3>
+                                <div style="position:relative; height:160px; max-height:160px;">
+                                    <canvas id="endpointCategoriesChart" style="width:100%; height:100%;"></canvas>
+                                </div>
+                            </div>
+                            <div class="panel" style="padding:10px; min-height:0;">
+                                    <h3 style="margin:0 0 8px 0;">Top Endpoints by Category</h3>
+                                    <div style="position:relative; height:160px; max-height:160px;">
+                                        <canvas id="apiEndpointsChart" style="width:100%; height:100%;"></canvas>
+                                    </div>
+                                </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <script>
+                let requestsChartInstance = null;
+                let endpointCategoriesChartInstance = null;
+                let apiEndpointsChartInstance = null;
+
+                function renderRequestsChart(timeseries) {
+                    const ctx = document.getElementById('requestsChart').getContext('2d');
+                    const labels = timeseries.map(p => new Date(p.timestamp).toLocaleTimeString());
+                    const counts = timeseries.map(p => p.request_count);
+                    const avgDurationsMs = timeseries.map(p => (p.avg_duration || 0) * 1000);
+
+                    if (requestsChartInstance) {
+                        requestsChartInstance.destroy();
+                    }
+
+                    requestsChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    label: 'Requests',
+                                    data: counts,
+                                    borderColor: '#4caf50',
+                                    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                    yAxisID: 'y',
+                                },
+                                {
+                                    label: 'Avg Duration (ms)',
+                                    data: avgDurationsMs,
+                                    borderColor: '#2196f3',
+                                    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                                    yAxisID: 'y1',
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            stacked: false,
+                            scales: {
+                                y: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    title: { display: true, text: 'Requests' },
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    position: 'right',
+                                    title: { display: true, text: 'Duration (ms)' },
+                                    grid: { drawOnChartArea: false },
+                                },
+                            },
+                        },
+                    });
+                }
+
+                    function buildTopEndpointsByCategory(endpointStats, perCategoryLimit = 3, overallLimit = 20) {
+                        const byCategory = new Map();
+
+                        for (const row of endpointStats || []) {
+                            const endpoint = row.endpoint || '';
+                            const cat = categorizeEndpoint(endpoint);
+                            const count = Number(row.request_count || 0);
+
+                            if (!byCategory.has(cat)) {
+                                byCategory.set(cat, []);
+                            }
+                            byCategory.get(cat).push({
+                                endpoint,
+                                category: cat,
+                                request_count: count,
+                            });
+                        }
+
+                        // For each category, take top `perCategoryLimit`
+                        let collected = [];
+                        for (const [cat, endpoints] of byCategory.entries()) {
+                            const topForCat = endpoints
+                                .sort((a, b) => b.request_count - a.request_count)
+                                .slice(0, perCategoryLimit);
+                            collected = collected.concat(topForCat);
+                        }
+
+                        // Overall cap so the chart doesn't get crazy
+                        collected.sort((a, b) => b.request_count - a.request_count);
+                        return collected.slice(0, overallLimit);
+                    }
+
+                    function renderApiEndpointsChart(endpointStats) {
+                        const topEndpoints = buildTopEndpointsByCategory(endpointStats);
+                        const ctx = document.getElementById('apiEndpointsChart').getContext('2d');
+
+                        const labels = topEndpoints.map(e => e.endpoint);
+                        const counts = topEndpoints.map(e => e.request_count);
+                        const categories = topEndpoints.map(e => e.category);
+
+                        // Simple color map per category
+                        const catColors = {
+                            'API': '#81c784',
+                            'Auth': '#ffb74d',
+                            'Payments': '#ff8a65',
+                            'Static': '#90a4ae',
+                            "Gentry's Quest": '#ba68c8',
+                            'osu!': '#4fc3f7',
+                            'Pages': '#ce93d8',
+                            'Unknown': '#e0e0e0',
+                        };
+
+                        const barColors = categories.map(cat => catColors[cat] || '#81c784');
+
+                        if (apiEndpointsChartInstance) {
+                            apiEndpointsChartInstance.destroy();
+                        }
+
+                        apiEndpointsChartInstance = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels,
+                                datasets: [{
+                                    label: 'Requests',
+                                    data: counts,
+                                    backgroundColor: barColors,
+                                    borderColor: barColors,
+                                    borderWidth: 1,
+                                }],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y',
+                                scales: {
+                                    x: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Requests' },
+                                    },
+                                    y: {
+                                        ticks: {
+                                            callback: (value, index) => {
+                                                const label = labels[index] || '';
+                                                // shorten long paths a bit
+                                                return label.length > 36
+                                                    ? label.slice(0, 33) + '…'
+                                                    : label;
+                                            }
+                                        }
+                                    },
+                                },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (ctx) => {
+                                                const cat = categories[ctx.dataIndex] || 'Unknown';
+                                                const val = counts[ctx.dataIndex];
+                                                return `${cat}: ${val} requests`;
+                                            }
+                                        }
+                                    },
+                                },
+                            },
+                        });
+                    }
+
+                function categorizeEndpoint(path) {
+                    if (path.startsWith('/api/')) return 'API';
+                    if (path.startsWith('/auth/')) return 'Auth';
+                    if (path.startsWith('/payment/')) return 'Payments';
+                    if (path.startsWith('/static/')) return 'Static';
+                    if (path.startsWith('/gentrys-quest/')) return "Gentry's Quest";
+                    if (path.startsWith('/osu/')) return 'osu!';
+                    return 'Pages';
+                }
+
+                function buildEndpointGroups(endpointStats) {
+                    const groups = new Map();
+
+                    for (const row of endpointStats || []) {
+                        const endpoint = row.endpoint || '';
+                        const cat = categorizeEndpoint(endpoint);
+
+                        const count = Number(row.request_count || 0);
+                        const avg = Number(row.avg_duration || 0); // seconds
+
+                        if (!groups.has(cat)) {
+                            groups.set(cat, {
+                                category: cat,
+                                request_count: 0,
+                                _total_duration: 0,
+                            });
+                        }
+                        const g = groups.get(cat);
+                        g.request_count += count;
+                        g._total_duration += avg * count;
+                    }
+
+                    return Array.from(groups.values())
+                        .map(g => ({
+                            category: g.category,
+                            request_count: g.request_count,
+                            avg_duration: g.request_count > 0
+                                ? g._total_duration / g.request_count
+                                : 0,
+                        }))
+                        .sort((a, b) => b.request_count - a.request_count);
+                }
+
+                function renderEndpointCategoriesChart(endpointStats) {
+                    const grouped = buildEndpointGroups(endpointStats);
+                    const ctx = document.getElementById('endpointCategoriesChart').getContext('2d');
+
+                    const labels = grouped.map(e => e.category);
+                    const counts = grouped.map(e => e.request_count);
+                    const avgDurationsMs = grouped.map(e => (e.avg_duration || 0) * 1000);
+
+                    if (endpointCategoriesChartInstance) {
+                        endpointCategoriesChartInstance.destroy();
+                    }
+
+                    endpointCategoriesChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    label: 'Requests',
+                                    data: counts,
+                                    backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                                    borderColor: '#ffc107',
+                                    borderWidth: 1,
+                                    yAxisID: 'y',
+                                },
+                                {
+                                    label: 'Avg Duration (ms)',
+                                    data: avgDurationsMs,
+                                    type: 'line',
+                                    borderColor: '#90caf9',
+                                    backgroundColor: 'rgba(144, 202, 249, 0.3)',
+                                    yAxisID: 'y1',
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { display: true },
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    position: 'left',
+                                    title: { display: true, text: 'Requests' },
+                                },
+                                y1: {
+                                    position: 'right',
+                                    title: { display: true, text: 'Duration (ms)' },
+                                    grid: { drawOnChartArea: false },
+                                },
+                            },
+                        },
+                    });
+                }
+
+                function setLastUpdated() {
+                    const el = document.getElementById('status-last-updated');
+                    if (!el) return;
+                    const now = new Date();
+                    el.textContent = 'Last updated ' + now.toLocaleTimeString();
+                }
+
+                function loadStatus() {
+                    fetch('/api/status/information', {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to fetch status information');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            const coreEl = document.getElementById('status-core');
+                            const gqEl = document.getElementById('status-gq');
+                            const osuEl = document.getElementById('status-osu');
+
+                            const totalRequests = data.request_data.total_requests ?? 'N/A';
+                            const avgDurationMs = data.request_data.avg_duration != null
+                                ? (data.request_data.avg_duration * 1000).toFixed(2) + ' ms'
+                                : 'N/A';
+                            const successful = data.request_data.successful_requests ?? 0;
+                            const failed = data.request_data.failed_requests ?? 0;
+
+                            const totalAccounts = data.account_data.total_accounts ?? 'N/A';
+                            const supporters = data.account_data.supporters ?? 0;
+                            const admins = data.account_data.admins ?? 0;
+
+                            const gq = data.gq || {};
+                            const gqPlayers = gq.players ?? 0;
+                            const gqTotalScore = gq.total_score ?? 0;
+                            const gqTotalMoney = gq.total_money ?? 0;
+                            const gqAvgScore = gq.avg_score != null ? gq.avg_score.toFixed(0) : 'N/A';
+                            const gqTotalScores = gq.total_scores ?? 0;
+                            const gqOnlineLB = gq.online_leaderboards ?? 0;
+                            const gqTotalLB = gq.total_leaderboards ?? 0;
+
+                            const osu = data.osu || {};
+                            const osuUsers = osu.users ?? 0;
+                            const osuAvgPerf = osu.avg_performance != null ? osu.avg_performance.toFixed(1) + ' pp' : 'N/A';
+                            const osuAvgAcc = osu.avg_accuracy != null ? osu.avg_accuracy.toFixed(2) + '%' : 'N/A';
+                            const osuBestRank = osu.best_rank != null ? '#' + osu.best_rank.toLocaleString() : 'N/A';
+                            const osuOpenMatches = osu.open_matches ?? 0;
+                            const osuActivePlayers = osu.active_players ?? 0;
+                            const osuLastRefresh = osu.last_refresh
+                                ? new Date(osu.last_refresh).toLocaleString()
+                                : 'N/A';
+
+                            if (coreEl) {
+                                coreEl.innerHTML = `
+                                    <h3 style="margin:0 0 6px 0;">Core</h3>
+                                    <div style="font-size:13px;display:grid;row-gap:2px;">
+                                        <div><strong>Requests:</strong> ${totalRequests}</div>
+                                        <div><strong>Avg Duration:</strong> ${avgDurationMs}</div>
+                                        <div><strong>Successful:</strong> ${successful}</div>
+                                        <div><strong>Failed:</strong> ${failed}</div>
+                                        <div><strong>Accounts:</strong> ${totalAccounts}</div>
+                                        <div><strong>Supporters:</strong> ${supporters}</div>
+                                        <div><strong>Admins:</strong> ${admins}</div>
+                                    </div>
+                                `;
+                            }
+
+                            if (gqEl) {
+                                gqEl.innerHTML = `
+                                    <h3 style="margin:0 0 6px 0;">Gentry's Quest</h3>
+                                    <div style="font-size:13px;display:grid;row-gap:2px;">
+                                        <div><strong>Players:</strong> ${gqPlayers}</div>
+                                        <div><strong>Total Score:</strong> ${gqTotalScore.toLocaleString()}</div>
+                                        <div><strong>Total Money:</strong> ${gqTotalMoney.toLocaleString()}</div>
+                                        <div><strong>Avg Score:</strong> ${typeof gqAvgScore === 'string' ? gqAvgScore : gqAvgScore.toLocaleString()}</div>
+                                        <div><strong>Scores:</strong> ${gqTotalScores.toLocaleString()}</div>
+                                        <div><strong>Leaderboards:</strong> ${gqOnlineLB} / ${gqTotalLB}</div>
+                                    </div>
+                                `;
+                            }
+
+                            if (osuEl) {
+                                osuEl.innerHTML = `
+                                    <h3 style="margin:0 0 6px 0;">osu! Integration</h3>
+                                    <div style="font-size:13px;display:grid;row-gap:2px;">
+                                        <div><strong>Linked Users:</strong> ${osuUsers}</div>
+                                        <div><strong>Avg Performance:</strong> ${osuAvgPerf}</div>
+                                        <div><strong>Avg Accuracy:</strong> ${osuAvgAcc}</div>
+                                        <div><strong>Best Rank:</strong> ${osuBestRank}</div>
+                                        <div><strong>Open Matches:</strong> ${osuOpenMatches}</div>
+                                        <div><strong>Active Players:</strong> ${osuActivePlayers}</div>
+                                        <div class="muted"><strong>Last osu! refresh:</strong> ${osuLastRefresh}</div>
+                                    </div>
+                                `;
+                            }
+
+                            if (data.timeseries && Array.isArray(data.timeseries.requests_last_24h)) {
+                                renderRequestsChart(data.timeseries.requests_last_24h);
+                            }
+                            if (data.timeseries && Array.isArray(data.timeseries.endpoint_stats)) {
+                                renderEndpointCategoriesChart(data.timeseries.endpoint_stats);
+                                renderApiEndpointsChart(data.timeseries.endpoint_stats);
+                            }
+
+                            setLastUpdated();
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            const coreEl = document.getElementById('status-core');
+                            if (coreEl) {
+                                coreEl.innerHTML = `
+                                    <h3 style="margin:0 0 6px 0;">Core</h3>
+                                    <p class="error" style="margin:0;">Failed to load status information.</p>
+                                `;
+                            }
+                        });
+                }
+
+                // Initial load + auto-refresh
+                loadStatus();
+                setInterval(loadStatus, 15000);
+            </script>
+        {% endblock %}
+    </body>
+</html>

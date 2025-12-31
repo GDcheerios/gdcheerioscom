@@ -17,6 +17,10 @@ def about(): return render_template("about.html")
 
 @main_blueprint.route("/supporter")
 def supporter(): return render_template("supporter.html")
+
+
+@main_blueprint.route("/status")
+def status(): return render_template("status.html")
 # endregion
 
 
