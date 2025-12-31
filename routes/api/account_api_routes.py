@@ -9,7 +9,7 @@ from objects.Account import Account
 account_api_blueprint = Blueprint('account', __name__)
 
 
-@account_api_blueprint.route("/account/create-account", methods=['POST'])
+@account_api_blueprint.post("/account/create-account")
 def create_account() -> Response:
     """
     The account creation POST method.
@@ -36,7 +36,7 @@ def create_account() -> Response:
     return redirect("/account/create?msg=Please check your email for a verification link.")
 
 
-@account_api_blueprint.route('/account/login-form', methods=['POST'])
+@account_api_blueprint.post('/account/login-form')
 def login_cookie():
     """
     Login form POST method.
@@ -61,7 +61,7 @@ def login_cookie():
     return resp
 
 
-@account_api_blueprint.route("/account/login-json", methods=['POST'])
+@account_api_blueprint.post("/account/login-json")
 def login_json():
     username = request.json["username"]
     password = request.json["password"]
@@ -122,7 +122,7 @@ def signout():
     return resp
 
 
-@account_api_blueprint.route("/account/change-username", methods=["POST"])
+@account_api_blueprint.post("/account/change-username")
 def change_username():
     id = request.cookies.get("userID")
     account = Account(id)
@@ -133,7 +133,7 @@ def change_username():
     return redirect(f'/user/{account.id}')
 
 
-@account_api_blueprint.route("/account/change-about", methods=["POST"])
+@account_api_blueprint.post("/account/change-about")
 def change_about():
     id = request.cookies.get("userID")
     account = Account(id)
@@ -143,20 +143,20 @@ def change_about():
     return redirect(f'/user/{account.id}')
 
 
-@account_api_blueprint.route("/account/check/username", methods=["GET"])
+@account_api_blueprint.get("/account/check/username")
 def check_username():
     username = request.args.get("username")
     return {"exists": Account.name_exists(username)}
 
 
-@account_api_blueprint.route("/account/check/email", methods=["GET"])
+@account_api_blueprint.get("/account/check/email")
 def check_email():
     email = request.args.get("email")
     print(email, Account.email_exists(email))
     return {"exists": Account.email_exists(email)}
 
 
-@account_api_blueprint.route("/account/grab/<identifier>")
+@account_api_blueprint.get("/account/grab/<identifier>")
 def grab_account(identifier):
     return Account(identifier).jsonify()
 
