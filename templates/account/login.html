@@ -12,12 +12,18 @@
       <h2 style="font-style: bold; color: red; text-align: center;">{{ warning }}</h2>
       <div class="account-form">
         <form action = "/api/account/login-form" method = "POST">
-          <p><h1>Enter username</h1></p>
+            {% if request.args.get('supporter_id') %}
+                <input type='hidden' name='supporter_id' value='{{ request.args.get("supporter_id") }}'/>
+            {% endif %}
+            <p><h1>Enter username</h1></p>
           <p><input type = 'text' name = 'nm'/></p>
           <p><h1>Enter password</h1></p>
           <p><input type = 'password' name = 'pw'/></p>
           <p><input type = 'submit' value = 'Login'/></p>
         </form>
+          <p>Don't have an account? <a
+                  href="/account/create{% if request.args.get('supporter_id') %}?supporter_id={{ request.args.get('supporter_id') }}{% endif %}">Create
+              one</a></p>
       </div>
     {% endblock %}
   </body>
