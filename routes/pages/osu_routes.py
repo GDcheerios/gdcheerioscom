@@ -28,7 +28,7 @@ def osu_match(id):
     )
     current_osu_id = None
     request_id = Account.id_from_session(request.cookies.get('session'))
-    is_creator = request_id == str(match["opener"])
+    is_creator = str(request_id) == str(match["opener"])
     if request_id:
         current_osu_id = Account(request_id).osu_id
 
