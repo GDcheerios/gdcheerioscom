@@ -23,17 +23,11 @@ def create_account() -> Response:
 
     password = request.form.get("pw")
     email = request.form.get("em")
-
-    try:
-        osu_id = int(request.form.get("id"))
-    except ValueError:
-        osu_id = 0
-
     about_me = request.form.get("am")
 
     supporter_id = request.args.get("supporter_id")
 
-    Account.queue(username, password, email, osu_id, about_me, supporter_id)
+    Account.queue(username, password, email, 0, about_me, supporter_id)
 
     return redirect("/account/create?msg=Please check your email for a verification link.")
 
