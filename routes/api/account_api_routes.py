@@ -31,7 +31,9 @@ def create_account() -> Response:
 
     about_me = request.form.get("am")
 
-    Account.queue(username, password, email, osu_id, about_me)
+    supporter_id = request.args.get("supporter_id")
+
+    Account.queue(username, password, email, osu_id, about_me, supporter_id)
 
     return redirect("/account/create?msg=Please check your email for a verification link.")
 
@@ -45,6 +47,7 @@ def login_cookie():
 
     username = request.form.get('nm')
     password = request.form.get('pw')
+    supporter_id = request.form.get("supporter_id")
     login_result = account_api.login(username, password)
     if login_result[1] == 404:
         resp = make_response(
@@ -53,6 +56,8 @@ def login_cookie():
         resp = make_response(
             render_template('account/login.html', warning="Incorrect password.", code=404))
     else:
+        if supporter_id is not None:
+            Account.claim_supporter(supporter_id, login_result[0]['data']['id'])
         account = login_result[0]['data']  # set this to only read login data
         resp = make_response(redirect(f"/account/{account['id']}"))
         resp.set_cookie('session', str(login_result[0]['session_id']), expires=datetime.now() + timedelta(days=360))
@@ -79,7 +84,7 @@ def verify_account() -> Response:
         return Response(status=400)
 
     row = environment.database.fetch_to_dict(
-        "SELECT id, email, username, password, osu_id, about, token, expires FROM pending_accounts WHERE id = %s",
+        "SELECT id, email, username, password, osu_id, about, token, expires, supporter_id FROM pending_accounts WHERE id = %s",
         params=(sid,)
     )
     if not row:
@@ -109,6 +114,9 @@ def verify_account() -> Response:
         row["osu_id"],
         row["about"]
     )
+
+    if row["supporter_id"] is not None:
+        Account.claim_supporter(row["supporter_id"], account.id)
 
     resp = make_response(redirect(f"/account/{account.id}"))
     resp.set_cookie('session', str(Account.create_session(account.id)), expires=datetime.now() + timedelta(days=360))

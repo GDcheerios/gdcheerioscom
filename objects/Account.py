@@ -62,7 +62,8 @@ class Account:
 
         if result["supporter_lasts"]:
             if datetime.now(tz=timezone.utc) > result["supporter_lasts"]:
-                database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}", params=(identifier,))
+                database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}",
+                                 params=(identifier,))
                 self.supporter = False
             else:
                 self.supporter = True
@@ -91,7 +92,8 @@ class Account:
             self.is_admin = result["is_admin"]
             if result["supporter_lasts"]:
                 if datetime.now(tz=timezone.utc) > result["supporter_lasts"]:
-                    database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}", params=(identifier,))
+                    database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}",
+                                     params=(identifier,))
                     self.supporter = False
                 else:
                     self.supporter = True
@@ -212,7 +214,7 @@ class Account:
         return Account(id)
 
     @staticmethod
-    def queue(username: str, password: str, email: str, osu_id: int, about: str):
+    def queue(username: str, password: str, email: str, osu_id: int, about: str, supporter_id=None):
 
         now = datetime.now(tz=timezone.utc)
         database.execute(
@@ -229,10 +231,10 @@ class Account:
         password = str(environment.bcrypt.generate_password_hash(password))[2:-1]  # remove the byte chars
         pending_id = database.fetch_one(
             """
-            INSERT INTO pending_accounts (username, password, email, osu_id, about, token)
-            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+            INSERT INTO pending_accounts (username, password, email, osu_id, about, token, supporter_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
             """,
-            params=(username, password, email, osu_id, about, token_hash)
+            params=(username, password, email, osu_id, about, token_hash, supporter_id)
         )[0]
         EmailManager.send_verification_email(email, username,
                                              f"{environment.domain}/api/account/verify?sid={pending_id}&token={raw_token}")
@@ -274,6 +276,38 @@ class Account:
             """,
             params=(weeks, id)
         )
+
+    @staticmethod
+    def claim_supporter(supporter_id, id: int):
+        weeks = database.fetch_one(
+            """
+            UPDATE supports
+            SET \"user\" = %s
+            WHERE id = %s
+            RETURNING weeks
+            """,
+            params=(id, supporter_id)
+        )
+        if weeks:
+            Account.make_supporter(id, weeks[0])
+
+    @staticmethod
+    def insert_supporter(id: int, weeks: int = 1):
+        database.execute(
+            """
+            INSERT INTO supports (\"user\", weeks)
+            VALUES (%s, %s)
+            """,
+            params=(id, weeks)
+        )
+
+    @staticmethod
+    def buy_supporter(id: int, weeks: int = 1):
+        """
+        Method specific for after purchase
+        """
+        Account.make_supporter(id, weeks)
+        Account.insert_supporter(id, weeks)
 
     # </editor-fold>
 
