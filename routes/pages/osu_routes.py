@@ -9,7 +9,7 @@ osu_blueprint = Blueprint('osu_blueprint', __name__)
 
 @osu_blueprint.route("/")
 def osu():
-    request_id = request.cookies.get("userID")
+    request_id = Account.id_from_session(request.cookies.get('session'))
     account = None
     if request_id:
         account = Account(request_id)
@@ -27,7 +27,7 @@ def osu_match(id):
         params=(id,)
     )
     current_osu_id = None
-    request_id = request.cookies.get("userID")
+    request_id = Account.id_from_session(request.cookies.get('session'))
     is_creator = request_id == str(match["opener"])
     if request_id:
         current_osu_id = Account(request_id).osu_id

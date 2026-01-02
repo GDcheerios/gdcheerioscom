@@ -7,6 +7,7 @@ import time
 from flask import Flask, g, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_bcrypt import Bcrypt
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # environment
 import environment
@@ -27,6 +28,10 @@ from routes.pages.main_routes import main_blueprint
 from routes.pages.gentrys_quest_routes import gentrys_quest_blueprint
 from routes.pages.account_routes import account_blueprint
 from routes.pages.osu_routes import osu_blueprint
+
+# apis and objects
+from api.key_api import verify_api_key_header
+from objects import Account
 
 
 def match_room(match_id: str) -> str:
@@ -60,6 +65,7 @@ def create_app():
         static_folder='static',  # Name of directory for static files
     )
 
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)
 
@@ -82,7 +88,15 @@ def create_app():
     def after_request(response):
         g.req_duration = time.perf_counter() - g.req_start
         g.req_endpoint = request.path
-        user_id = request.cookies.get("userID")
+        user_id = Account.id_from_session(request.cookies.get("session"))
+
+        if user_id is None:
+            api_key = request.headers.get("X-API-Key") or request.headers.get("Authorization")
+            if api_key:
+                key_user = verify_api_key_header()
+                if key_user:
+                    user_id = key_user
+
         ip_address = request.remote_addr
         success = 200 <= response.status_code < 500
 

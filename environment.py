@@ -109,7 +109,7 @@ Database.execute(
     DELETE
     FROM api_keys
     WHERE expires_at < %s
-      AND expires_at IS NOT NULL
+        AND expires_at IS NOT NULL
     """,
     params=(now,)
 )

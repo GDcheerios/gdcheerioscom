@@ -55,7 +55,7 @@ def login_cookie():
     else:
         account = login_result[0]['data']  # set this to only read login data
         resp = make_response(redirect(f"/account/{account['id']}"))
-        resp.set_cookie('userID', str(account['id']), expires=datetime.now() + timedelta(days=360))
+        resp.set_cookie('session', str(login_result[0]['session_id']), expires=datetime.now() + timedelta(days=360))
         return resp
 
     return resp
@@ -111,20 +111,20 @@ def verify_account() -> Response:
     )
 
     resp = make_response(redirect(f"/account/{account.id}"))
-    resp.set_cookie('userID', str(account.id), expires=datetime.now() + timedelta(days=360))
+    resp.set_cookie('session', str(Account.create_session(account.id)), expires=datetime.now() + timedelta(days=360))
     return resp
 
 
 @account_api_blueprint.route("/account/signout")
 def signout():
     resp = make_response(render_template('account/login.html'))
-    resp.delete_cookie('userID')
+    resp.delete_cookie('session')
     return resp
 
 
 @account_api_blueprint.post("/account/change-username")
 def change_username():
-    id = request.cookies.get("userID")
+    id = Account.id_from_session(request.cookies.get("session"))
     account = Account(id)
     username = request.form.get("username")
     if not Account.name_exists(username):
@@ -135,7 +135,7 @@ def change_username():
 
 @account_api_blueprint.post("/account/change-about")
 def change_about():
-    id = request.cookies.get("userID")
+    id = Account.id_from_session(request.cookies.get("session"))
     account = Account(id)
     about_me = request.form.get("about_me")
     Account.change_about(int(id), about_me)
@@ -164,7 +164,7 @@ def grab_account(identifier):
 @account_api_blueprint.post("/account/set-osu")
 def set_osu():
     id = request.form["osu_id"]
-    user_id = request.cookies.get("userID")
+    user_id = Account.id_from_session(request.cookies.get("session"))
     if user_id:
         user = Account(user_id)
         user.set_osu_id(id)

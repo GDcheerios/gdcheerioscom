@@ -21,7 +21,7 @@
             <div class="create">
               <h1>Create a match</h1>
               <div style="display: flex;">
-                <input type="hidden" name="id" value="{{ request.cookies.get('userID') }}" required>
+                <input type="hidden" name="id" value="{{ account.id }}" required>
                 <input style="width: 400px;" type="text" name="name" placeholder="Match name" required>
                 <input style="height: 80px;" type="submit" value="Create" onclick="createMatch()">
               </div>

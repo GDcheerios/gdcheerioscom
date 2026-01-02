@@ -18,10 +18,12 @@ def login(username, password) -> tuple[dict, int]:
     if account.exists:
         if environment.bcrypt.check_password_hash(account.password, password):
             access_token = issue_access_token(account.id)
+            session_id = Account.create_session(account.id)
             return {
                 "success": True,
                 "data": account.jsonify(),
-                "access_token": access_token
+                "access_token": access_token,
+                "session_id": session_id
             }, 200
 
         return {

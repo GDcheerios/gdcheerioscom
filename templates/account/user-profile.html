@@ -21,7 +21,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
             <h2 class="about">{{ account.about|safe }}</h2>
-            {% if request.cookies.get("userID") == account.id | string %}
+            {% if account.id_from_session(request.cookies.get("session")) == account.id | string %}
                 <hr style="height: 0;">
                 <h4 style="text-align: right;">Edit your information</h4>
                 <form action="/api/account/change-username" method="POST"

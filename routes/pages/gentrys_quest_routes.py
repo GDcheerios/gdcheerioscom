@@ -24,7 +24,7 @@ def gentrys_quest_home(): return render_template("gentrys quest/home.html")
 @gentrys_quest_blueprint.route("/leaderboard")
 def gentrys_quest_leaderboard():
     players = get_top_players()
-    id = request.cookies.get("userID")
+    id = Account.id_from_session(request.cookies.get("session"))
     if id:
         id = int(id)
     found_you = False
@@ -58,7 +58,7 @@ def gentrys_quest_levels(): return render_template(
 @gentrys_quest_blueprint.route("/ranking")
 def gentrys_quest_ranking():
     global user_ranking
-    user_id = request.cookies.get("userID")
+    user_id = Account.id_from_session(request.cookies.get("session"))
     if user_id:
         user_ranking = Account(user_id).gq_data["ranking"]
     return render_template("gentrys quest/ranking.html", user_ranking=user_ranking)
