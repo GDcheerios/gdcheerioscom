@@ -32,8 +32,8 @@
 
       <!-- Account dropdown -->
       <li class="dropdown">
-        {% if request.cookies.get('userID') != None %}
-          <a href="/account/{{request.cookies.get('userID')}}">Profile</a>
+        {% if request.cookies.get('session') != None %}
+          <a href="/account">Profile</a>
           <ul class="dropdown-content">
             <li><a href="/account/signout">Sign Out</a></li>
           </ul>

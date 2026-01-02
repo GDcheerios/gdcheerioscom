@@ -173,6 +173,25 @@ class Account:
             self.gq_data["metadata"]["level"] = level
             self.gq_data["metadata"]["required"] = environment.gq_levels[level]
 
+    @staticmethod
+    def from_session(session):
+        id = database.fetch_one("SELECT \"user\" FROM sessions WHERE id = %s", params=(session,))
+        if id:
+            return Account(id[0])
+        return None
+
+    @staticmethod
+    def id_from_session(session):
+        id = database.fetch_one("SELECT \"user\" FROM sessions WHERE id = %s", params=(session,))
+        if id:
+            return id[0]
+        return None
+
+    @staticmethod
+    def create_session(id: int):
+        session_id = database.fetch_one("INSERT INTO sessions (\"user\") VALUES (%s) RETURNING id", params=(id,))
+        return session_id[0]
+
     # <editor-fold desc="Modifiers">
     @staticmethod
     def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":

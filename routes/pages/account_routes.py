@@ -10,11 +10,11 @@ account_blueprint = Blueprint("account_blueprint", __name__)
 
 @account_blueprint.route("/")
 def account():
-    id = request.cookies.get("userID")
-    if id is None:
+    session_id = request.cookies.get("session")
+    if session_id is None:
         return redirect("/account/login")
     else:
-        return redirect(f"/account/{id}")
+        return redirect(f"/account/{Account.id_from_session(session_id)}")
 
 
 @account_blueprint.route("/<id>")
@@ -42,5 +42,7 @@ def login(): return render_template("account/login.html")
 @account_blueprint.route("/signout")
 def signout():
     resp = make_response(redirect('/account/login'))
-    resp.delete_cookie('userID')
+    session_id = request.cookies.get('session')
+    resp.delete_cookie('session')
+    environment.database.execute("DELETE FROM sessions WHERE id = %s", (session_id,))
     return resp

@@ -8,6 +8,7 @@ from datetime import date, datetime
 
 import environment
 from api import osu_api
+from objects import Account
 
 osu_api_blueprint = Blueprint('osu_api_blueprint', __name__)
 
@@ -92,7 +93,7 @@ def create_match():
     global team_name
     team_name = None
     data = request.json
-    user_id = request.cookies.get("userID")
+    user_id = Account.id_from_session(request.cookies.get("session"))
     match_id = environment.database.fetch_one(
         """
         INSERT INTO osu_matches
@@ -137,7 +138,7 @@ def refresh_all_in_match(id: int):
 @osu_api_blueprint.post('/osu/end-match/<id>')
 def end_match(id):
     match = environment.database.fetch_to_dict("SELECT * FROM osu_matches WHERE id = %s", params=(id,))
-    if request.cookies.get("userID") != str(match["opener"]):
+    if Account.id_from_session(request.cookies.get("session")) != str(match["opener"]):
         return {"error": "not your match"}
 
     match_users = environment.database.fetch_all("SELECT \"user\" FROM osu_match_users WHERE match = %s", params=(id,))

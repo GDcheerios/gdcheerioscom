@@ -11,22 +11,6 @@ from objects import Account
 gentrys_quest_api_blueprint = Blueprint("gentrys_quest_api_blueprint", __name__)
 
 
-# region Version
-@gentrys_quest_api_blueprint.get("/gq/get-version")
-def version(): return environment.gq_version
-
-
-@gentrys_quest_api_blueprint.post("/gq/set-version")
-def set_version():
-    if environment.secret == request.form.get("secret"):
-        environment.database.execute(
-            f"UPDATE server SET version = %s",
-            params=(request.form.get("version"),)
-        )
-
-
-# endregion
-
 # region Users
 @gentrys_quest_api_blueprint.get("/gq/check-in/<id>")
 def check_in(id: int):

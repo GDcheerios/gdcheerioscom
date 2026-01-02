@@ -69,7 +69,6 @@ def _get_current_user_id_from_bearer():
 
         return str(sub)
     except Exception:
-        # Avoid logging stack traces with secrets; keep message minimal
         logging.error("[keys] Unexpected error verifying token")
         return None
 

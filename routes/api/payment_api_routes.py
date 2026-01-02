@@ -1,6 +1,7 @@
 import stripe
 from flask import Blueprint, redirect, url_for, session, request, jsonify
 import environment
+from objects import Account
 
 payments_api_blueprint = Blueprint('payment api', __name__)
 stripe.api_key = environment.stripe_secret_key
@@ -8,7 +9,7 @@ stripe.api_key = environment.stripe_secret_key
 
 @payments_api_blueprint.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
-    user_id = request.cookies.get('userID')
+    user_id = Account.id_from_session(request.cookies.get('session'))
     if user_id is None:
         return "Unauthorized", 401
 
@@ -48,7 +49,7 @@ def create_checkout_session():
 
 @payments_api_blueprint.get('/success')
 def payment_success():
-    return redirect(f"/user/{request.cookies.get('userID')}")
+    return redirect(f"/account/{Account.id_from_session(request.cookies.get('session'))}")
 
 
 @payments_api_blueprint.route('/webhook', methods=['POST'])
