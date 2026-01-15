@@ -138,7 +138,7 @@ def refresh_all_in_match(id: int):
 @osu_api_blueprint.post('/osu/end-match/<id>')
 def end_match(id):
     match = environment.database.fetch_to_dict("SELECT * FROM osu_matches WHERE id = %s", params=(id,))
-    if Account.id_from_session(request.cookies.get("session")) != str(match["opener"]):
+    if str(Account.id_from_session(request.cookies.get("session"))) != str(match["opener"]):
         return {"error": "not your match"}
 
     match_users = environment.database.fetch_all("SELECT \"user\" FROM osu_match_users WHERE match = %s", params=(id,))
