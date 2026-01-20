@@ -2,6 +2,7 @@
   <nav>
     <h1 id="thecom">GDcheerios.com</h1>
     <ul>
+      
       <!-- Main dropdown -->
       <li class="dropdown">
         <a href="/">Main</a>
@@ -29,6 +30,8 @@
         <a href="/osu">Osu</a>
         <ul class="dropdown-content">
         </ul>
+      
+      <li><a href="/search">Search</a></li>
 
       <!-- Account dropdown -->
       <li class="dropdown">
@@ -48,18 +51,15 @@
   </nav>
 </div>
 <script>
-  // Handle name randomization
   const nameEl = document.getElementById('thecom');
   if (Math.floor(Math.random() * 100) < 20) {
       nameEl.innerHTML = "GDcheeriosDotCom";
   }
 
-  // hide the things
   document.querySelectorAll('.dropdown-content').forEach(function (content) {
     content.style.display = 'none';
   });
 
-  // Handle dropdown visibility
   document.querySelectorAll('.dropdown').forEach(function (dropdown) {
     dropdown.addEventListener('mouseenter', function () {
       this.querySelector('.dropdown-content').style.display = 'block';
@@ -69,4 +69,12 @@
       this.querySelector('.dropdown-content').style.display = 'none';
     });
   });
+
+  document.addEventListener('keydown', function (event) {
+    if ((event.ctrlKey && event.key === 'k') || event.key === '/') {
+      event.preventDefault();
+      window.location.href = '/search';
+    }
+  });
+
 </script>

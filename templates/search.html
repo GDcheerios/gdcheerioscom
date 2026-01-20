@@ -1,0 +1,235 @@
+<html>
+<head>
+    {% block head %}
+    <title>Search</title>
+    <link rel="stylesheet" href="/static/style.css">
+    {% endblock %}
+</head>
+<body>
+{% include 'navbar.html' %}
+{% block body %}
+<section class="block" id="search" aria-labelledby="search">
+    <div class="search-wrap">
+        <form class="search-form" action="/search" method="get" role="search" aria-label="Site search">
+            <label>
+                <input
+                    class="search-input"
+                    id="searchInput"
+                    type="search"
+                    name="q"
+                    placeholder="Search..."
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+            </label>
+        </form>
+    </div>
+
+    <div id="searchStatus" class="muted" style="min-height: 18px;"></div>
+
+    <div id="searchResults" class="grid" style="margin-top: 12px; display: none;">
+        <div class="panel">
+            <h3>Users</h3>
+            <div id="usersList" class="search-items"></div>
+            <p id="usersEmpty" class="muted" style="display: none;">No users found.</p>
+        </div>
+
+        <div class="panel">
+            <h3>Osu matches</h3>
+            <div id="matchesList" class="search-items"></div>
+            <p id="matchesEmpty" class="muted" style="display: none;">No matches found.</p>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('searchInput');
+        const form = input.closest('form');
+
+        const statusEl = document.getElementById('searchStatus');
+        const resultsWrap = document.getElementById('searchResults');
+
+        const usersList = document.getElementById('usersList');
+        const usersEmpty = document.getElementById('usersEmpty');
+
+        const matchesList = document.getElementById('matchesList');
+        const matchesEmpty = document.getElementById('matchesEmpty');
+
+        let debounceTimer = null;
+        let controller = null;
+
+        function setVisible(el, isVisible) {
+            el.style.display = isVisible ? '' : 'none';
+        }
+
+        function clearLists() {
+            usersList.innerHTML = '';
+            matchesList.innerHTML = '';
+        }
+
+        function makeClickableCard({ title, subtitle, href, metaLines }) {
+            const card = document.createElement('div');
+            card.className = 'search-item';
+            card.tabIndex = 0;
+            card.setAttribute('role', 'link');
+            card.dataset.href = href || '';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'search-item-title';
+            titleEl.textContent = title ?? '';
+
+            const subtitleEl = document.createElement('div');
+            subtitleEl.className = 'search-item-subtitle';
+            subtitleEl.textContent = subtitle ?? '';
+
+            card.appendChild(titleEl);
+            card.appendChild(subtitleEl);
+
+            const go = () => {
+                if (card.dataset.href) window.location.href = card.dataset.href;
+            };
+
+            card.addEventListener('click', go);
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    go();
+                }
+            });
+
+            return card;
+        }
+
+        function renderUsers(users) {
+            usersList.innerHTML = '';
+            if (!users || users.length === 0) {
+                setVisible(usersEmpty, true);
+                return;
+            }
+            setVisible(usersEmpty, false);
+
+            for (const user of users) {
+                const id = user && typeof user === 'object' ? (user.id ?? user.get?.('id')) : null;
+                const username =
+                    (user && typeof user === 'object' && (user.username ?? user.name)) ||
+                    (typeof user === 'string' ? user : null) ||
+                    (id != null ? `User #${id}` : 'User');
+
+                usersList.appendChild(
+                    makeClickableCard({
+                        title: String(username),
+                        subtitle: id != null ? `View profile • ID: ${id}` : 'View profile',
+                        href: id != null ? `/account/${encodeURIComponent(String(id))}` : '',
+                        metaLines: []
+                    })
+                );
+            }
+        }
+
+        function formatMaybeDate(value) {
+            if (!value) return '';
+            const d = new Date(value);
+            if (!isNaN(d.getTime())) {
+                return d.toLocaleString();
+            }
+            return String(value);
+        }
+
+        function renderMatches(matches) {
+            matchesList.innerHTML = '';
+            if (!matches || matches.length === 0) {
+                setVisible(matchesEmpty, true);
+                return;
+            }
+            setVisible(matchesEmpty, false);
+
+            for (const row of matches) {
+                const id = row && typeof row === 'object' ? row.id : null;
+                const name = row && typeof row === 'object' ? (row.name ?? `Match #${id ?? ''}`) : String(row);
+
+                const started = row && typeof row === 'object' ? formatMaybeDate(row.started) : '';
+                const opener = row && typeof row === 'object' ? row.opener : null;
+
+                const meta = [];
+                if (row && typeof row === 'object') {
+                    if (row.pinned) meta.push('Pinned');
+                    if (row.open === true) meta.push('Open');
+                    if (row.open === false) meta.push('Closed');
+                    if (row.ended === true) meta.push('Ended');
+                    if (row.ended === false) meta.push('In progress');
+                    if (started) meta.push(`Started: ${started}`);
+                    if (opener != null) meta.push(`Opener: ${opener}`);
+                    if (row.password) meta.push('Passworded');
+                }
+
+                matchesList.appendChild(
+                    makeClickableCard({
+                        title: String(name),
+                        subtitle: id != null ? `Match • ID: ${id}` : 'Match',
+                        href: id != null ? `/osu/match/${encodeURIComponent(String(id))}` : '',
+                        metaLines: meta
+                    })
+                );
+            }
+        }
+
+        async function fetchAndRender(q) {
+            if (controller) controller.abort();
+            controller = new AbortController();
+
+            statusEl.textContent = 'Searching…';
+            setVisible(resultsWrap, false);
+
+            try {
+                const url = `/search/results?q=${encodeURIComponent(q)}`;
+                const res = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: controller.signal
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+
+                clearLists();
+                renderUsers(data.users);
+                renderMatches(data.matches);
+
+                setVisible(resultsWrap, true);
+                statusEl.textContent = '';
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+                statusEl.textContent = 'Could not load results.';
+                clearLists();
+                setVisible(resultsWrap, false);
+            }
+        }
+
+        function onInputChanged() {
+            const q = input.value.trim();
+
+            if (controller) controller.abort();
+            if (debounceTimer) clearTimeout(debounceTimer);
+
+            if (!q) {
+                statusEl.textContent = '';
+                clearLists();
+                setVisible(resultsWrap, false);
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetchAndRender(q);
+            }, 250);
+        }
+
+        form.addEventListener('submit', (e) => e.preventDefault());
+
+        input.addEventListener('input', onInputChanged);
+    </script>
+</section>
+{% endblock %}
+</body>
+</html>
