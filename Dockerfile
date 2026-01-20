@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Specify the command to run on container start
-CMD ["python", "main.py"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} --worker-class eventlet -w 1 --timeout 120 \"main:create_prod_socketio()\""]

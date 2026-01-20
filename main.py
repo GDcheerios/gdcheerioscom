@@ -131,11 +131,30 @@ def create_app():
     return app
 
 
-if __name__ == "__main__":
-    server_port = os.environ.get('PORT', environment.port)
-
+def create_prod_socketio() -> SocketIO:
     app = create_app()
-    socketio = SocketIO(app)
+    socketio = SocketIO(app, async_mode="eventlet")
     register_socket_handlers(socketio)
     environment.socket = socketio
-    socketio.run(app, host='0.0.0.0', port=server_port, debug=environment.debug, allow_unsafe_werkzeug=True)
+    return socketio
+
+
+def create_dev_socketio() -> SocketIO:
+    app = create_app()
+    socketio = SocketIO(app, async_mode="threading")
+    register_socket_handlers(socketio)
+    environment.socket = socketio
+    return socketio
+
+
+if __name__ == "__main__":
+    app = create_app()
+    port = int(os.environ.get("PORT", environment.port))
+    socketio = create_dev_socketio()
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=port,
+        debug=True,
+        allow_unsafe_werkzeug=True,
+    )
