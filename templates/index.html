@@ -16,7 +16,7 @@
 <div class="container">
 
     <!-- Hero -->
-    <section class="block" style="display:grid;gap:10px;align-items:center">
+    '<section class="block" style="display:grid;gap:10px;align-items:center">
         <h1 style="margin:0">Welcome to GDcheerios.com</h1>
         <p class="muted" style="margin:0">Tools, projects, and updates built and maintained by GDcheerios.</p>
     </section>
@@ -48,9 +48,93 @@
         </div>
     </section>
 
-    <section class="center muted" style="margin-top:8px">
-        <small>© {{ current_year or 2025 }} GDcheerios. All rights reserved.</small>
-    </section>
+        <!-- Changelog -->
+        <section class="block" id="changelog">
+            <h2 style="margin-top:0">Changelog 2026.1.1</h2>
+            <div class="panel">
+                <ul style="list-style-type: none; padding-left: 0; margin: 0; display: grid; gap: 10px;">
+                    <li style="
+                        padding: 10px 12px;
+                        border-radius: 10px;
+                        border: 1px solid #2b2b2b;
+                        background: rgba(255,255,255,0.03);
+                    ">
+                        Implemented sessions
+                        <span class="muted">by</span>
+                        <a href="/account/GDcheerios" target="_blank" rel="noopener noreferrer"
+                           style="font-weight:700; text-decoration: underline; text-underline-offset: 3px;">
+                            @GDcheerios
+                        </a>
+                        <span class="muted">in</span>
+                        <a href="https://github.com/GDcheerios/gdcheerioscom/pull/188" target="_blank" rel="noopener noreferrer"
+                           style="padding: 2px 8px; border: 1px solid #2b2b2b; border-radius: 999px; background: #1a1a1a;">
+                            #188
+                        </a>
+                    </li>
+
+                    <li style="
+                        padding: 10px 12px;
+                        border-radius: 10px;
+                        border: 1px solid #2b2b2b;
+                        background: rgba(255,255,255,0.03);
+                    ">
+                        Capitalized effort in supporter
+                        <span class="muted">by</span>
+                        <a href="/account/GDcheerios" target="_blank" rel="noopener noreferrer"
+                           style="font-weight:700; text-decoration: underline; text-underline-offset: 3px;">
+                            @GDcheerios
+                        </a>
+                        <span class="muted">in</span>
+                        <a href="https://github.com/GDcheerios/gdcheerioscom/pull/189" target="_blank" rel="noopener noreferrer"
+                           style="padding: 2px 8px; border: 1px solid #2b2b2b; border-radius: 999px; background: #1a1a1a;">
+                            #189
+                        </a>
+                    </li>
+
+                    <li style="
+                        padding: 10px 12px;
+                        border-radius: 10px;
+                        border: 1px solid #2b2b2b;
+                        background: rgba(255,255,255,0.03);
+                    ">
+                        Fixed titles and descriptions of pages
+                        <span class="muted">by</span>
+                        <a href="/account/GDcheerios" target="_blank" rel="noopener noreferrer"
+                           style="font-weight:700; text-decoration: underline; text-underline-offset: 3px;">
+                            @GDcheerios
+                        </a>
+                        <span class="muted">in</span>
+                        <a href="https://github.com/GDcheerios/gdcheerioscom/pull/190" target="_blank" rel="noopener noreferrer"
+                           style="padding: 2px 8px; border: 1px solid #2b2b2b; border-radius: 999px; background: #1a1a1a;">
+                            #190
+                        </a>
+                    </li>
+
+                    <li style="
+                        padding: 10px 12px;
+                        border-radius: 10px;
+                        border: 1px solid #2b2b2b;
+                        background: rgba(255,255,255,0.03);
+                    ">
+                        Added supporter claiming
+                        <span class="muted">by</span>
+                        <a href="/account/GDcheerios" target="_blank" rel="noopener noreferrer"
+                           style="font-weight:700; text-decoration: underline; text-underline-offset: 3px;">
+                            @GDcheerios
+                        </a>
+                        <span class="muted">in</span>
+                        <a href="https://github.com/GDcheerios/gdcheerioscom/pull/191" target="_blank" rel="noopener noreferrer"
+                           style="padding: 2px 8px; border: 1px solid #2b2b2b; border-radius: 999px; background: #1a1a1a;">
+                            #191
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="center muted" style="margin-top:8px">
+            <small>© {{ current_year or 2025 }} GDcheerios. All rights reserved.</small>
+        </section>
 
 </div>
 {% endblock %}
