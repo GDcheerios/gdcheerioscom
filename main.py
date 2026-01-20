@@ -88,31 +88,33 @@ def create_app():
     def after_request(response):
         g.req_duration = time.perf_counter() - g.req_start
         g.req_endpoint = request.path
-        user_id = Account.id_from_session(request.cookies.get("session"))
 
-        if user_id is None:
-            api_key = request.headers.get("X-API-Key") or request.headers.get("Authorization")
-            if api_key:
-                key_user = verify_api_key_header()
-                if key_user:
-                    user_id = key_user
+        if not g.req_endpoint.startswith('/static'):
+            user_id = Account.id_from_session(request.cookies.get("session"))
 
-        ip_address = request.remote_addr
-        success = 200 <= response.status_code < 500
+            if user_id is None:
+                api_key = request.headers.get("X-API-Key") or request.headers.get("Authorization")
+                if api_key:
+                    key_user = verify_api_key_header()
+                    if key_user:
+                        user_id = key_user
 
-        environment.database.execute(
-            """
-            INSERT INTO requests (endpoint, duration, \"user\", ip, successful)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            params=(
-                g.req_endpoint,
-                g.req_duration,
-                user_id,
-                ip_address,
-                success
+            ip_address = request.remote_addr
+            success = 200 <= response.status_code < 500
+
+            environment.database.execute(
+                """
+                INSERT INTO requests (endpoint, duration, \"user\", ip, successful)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                params=(
+                    g.req_endpoint,
+                    g.req_duration,
+                    user_id,
+                    ip_address,
+                    success
+                )
             )
-        )
         return response
 
     # load blueprints
