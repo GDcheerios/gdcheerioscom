@@ -4,7 +4,7 @@ import os
 import time
 
 # flask packages
-from flask import Flask, g, request
+from flask import Flask, g, request, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_bcrypt import Bcrypt
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -56,6 +56,20 @@ def register_socket_handlers(socketio):
             return
         leave_room(match_room(match_id))
         emit("left_match", {"match_id": match_id})
+
+
+def register_error_pages():
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template('errors/403.html'), 403
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        return render_template('errors/500.html'), 500
 
 
 def create_app():
@@ -137,6 +151,7 @@ app = create_app()
 socketio = SocketIO(app, async_mode="eventlet" if not environment.debug else "threading", logger=False,
                     engineio_logger=False, cors_allowed_origins="*")
 register_socket_handlers(socketio)
+register_error_pages()
 environment.socket = socketio
 
 if __name__ == "__main__":
