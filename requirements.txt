@@ -6,5 +6,6 @@ requests==2.32.4
 psycopg2==2.9.10
 python-dotenv==1.0.1
 stripe==14.1.0
+gunicorn==23.0.0
 GPSystem @ git+https://github.com/GDcheerios/GPSystem.git
 PSQLConnection @ git+https://github.com/GDcheerios/PSQLConnection.git
