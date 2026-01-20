@@ -27,9 +27,9 @@ def create_account() -> Response:
 
     supporter_id = request.args.get("supporter_id")
 
-    Account.queue(username, password, email, 0, about_me, supporter_id)
+    result = Account.queue(username, password, email, 0, about_me, supporter_id)
 
-    return redirect("/account/create?msg=Please check your email for a verification link.")
+    return redirect(f"/account/create?msg={result['message']}")
 
 
 @account_api_blueprint.post('/account/login-form')

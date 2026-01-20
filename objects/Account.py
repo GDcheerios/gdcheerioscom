@@ -236,8 +236,20 @@ class Account:
             """,
             params=(username, password, email, osu_id, about, token_hash, supporter_id)
         )[0]
-        EmailManager.send_verification_email(email, username,
-                                             f"{environment.domain}/api/account/verify?sid={pending_id}&token={raw_token}")
+
+        try:
+            EmailManager.send_verification_email(email, username,
+                                                 f"{environment.domain}/api/account/verify?sid={pending_id}&token={raw_token}")
+        except ValueError as e:
+            return {
+                "success": False,
+                "message": f"Invalid email!"
+            }
+
+        return {
+            "success": True,
+            "message": "Verification email sent. Please check your inbox."
+        }
 
     @staticmethod
     def set_status(id: int, status: str):
