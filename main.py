@@ -132,10 +132,10 @@ def create_app():
 
 
 app = create_app()
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode="eventlet" if not environment.debug else "threading", logger=False,
+                    engineio_logger=False, cors_allowed_origins="*")
 register_socket_handlers(socketio)
 environment.socket = socketio
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", environment.port))
