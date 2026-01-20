@@ -194,6 +194,12 @@ class Account:
         session_id = database.fetch_one("INSERT INTO sessions (\"user\") VALUES (%s) RETURNING id", params=(id,))
         return session_id[0]
 
+    @staticmethod
+    def search(query: str):
+        return database.fetch_all_to_dict(
+            f"SELECT id, username FROM accounts WHERE username ILIKE %s OR about ILIKE %s LIMIT 5;",
+            params=(f"%{query}%", f"%{query}%"))
+
     # <editor-fold desc="Modifiers">
     @staticmethod
     def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":
