@@ -36,7 +36,7 @@ def search_results():
 
 
 @main_blueprint.route("/supporter")
-def supporter(): return render_template("supporter.html")
+def supporter(): return render_template("supporter.html", logged_in=request.cookies.get("session") is not None)
 
 
 @main_blueprint.route("/supporter/claim/<id>")

@@ -25,17 +25,21 @@
                 </p>
                 <h3>What you get with being a supporter</h3>
                 <ul>
-                    <li>Supporter role in the <a href="/discord">GDcheerios Discord</a>, if your discord is linked to your account.</li>
+                    <li>Supporter role in the <a href="https://discord.com/invite/vDu7TaSwQg" target="_blank">GDcheerios Discord</a>, if your discord is linked to your account.</li>
                     <li>Cool supporter tag on your profile</li>
                     <li>More features coming soon</li>
                 </ul>
             </div>
-            <form action="/payment/create-checkout-session" method="POST">
-                <label for="weeks-slider" style="display: block; margin-bottom: 10px;">How long do you want supporter status?</label>
-                <input type="range" class="supporter-slider" id="weeks-slider" name="weeks" min="1" max="104" value="1">
-                <div id="time-display">1 week</div>
-                <button type="submit" class="supporter-button">Buy Supporter</button>
-            </form>
+            {% if logged_in %}
+                <form action="/payment/create-checkout-session" method="POST">
+                    <label for="weeks-slider" style="display: block; margin-bottom: 10px;">How long do you want supporter status?</label>
+                    <input type="range" class="supporter-slider" id="weeks-slider" name="weeks" min="1" max="104" value="1">
+                    <div id="time-display">1 week</div>
+                    <button type="submit" class="supporter-button">Buy Supporter</button>
+                </form>
+            {% else %}
+                <a href="/account/login" class="supporter-button">Login to buy supporter</a>
+            {% endif %}
             <script>
                 const slider = document.getElementById('weeks-slider');
                 const display = document.getElementById('time-display');
