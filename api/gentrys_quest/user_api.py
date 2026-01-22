@@ -67,6 +67,43 @@ def get_placement(weighted, score):
     )[0]
 
 
+def insert_metrics(id, gp, rank):
+    today = datetime.datetime.now(tz=datetime.timezone.utc).date()
+    has_today_metrics = environment.database.fetch_one(
+        """
+        SELECT COUNT(*) > 0
+        FROM gq_metrics
+        WHERE user_id = %s
+          AND recorded_at = %s
+        """,
+        params=(id, today)
+    )[0]
+
+    if not has_today_metrics:
+        print(f"Inserting new gq_metrics for user_id={id}, date={today}")
+        environment.database.execute(
+            """
+            SELECT COUNT(*) > 0
+            FROM gq_metrics
+            WHERE user_id = %s
+              AND recorded_at = %s
+            """,
+            params=(id, today)
+        )
+    else:
+        print(f"Updating existing gq_metrics for user_id={id}, date={today}")
+        environment.database.execute(
+            """
+            UPDATE gq_metrics
+            SET rank = %s,
+                gp   = %s
+            WHERE user_id = %s
+              AND recorded_at = %s
+            """,
+            params=(rank, gp, id, today)
+        )
+
+
 def rate_user(id: int, custom_rating: int = None) -> dict:
     print(f"rate_user called for user_id={id}, custom_rating={custom_rating}")
     today = datetime.datetime.now(tz=datetime.timezone.utc).date()
@@ -111,84 +148,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
 
     placement = get_placement(weighted_rating, score)
     print(f"Calculated placement={placement} for user_id={id}")
-
-    has_today_metrics = environment.database.fetch_one(
-        """
-        SELECT COUNT(*) > 0
-        FROM gq_metrics
-        WHERE user_id = %s
-          AND recorded_at = %s
-        """,
-        params=(id, today)
-    )[0]
-
-    if not has_today_metrics:
-        print(f"Inserting new gq_metrics for user_id={id}, date={today}")
-        environment.database.execute(
-            """
-            SELECT COUNT(*) > 0
-            FROM gq_metrics
-            WHERE user_id = %s AND recorded_at = %s
-            """,
-            params=(id, today)
-        )
-    else:
-        print(f"Updating existing gq_metrics for user_id={id}, date={today}")
-        environment.database.execute(
-            """
-            UPDATE gq_metrics
-            SET rank = %s,
-                gp   = %s
-            WHERE user_id = %s
-              AND recorded_at = %s
-            """,
-            params=(placement, weighted_rating, id, today)
-        )
-
-    affected_players = environment.database.fetch_all_to_dict(
-        """
-        SELECT id, weighted
-        FROM gq_rankings
-        WHERE id != %s
-          AND weighted <= %s
-        """,
-        params=(id, weighted_rating)
-    )
-    print(f"Found {len(affected_players)} affected players for user_id={id}")
-
-    for player in affected_players:
-        print(f"Processing affected player_id={player['id']}")
-        player_placement = get_placement(player["weighted"], score)
-
-        player_has_today_metrics = environment.database.fetch_one(
-            """
-            SELECT COUNT(*) > 0
-            FROM gq_metrics
-            WHERE user_id = %s
-              AND recorded_at = %s
-            """,
-            params=(player["id"], today)
-        )[0]
-
-        if not player_has_today_metrics:
-            environment.database.execute(
-                """
-                INSERT INTO gq_metrics (user_id, rank, gp)
-                VALUES (%s, %s, %s)
-                """,
-                params=(player["id"], player_placement, player["weighted"])
-            )
-        else:
-            environment.database.execute(
-                """
-                UPDATE gq_metrics
-                SET rank = %s,
-                    gp   = %s
-                WHERE user_id = %s
-                  AND recorded_at = %s
-                """,
-                params=(player_placement, player["weighted"], player["id"], today)
-            )
+    insert_metrics(id, weighted_rating, rank)
 
     result = {
         "weighted": weighted_rating,
@@ -199,3 +159,25 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
     }
     print(f"rate_user completed for user_id={id}, result={result}")
     return result
+
+
+def get_ranking(id: int):
+    data = environment.database.fetch_to_dict(
+        """
+        SELECT *
+        FROM gq_rankings r,
+             gq_data d
+        WHERE r.id = %s
+          and d.id = %s
+        """, params=(id, id))
+
+    placement = get_placement(data["weighted"], data["score"])
+    insert_metrics(id, data["weighted"], placement)
+
+    return {
+        "placement": placement,
+        "rank": data["rank"],
+        "tier": data["tier"],
+        "unweighted": data["unweighted"],
+        "weighted": data["weighted"]
+    }
