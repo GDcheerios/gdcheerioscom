@@ -7,7 +7,7 @@ import environment
 
 database = environment.database
 from api.osu_api import fetch_osu_data
-from api.gentrys_quest.user_api import get_placement
+from api.gentrys_quest.user_api import get_ranking
 from objects.EmailManager import EmailManager
 
 
@@ -152,19 +152,23 @@ class Account:
             self.gq_data = {
                 "scores": leaderboards,
                 "metrics": environment.database.fetch_all_to_dict(
-                    "SELECT * FROM gq_metrics WHERE user_id = %s ORDER BY recorded_at desc", params=(self.id,)),
-                "metadata": environment.database.fetch_to_dict("SELECT * FROM gq_data WHERE id = %s",
-                                                               params=(self.id,)),
-                "ranking": environment.database.fetch_to_dict("SELECT * FROM gq_rankings WHERE id = %s",
-                                                              params=(self.id,)),
-                "items": environment.database.fetch_all_to_dict("SELECT * FROM gq_items WHERE owner = %s",
-                                                                params=(self.id,))
+                    """SELECT *
+                       FROM gq_metrics
+                       WHERE user_id = %s
+                       ORDER BY recorded_at desc""",
+                    params=(self.id,)),
+                "metadata": environment.database.fetch_to_dict(
+                    """SELECT *
+                       FROM gq_data
+                       WHERE id = %s""",
+                    params=(self.id,)),
+                "ranking": get_ranking(self.id),
+                "items": environment.database.fetch_all_to_dict(
+                    """SELECT *
+                       FROM gq_items
+                       WHERE owner = %s""",
+                    params=(self.id,))
             }
-            if self.gq_data["ranking"]:
-                self.gq_data["ranking"]["placement"] = get_placement(
-                    self.gq_data["ranking"]["weighted"],
-                    self.gq_data["metadata"]["score"]
-                )
 
             level = 0
             for i, threshold in enumerate(environment.gq_levels):
@@ -205,7 +209,8 @@ class Account:
     def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":
         query = """
                 INSERT INTO accounts (username, password, email, osu_id, about)
-                VALUES (%s, %s, %s, %s, %s) RETURNING id
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
                 """
 
         params = (
@@ -238,7 +243,8 @@ class Account:
         pending_id = database.fetch_one(
             """
             INSERT INTO pending_accounts (username, password, email, osu_id, about, token, supporter_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
             """,
             params=(username, password, email, osu_id, about, token_hash, supporter_id)
         )[0]
