@@ -46,3 +46,8 @@ def signout():
     resp.delete_cookie('session')
     environment.database.execute("DELETE FROM sessions WHERE id = %s", (session_id,))
     return resp
+
+
+@account_blueprint.route("/reset-password")
+def reset_password():
+    return render_template("account/reset-password.html")
