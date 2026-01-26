@@ -33,8 +33,6 @@
         <input id="xpInput" type="number" placeholder="Type XP (sandbox, live updates)" min="0" inputmode="numeric">
         <input id="deltaInput" type="number" placeholder="Add/Subtract (e.g., 500 or -250)" inputmode="numeric">
       </div>
-      <div class="hint">Sandbox mode: type in either box. Total XP = XP + Add/Subtract. No server calls.</div>
-
       <div class="single-level">
         <div class="summary">
           <div id="summaryLevel">Level: 1</div>
@@ -87,18 +85,43 @@
 
         function formatNumber(n) { try { return Number(n).toLocaleString(); } catch { return n; } }
 
+        // thresholds[] is expected to be TOTAL XP required to reach each level (cumulative),
+        // not "XP needed within this level".
         function computeLevel(totalXp) {
-          let acc = 0;
-          for (let i = 0; i < thresholds.length; i++) {
-            const req = thresholds[i];
-            if (totalXp < acc + req) {
-              const into = totalXp - acc;
-              return { level: i + 1, intoLevelXp: Math.max(0, into), levelCap: req, completedSum: acc };
-            }
-            acc += req;
+          if (!thresholds.length) {
+            return { level: 1, intoLevelXp: 0, levelSpan: 1, prevTotal: 0, nextTotal: 1 };
           }
-          const lastCap = thresholds[thresholds.length - 1] || 1;
-          return { level: thresholds.length, intoLevelXp: Math.max(0, totalXp - acc), levelCap: lastCap, completedSum: acc };
+
+          // Find first level whose total threshold is greater than the player's total XP
+          for (let i = 0; i < thresholds.length; i++) {
+            const nextTotal = thresholds[i];                 // total XP needed to reach level (i+1)
+            const prevTotal = i === 0 ? 0 : thresholds[i - 1]; // total XP at start of this level
+            if (totalXp < nextTotal) {
+              const levelSpan = Math.max(1, nextTotal - prevTotal); // XP within this level
+              const into = totalXp - prevTotal;
+              return {
+                level: i + 1,
+                intoLevelXp: Math.max(0, into),
+                levelSpan,
+                prevTotal,
+                nextTotal
+              };
+            }
+          }
+
+          // At/above max configured threshold: treat as max level, bar full
+          const maxLevel = thresholds.length;
+          const prevTotal = maxLevel === 1 ? 0 : thresholds[maxLevel - 2];
+          const nextTotal = thresholds[maxLevel - 1];
+          const levelSpan = Math.max(1, nextTotal - prevTotal);
+
+          return {
+            level: maxLevel,
+            intoLevelXp: levelSpan, // full bar
+            levelSpan,
+            prevTotal,
+            nextTotal
+          };
         }
 
         function clampNonNegative(n) { return Math.max(0, n); }
@@ -113,17 +136,19 @@
           const barText = document.getElementById("barText");
           const capsText = document.getElementById("capsText");
 
-          const { level, intoLevelXp, levelCap } = computeLevel(totalXp);
-          const pct = Math.max(0, Math.min(100, (intoLevelXp / Math.max(1, levelCap)) * 100));
+          const { level, intoLevelXp, levelSpan, nextTotal } = computeLevel(totalXp);
+          const pct = Math.max(0, Math.min(100, (intoLevelXp / Math.max(1, levelSpan)) * 100));
 
           bar.style.width = pct.toFixed(2) + "%";
           barText.textContent = pct.toFixed(1) + "%";
           levelEl.textContent = "Level: " + level;
-          xpEl.textContent = `${formatNumber(intoLevelXp)} / ${formatNumber(levelCap)} xp`;
-          totalEl.textContent = "Total XP: " + formatNumber(totalXp);
 
-          const totalCap = thresholds.reduce((a, b) => a + b, 0);
-          capsText.textContent = `Configured levels: ${thresholds.length} (cumulative cap: ${formatNumber(totalCap)})`;
+          // Show progress inside the current level, but computed from TOTAL XP thresholds
+          xpEl.textContent = `${formatNumber(intoLevelXp)} / ${formatNumber(levelSpan)} xp`;
+          totalEl.textContent = `Total XP: ${formatNumber(totalXp)} (next level at ${formatNumber(nextTotal)})`;
+
+          const totalCap = thresholds[thresholds.length - 1] || 0; // cumulative cap is last threshold
+          capsText.textContent = `Configured levels: ${thresholds.length} (max threshold: ${formatNumber(totalCap)})`;
         }
 
         const xpInput = document.getElementById("xpInput");
