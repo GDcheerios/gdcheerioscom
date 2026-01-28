@@ -21,9 +21,10 @@
           <p><input type = 'password' name = 'pw'/></p>
           <p><input type = 'submit' value = 'Login'/></p>
         </form>
-          <p>Don't have an account? <a
+          <p>Don't have an account? <a style="text-decoration: underline;"
                   href="/account/create{% if request.args.get('supporter_id') %}?supporter_id={{ request.args.get('supporter_id') }}{% endif %}">Create
-              one</a></p>
+              one</a>.</p>
+          <p>Or <a style="text-decoration: underline;" href="/account/password-reset">forgot your password?</a></p>
       </div>
     {% endblock %}
   </body>

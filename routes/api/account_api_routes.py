@@ -5,6 +5,7 @@ from flask import Blueprint, request, redirect, make_response, render_template, 
 import environment
 from api import account_api
 from objects.Account import Account
+from objects.EmailManager import EmailManager
 
 account_api_blueprint = Blueprint('account', __name__)
 
@@ -89,7 +90,7 @@ def verify_account() -> Response:
         DELETE
         FROM pending_accounts
         WHERE expires < NOW()
-          OR id = %s
+           OR id = %s
         """,
         params=(sid,)
     )
@@ -114,6 +115,40 @@ def verify_account() -> Response:
 
     resp = make_response(redirect(f"/account/{account.id}"))
     resp.set_cookie('session', str(Account.create_session(account.id)), expires=datetime.now() + timedelta(days=360))
+    return resp
+
+
+@account_api_blueprint.post("/account/send-reset-email")
+def send_reset_email():
+    email = request.json["email"]
+    if not Account.email_exists(email): return Response(status=404)
+    
+    id = environment.database.fetch_one("select id from accounts where email = %s", params=(email,))
+    code = environment.database.fetch_one("insert into password_resets (\"user\") values (%s) returning id", params=(id,))[0]
+    EmailManager.send_reset_password_email(email, code)
+    return {"success": True}
+
+
+@account_api_blueprint.post("/account/reset-password")
+def reset_password():
+    code = request.json["code"]
+    password = request.json["password"]
+
+    password_reset = environment.database.fetch_to_dict(
+        "select * from password_resets where id = %s and expires_at > NOW() - INTERVAL '24 hours'", params=(code,))
+    if not password_reset:
+        environment.database.execute(
+            "DELETE FROM password_resets WHERE id = %s OR expires_at <= NOW() - INTERVAL '24 hours'", params=(code,))
+        return Response(status=404)
+
+    password_hash = Account.get_password_hash(password)
+    environment.database.execute("UPDATE accounts SET password = %s WHERE id = %s",
+                                 params=(password_hash, password_reset["user"]))
+    environment.database.execute("DELETE FROM password_resets WHERE id = %s", params=(code,))
+
+    resp = Response(status=200)
+    resp.set_cookie('session', str(Account.create_session(password_reset["user"])), expires=datetime.now() + timedelta(days=360))
+
     return resp
 
 
@@ -173,4 +208,3 @@ def set_osu():
         return redirect(f"/user/{user_id}")
 
     return redirect(f"/user/{user_id}")
-

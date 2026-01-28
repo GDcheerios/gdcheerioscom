@@ -238,8 +238,7 @@ class Account:
         )
         raw_token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-        password = str(password)
-        password = str(environment.bcrypt.generate_password_hash(password))[2:-1]  # remove the byte chars
+        password = Account.get_password_hash(str(password))
         pending_id = database.fetch_one(
             """
             INSERT INTO pending_accounts (username, password, email, osu_id, about, token, supporter_id)
@@ -262,6 +261,10 @@ class Account:
             "success": True,
             "message": "Verification email sent. Please check your inbox."
         }
+
+    @staticmethod
+    def get_password_hash(password: str):
+        return str(environment.bcrypt.generate_password_hash(password))[2:-1]  # remove the byte chars
 
     @staticmethod
     def set_status(id: int, status: str):
