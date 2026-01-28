@@ -537,7 +537,8 @@
                                             position: 'left',
                                             ticks: {
                                                 color: 'rgba(255,255,255,0.7)',
-                                                callback: (v) => v.toLocaleString()
+                                                callback: (v) => v.toLocaleString(),
+                                                maxTicksLimit: 5
                                             },
                                             grid: {
                                                 color: '#2b2b2b'
@@ -547,16 +548,16 @@
                                         },
                                         yRank: {
                                             position: 'right',
-                                            reverse: true, // lower rank (better) at the top
+                                            reverse: true,
                                             ticks: {
                                                 color: '#ffae00',
-                                                callback: (v) => `#${Number(v).toLocaleString()}`
+                                                callback: (v) => `#${Number(v).toLocaleString()}`,
+                                                maxTicksLimit: 5
                                             },
                                             grid: {
                                                 drawOnChartArea: false
                                             },
-                                            suggestedMin: minRank,
-                                            suggestedMax: maxRank
+                                            min: 1,
                                         }
                                     }
                                 }
@@ -565,7 +566,7 @@
 
                         function setupTimeframeButtons() {
                             const container = document.getElementById('gq-timeframe-toggle');
-                            if (!container) return;
+                            if (!container) return
 
                             container.querySelectorAll('.gq-timeframe-btn').forEach(btn => {
                                 btn.addEventListener('click', () => {
