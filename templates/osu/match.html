@@ -89,16 +89,12 @@
             {% endif %}
 
             <div class="match-layout">
-                <!-- LEFT: players -->
                 <div id="match-info" class="match-players-column">
                     <div id="loading-indicator">
                         <p>Loading match data...</p>
                     </div>
                 </div>
-
-                <!-- RIGHT: teams overview -->
                 <div id="teams-overview" class="teams-overview">
-                    <!-- filled by JS -->
                 </div>
             </div>
             <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -316,7 +312,11 @@
 
                     const nameEl = document.createElement('div');
                     nameEl.className = 'player-text-name';
-                    nameEl.textContent = player.username;
+                    if (player.nickname != null) {
+                      nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.nickname} <span style="font-size: 50%;">(${player.username})</span></a>`;
+                    } else {
+                      nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">player.username</a>`;
+                    }
                     textBlock.appendChild(nameEl);
 
                     const metaEl = document.createElement('div');
