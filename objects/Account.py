@@ -60,16 +60,6 @@ class Account:
             params=(identifier,)
         )
 
-        if result["supporter_lasts"]:
-            if datetime.now(tz=timezone.utc) > result["supporter_lasts"]:
-                database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}",
-                                 params=(identifier,))
-                self.supporter = False
-            else:
-                self.supporter = True
-        else:
-            self.supporter = result["is_supporter"]
-
         self.pfp = "https://storage.cloud.google.com/gdcheerioscombucket/profile-pictures/huh.png"
 
         try:
