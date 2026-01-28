@@ -83,12 +83,10 @@ def insert_metrics(id, gp, rank):
         print(f"Inserting new gq_metrics for user_id={id}, date={today}")
         environment.database.execute(
             """
-            SELECT COUNT(*) > 0
-            FROM gq_metrics
-            WHERE user_id = %s
-              AND recorded_at = %s
+            INSERT INTO gq_metrics (user_id, rank, gp, recorded_at)
+                VALUES (%s, %s, %s, %s)
             """,
-            params=(id, today)
+            params=(id, rank, gp, today)
         )
     else:
         print(f"Updating existing gq_metrics for user_id={id}, date={today}")
