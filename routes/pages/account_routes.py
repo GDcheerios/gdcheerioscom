@@ -39,6 +39,12 @@ def create():
 def login(): return render_template("account/login.html")
 
 
+@account_blueprint.route("/password-reset")
+def password_reset():
+    reset_code = request.args.get("code")
+    return render_template("account/password-reset.html", code=reset_code)
+
+
 @account_blueprint.route("/signout")
 def signout():
     resp = make_response(redirect('/account/login'))

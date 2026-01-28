@@ -69,3 +69,24 @@ class EmailManager:
         with smtplib.SMTP_SSL(environment.smtp_host, 465, context=context) as server:
             server.login(environment.smtp_email, environment.smtp_password)
             server.send_message(msg)
+
+    @staticmethod
+    def send_reset_password_email(to_email: str, reset_code: str):
+        ok, reason = EmailManager.validate_email(to_email)
+        if not ok:
+            raise ValueError(reason)
+
+        msg = EmailMessage()
+        msg["Subject"] = "Reset your password"
+        msg["From"] = environment.smtp_email
+        msg["To"] = to_email.strip()
+        msg.set_content(
+            f"Please reset your password:\n{environment.domain}/account/password-reset?code={reset_code}\n\n"
+            f"If you didn't request a password reset, please ignore this email.\n"
+            f"This link expires in 24 hours.\n"
+        )
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(environment.smtp_host, 465, context=context) as server:
+            server.login(environment.smtp_email, environment.smtp_password)
+            server.send_message(msg)
