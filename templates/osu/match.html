@@ -315,7 +315,7 @@
                     if (player.nickname != null) {
                       nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.nickname} <span style="font-size: 50%;">(${player.username})</span></a>`;
                     } else {
-                      nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">player.username</a>`;
+                      nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.username}</a>`;
                     }
                     textBlock.appendChild(nameEl);
 
