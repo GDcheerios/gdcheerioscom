@@ -29,7 +29,7 @@ def create():
         osu_info = json.loads(osu_info)
     return render_template("account/create.html",
                            client_id=environment.osu_client_id,
-                           redirect_uri=f"{environment.domain}/api/code_grab",
+                           redirect_uri=f"{environment.domain}/oauth/osu",
                            osu_info=osu_info,
                            msg=request.args.get("msg")
                            )
