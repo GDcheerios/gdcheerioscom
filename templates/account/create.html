@@ -32,6 +32,9 @@
                   <input
                           type="text"
                           name="nm"
+                          {% if username %}
+                          value="{{ username }}"
+                          {% endif %}
                           required
                           minlength="1"
                           maxlength="24"

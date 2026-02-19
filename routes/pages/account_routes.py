@@ -27,11 +27,13 @@ def create():
     osu_info = request.args.get("osu_info")
     if osu_info is not None:
         osu_info = json.loads(osu_info)
+    username = request.args.get("username")
     return render_template("account/create.html",
                            client_id=environment.osu_client_id,
                            redirect_uri=f"{environment.domain}/oauth/osu",
                            osu_info=osu_info,
-                           msg=request.args.get("msg")
+                           msg=request.args.get("msg"),
+                           username=username if username else None
                            )
 
 

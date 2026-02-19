@@ -25,7 +25,6 @@ def osu_callback():
                                       'Content-Type': 'application/json'})
 
     response = response.json()
-    print(response)
 
     user_info = requests.get("https://osu.ppy.sh/api/v2/me/osu", headers={
         'Accept': 'application/json',
@@ -33,8 +32,11 @@ def osu_callback():
         'Authorization': f"Bearer {response['access_token']}"
     }).json()
 
-    print(user_info)
-
     info = fetch_osu_data(user_info["id"])
 
-    return redirect(f"/account/create?osu_info={json.dumps(info)}")
+    return redirect(
+            f"/account/create" + 
+            f"?osu_info={json.dumps(info)}" +
+            f"&username={info['username']}" +
+            "&msg=Please fill out required information"
+    )
