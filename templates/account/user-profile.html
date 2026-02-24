@@ -48,15 +48,19 @@
                         Update About Me
                     </button>
                 </form>
-                <form action="/api/account/set-osu" method="POST"
-                      style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
-                    <input type="text" name="osu_id" placeholder="osu! User ID/Username" required
-                           style="padding: 8px; border: 1px solid #2b2b2b; border-radius: 4px; background: #111; color: #fff;">
-                    <button type="submit"
-                            style="padding: 8px 16px; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-                        Link osu! Account
-                    </button>
-                </form>
+                {% if not account.osu_data %}
+                    <div id="osu-source" class="source" style="background: #e15894;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Osu%21_Logo_2016.svg/960px-Osu%21_Logo_2016.svg.png" alt="osu! logo">
+                        <h1>Link osu! account</h1>
+                    </div>
+                    <script>
+                        const osuSource = document.getElementById('osu-source');
+                        osuSource.addEventListener('click', () => {
+                            window.location.href = 'https://osu.ppy.sh/oauth/authorize?redirect_uri={{osu_redirect_uri}}&client_id={{osu_client_id}}&response_type=code&scope=public+identify&state=randomval';
+                        });
+                        osuSource.style.cursor = 'pointer';
+                    </script>
+                {% endif %}
             {% endif %}
         </div>
     </div>
@@ -922,7 +926,7 @@
         </script>
 </div>
 {% endif %}
-        {% if account.has_osu %}
+        {% if account.osu_data %}
         <div id="osu-data" class="block gq-card">
             <h1 style="margin-top:0">osu!</h1>
             <div class="osu-section">

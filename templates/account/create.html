@@ -17,6 +17,12 @@
       <div style="display: flex; flex-direction: row; justify-content: space-evenly;">
       <div class="account-form">
           <form id="create-form" action="/api/account/create-account" method="POST" novalidate>
+              <input type="hidden" name="osu_id" value="{{ osu_info.id }}">
+              <input type="hidden" name="google_info" value="{{ google_info }}">
+              {% if request.args.get('supporter_id') %}
+                <input type="hidden" name="supporter_id" value="{{ request.args.get('supporter_id') }}">
+              {% endif %}
+
               <p><h1>Enter email</h1></p>
               <p>
                   <input
@@ -78,17 +84,16 @@
                     <h1>Link with osu!</h1>
                   {% endif %}
               </div>
-              <div id="google-source" class="source">
-                  {% if google_info %}
-                    <img src={{ google_info['picture'] }}>
-                    <h1>Linked as {{ google_info['name'] }}</h1>
-                  {% else %}
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
-                       alt="Google logo">
-                    <h1>Link with Google</h1>
-                  {% endif %}
-
-              </div>
+<!--              <div id="google-source" class="source">-->
+<!--                  {% if google_info %}-->
+<!--                    <img src={{ google_info['picture'] }}>-->
+<!--                    <h1>Linked as {{ google_info['name'] }}</h1>-->
+<!--                  {% else %}-->
+<!--                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"-->
+<!--                       alt="Google logo">-->
+<!--                    <h1>Link with Google</h1>-->
+<!--                  {% endif %}-->
+<!--              </div>-->
           <div>
     </div>
   <script>
@@ -218,19 +223,30 @@
           }
       });
 
+      validateEmailLocal();
+      validateUsernameLocal();
+      validatePasswordLocal();
+      checkEmail(emailInput.value);
+      checkUsername(usernameInput.value);
       updateSubmit();
 
       const osuSource = document.getElementById('osu-source');
       osuSource.addEventListener('click', () => {
-          window.location.href = 'https://osu.ppy.sh/oauth/authorize?redirect_uri={{osu_redirect_uri}}&client_id={{osu_client_id}}&response_type=code&scope=public+identify&state=randomval';
+          window.location.href = 'https://osu.ppy.sh/oauth/authorize?redirect_uri={{osu_redirect_uri}}&client_id={{osu_client_id}}&response_type=code&scope=public+identify'+
+              {% if request.args.get('supporter_id') %}
+                '&state={{request.args.get('supporter_id')}}';
+              {% else %}
+                '';
+              {% endif %}
+
       });
       osuSource.style.cursor = 'pointer';
 
-      const googleSource = document.getElementById('google-source');
-      googleSource.addEventListener('click', () => {
-          window.location.href = '/oauth/google/login';
-      });
-      googleSource.style.cursor = 'pointer';
+      // const googleSource = document.getElementById('google-source');
+      // googleSource.addEventListener('click', () => {
+      //     window.location.href = '/oauth/google/login';
+      // });
+      // googleSource.style.cursor = 'pointer';
   </script>
   {% endblock %}
   </body>

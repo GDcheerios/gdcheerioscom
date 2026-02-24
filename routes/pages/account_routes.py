@@ -18,8 +18,13 @@ def account():
 
 
 @account_blueprint.route("/<id>")
-def user(id: int | str): return render_template("account/user-profile.html", account=Account(id),
-                                                rater=environment.gq_rater, gq_level_colors=environment.gq_level_colors)
+def user(id: int | str): return render_template("account/user-profile.html",
+                                                account=Account(id),
+                                                rater=environment.gq_rater,
+                                                gq_level_colors=environment.gq_level_colors,
+                                                osu_redirect_uri=f"{environment.domain}/oauth/osu",
+                                                osu_client_id=environment.osu_client_id
+                                                )
 
 
 @account_blueprint.route("/create")

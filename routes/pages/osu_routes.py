@@ -30,7 +30,9 @@ def osu_match(id):
     request_id = Account.id_from_session(request.cookies.get('session'))
     is_creator = str(request_id) == str(match["opener"])
     if request_id:
-        current_osu_id = Account(request_id).osu_id
+        osu_data = Account(request_id).get_osu_data()
+        if osu_data:
+            current_osu_id = osu_data["id"]
 
     return render_template('osu/match.html', match=match, players=players, current_osu_id=current_osu_id, is_creator=is_creator)
 

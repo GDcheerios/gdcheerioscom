@@ -101,6 +101,7 @@ def google_callback():
 @oauth_api_routes.route('/osu')
 def osu_callback():
     code = urllib.parse.parse_qs(request.query_string.decode('utf-8'))["code"][0]
+    supporter_id = urllib.parse.parse_qs(request.query_string.decode('utf-8'))["state"][0]
 
     response = requests.post("https://osu.ppy.sh/oauth/token",
                              json={'client_id': environment.osu_client_id,
@@ -122,9 +123,18 @@ def osu_callback():
 
     info = fetch_osu_data(user_info["id"])
 
-    return redirect(
-            f"/account/create" +
-            f"?osu_info={json.dumps(info)}" +
-            f"&username={info['username']}" +
-            "&msg=Please fill out required information"
-    )
+    from objects import Account  # import here to avoid circular imports
+
+    user = Account.id_from_session(request.cookies.get('session'))
+    if user:
+        user = Account(user)
+        user.set_osu_id(info.get("id"))
+        return redirect(f"/user/{user.id}")
+    else:
+        return redirect(
+                f"/account/create" +
+                f"?osu_info={json.dumps(info)}" +
+                f"&username={info['username']}" +
+                f"&supporter_id={supporter_id}" +
+                "&msg=Please fill out required information"
+        )
