@@ -79,6 +79,49 @@
                 outline: none;
                 min-width: 260px;
             }
+
+            .player-level {
+                margin-top: 6px;
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                align-items: center;
+                gap: 10px;
+            }
+            .player-level-badge {
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: .04em;
+                padding: 4px 8px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.10);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                color: rgba(255, 255, 255, 0.92);
+                white-space: nowrap;
+            }
+            .player-level-bar-wrap {
+                position: relative;
+                height: 10px;
+                border-radius: 999px;
+                overflow: hidden;
+                background: rgba(0, 0, 0, 0.35);
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+            }
+            .player-level-bar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 0%;
+                background: linear-gradient(90deg, rgba(2, 179, 255, 0.95), rgba(0, 228, 168, 0.95));
+                transition: width 220ms ease;
+            }
+            .player-level-pct {
+                font-size: 12px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.85);
+                min-width: 54px;
+                text-align: right;
+            }
         </style>
         {% endblock %}
     </head>
@@ -140,6 +183,61 @@
                     currentOsuId,
                     playersCount: Array.isArray(players) ? players.length : null,
                 });
+
+                function scoreForLevel(n) {
+                    const nn = Number(n);
+                    if (!Number.isFinite(nn) || nn < 1) return 0;
+
+                    if (nn <= 100) {
+                        const poly = (5000 / 3) * (4 * Math.pow(nn, 3) - 3 * Math.pow(nn, 2) - nn);
+                        const exp = 1.25 * Math.pow(1.8, (nn - 60));
+                        return poly + exp;
+                    }
+                    return 26931190827 + 99999999999 * (nn - 100);
+                }
+
+                function levelFromScore(scoreValue) {
+                    const s = Math.max(0, Number(scoreValue) || 0);
+
+                    const maxLevel = 300;
+                    let lo = 1, hi = maxLevel, best = 1;
+
+                    while (lo <= hi) {
+                        const mid = (lo + hi) >> 1;
+                        const t = scoreForLevel(mid);
+                        if (t <= s) {
+                            best = mid;
+                            lo = mid + 1;
+                        } else {
+                            hi = mid - 1;
+                        }
+                    }
+
+                    const level = best;
+                    const prev = scoreForLevel(level);
+                    const next = scoreForLevel(level + 1);
+                    const span = Math.max(1, next - prev);
+                    const pct = Math.max(0, Math.min(1, (s - prev) / span));
+
+                    return { level, prev, next, pct };
+                }
+
+                function setPlayerLevelUI(userId, scoreValue) {
+                    const lvlEl = document.querySelector(
+                        `.player-level-badge[data-level-for="${CSS.escape(String(userId))}"]`
+                    );
+                    const barEl = document.querySelector(
+                        `.player-level-bar[data-levelbar-for="${CSS.escape(String(userId))}"]`
+                    );
+                    const pctEl = document.querySelector(
+                        `.player-level-pct[data-levelpct-for="${CSS.escape(String(userId))}"]`
+                    );
+
+                    const { level, pct } = levelFromScore(scoreValue);
+                    if (lvlEl) lvlEl.textContent = `LV. ${level}`;
+                    if (barEl) barEl.style.width = (pct * 100).toFixed(2) + "%";
+                    if (pctEl) pctEl.textContent = (pct * 100).toFixed(1) + "%";
+                }
 
                 async function endMatch() {
                     if (matchEnded) return;
@@ -256,7 +354,7 @@
                                 nickname: nickname
                             })
                         });
-                        
+
                         if (!res.ok) {
                             let msg = "Failed to change nickname.";
                             try {
@@ -439,6 +537,33 @@
                     metaEl.textContent = `ACC: ${accValue} • Rank: ${rankValue}`;
                     textBlock.appendChild(metaEl);
 
+                    const levelWrap = document.createElement('div');
+                    levelWrap.className = 'player-level';
+
+                    const levelBadge = document.createElement('div');
+                    levelBadge.className = 'player-level-badge';
+                    levelBadge.dataset.levelFor = String(player.id);
+                    levelBadge.textContent = 'LV. 1';
+
+                    const barWrap = document.createElement('div');
+                    barWrap.className = 'player-level-bar-wrap';
+
+                    const bar = document.createElement('div');
+                    bar.className = 'player-level-bar';
+                    bar.dataset.levelbarFor = String(player.id);
+                    barWrap.appendChild(bar);
+
+                    const pct = document.createElement('div');
+                    pct.className = 'player-level-pct';
+                    pct.dataset.levelpctFor = String(player.id);
+                    pct.textContent = '0.0%';
+
+                    levelWrap.appendChild(levelBadge);
+                    levelWrap.appendChild(barWrap);
+                    levelWrap.appendChild(pct);
+
+                    textBlock.appendChild(levelWrap);
+
                     main.appendChild(textBlock);
 
                     const scoreWrapper = document.createElement('div');
@@ -520,7 +645,7 @@
                         };
                         scoreWrapper.appendChild(removeBtn);
                     }
-                    
+
                     if (isCreator && !matchEnded) {
                         const nicknameBtn = document.createElement('button');
                         nicknameBtn.className = 'player-refresh-button';
@@ -616,6 +741,7 @@
                     sortedPlayers.forEach((player, index) => {
                         const row = createPlayerRow(player, index);
                         matchInfo.appendChild(row);
+                        setPlayerLevelUI(player.id, Number(player.score || 0));
                     });
 
                     const teams = buildTeams(sortedPlayers);
@@ -635,7 +761,6 @@
 
                     const prevRects = captureRowPositions();
                     renderAll();
-                    renderTeamsOverview(teams);
                     animateRowReorder(prevRects);
 
                     if (!changeMap) return;
@@ -665,6 +790,8 @@
                         }
                         if (playEl) animateNumber(playEl, c.playFrom, c.playTo, 650);
                         if (avgEl) animateNumber(avgEl, c.avgFrom, c.avgTo, 650);
+
+                        setPlayerLevelUI(userId, c.scoreTo);
                     }
                 }
 
