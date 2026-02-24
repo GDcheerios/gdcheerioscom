@@ -69,6 +69,16 @@
             .match-button--refresh {
                 background: rgba(60, 255, 160, 0.18);
             }
+
+            .match-add-user-input {
+                padding: 10px 12px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                background: rgba(255, 255, 255, 0.06);
+                color: white;
+                outline: none;
+                min-width: 260px;
+            }
         </style>
         {% endblock %}
     </head>
@@ -84,6 +94,16 @@
                     </button>
                     <button id="refresh-match-btn" class="match-button match-button--refresh" onclick="refreshMatch()" type="button">
                         Refresh match
+                    </button>
+                    <input
+                            id="add-user-input"
+                            class="match-add-user-input"
+                            type="text"
+                            placeholder="Add user (osu username or id)"
+                            autocomplete="off"
+                    />
+                    <button id="add-user-btn" class="match-button match-button--refresh" onclick="addUserToMatch()" type="button">
+                        Add user
                     </button>
                 </div>
             {% endif %}
@@ -103,6 +123,7 @@
                 const currentOsuId = {{ current_osu_id|tojson }};  // may be null
                 const matchId = {{ match.id | tojson }};
                 const matchEnded = {{ match.ended | tojson }};
+                const isCreator = {{ is_creator | tojson }};
 
                 console.log("[match] script loaded", {
                     matchId,
@@ -156,6 +177,96 @@
                         });
                     } catch (e) {
                         alert("Failed to refresh match data.");
+                    }
+                }
+
+                async function addUserToMatch() {
+                    const input = document.getElementById("add-user-input");
+                    const value = input.value.trim();
+                    if (!value) return;
+
+                    try {
+                        const res = await fetch("/api/osu/add-user", {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify({
+                                user: value,
+                                match: matchId
+                            })
+                        });
+
+                        if (!res.ok) {
+                            let msg = "Failed to add user.";
+                            try {
+                                const data = await res.json();
+                                if (data && data.error) msg = data.error;
+                            } catch (_) {
+                            }
+                            throw new Error(msg);
+                        }
+
+                        input.value = "";
+                        window.location.reload();
+
+                    } catch (e) {
+                        alert(e?.message || "Failed to add user.");
+                    } finally {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = "Add user";
+                        }
+                    }
+                }
+
+                async function removeUserFromMatch(userId) {
+                    try {
+                        const res = await fetch("/api/osu/remove-user", {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify({
+                                user: userId,
+                                match: matchId
+                            })
+                        });
+                        if (!res.ok) {
+                            let msg = "Failed to remove user.";
+                            try {
+                                const data = await res.json();
+                                if (data && data.error) msg = data.error;
+                            } catch (_) {
+                            }
+                            throw new Error(msg);
+                        }
+                        window.location.reload();
+                    } catch (e) {
+                        alert(e?.message || "Failed to remove user.");
+                    }
+                }
+
+                async function changeNickname(userId, nickname) {
+                    try {
+                        const res = await fetch("/api/osu/change-nickname", {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify({
+                                user: userId,
+                                match: matchId,
+                                nickname: nickname
+                            })
+                        });
+                        
+                        if (!res.ok) {
+                            let msg = "Failed to change nickname.";
+                            try {
+                                const data = await res.json();
+                                if (data && data.error) msg = data.error;
+                            } catch (_) {
+                            }
+                            throw new Error(msg);
+                        }
+                        window.location.reload();
+                    } catch (e) {
+                        alert("Failed to change nickname.");
                     }
                 }
 
@@ -387,13 +498,40 @@
 
                     scoreWrapper.appendChild(statsEl);
 
-                    if (String(player.id) === String(currentOsuId) && !matchEnded) {
+
+                    if ((String(player.id) === String(currentOsuId) || isCreator) && !matchEnded) {
                         const refreshBtn = document.createElement('button');
                         refreshBtn.className = 'player-refresh-button';
                         refreshBtn.textContent = 'Refresh';
                         refreshBtn.onclick = () => refreshPlayer(player, refreshBtn);
                         scoreWrapper.appendChild(refreshBtn);
                     }
+
+                    if (isCreator && !matchEnded) {
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'player-refresh-button';
+                        removeBtn.textContent = 'Remove';
+                        removeBtn.onclick = () => {
+                            if (confirm(`Remove ${player.username} from this match?`)) {
+                                removeUserFromMatch(player.id);
+                            }
+                        };
+                        scoreWrapper.appendChild(removeBtn);
+                    }
+                    
+                    if (isCreator && !matchEnded) {
+                        const nicknameBtn = document.createElement('button');
+                        nicknameBtn.className = 'player-refresh-button';
+                        nicknameBtn.textContent = 'Change Nickname';
+                        nicknameBtn.onclick = () => {
+                            const newNickname = prompt(`Enter new nickname for ${player.username}:`);
+                            if (newNickname !== null) {
+                                changeNickname(player.id, newNickname.trim());
+                            }
+                        };
+                        scoreWrapper.appendChild(nicknameBtn);
+                    }
+
 
                     content.appendChild(main);
                     content.appendChild(scoreWrapper);

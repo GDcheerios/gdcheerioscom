@@ -27,6 +27,8 @@ def _json_safe(value):
     return value
 
 
+# region User API
+
 @osu_api_blueprint.get('/osu/fetch-user/<id>')
 def fetch_osu_user(id):
     data = osu_api.fetch_osu_data(id)
@@ -55,6 +57,67 @@ def fetch_osu_user(id):
 
     return data
 
+
+@osu_api_blueprint.post('/osu/add-user')
+def fetch_osu_user_matches():
+    user = request.json["user"]
+    match = request.json["match"]
+
+    user = osu_api.fetch_osu_data(user)
+
+    environment.database.execute(
+        """
+        INSERT INTO osu_match_users 
+            (match, "user", starting_score, starting_playcount)
+        values 
+            (%s, %s, %s, %s)
+        """,
+        params=(match, user['id'], user['score'], user['playcount'])
+    )
+    return {"success": True}
+
+
+@osu_api_blueprint.post('/osu/remove-user')
+def remove_osu_user_from_match():
+    user = request.json["user"]
+    match = request.json["match"]
+
+    environment.database.execute(
+        """
+        DELETE
+        FROM osu_match_users
+        WHERE match = %s
+          AND "user" = %s
+        """,
+        params=(match, user)
+    )
+    return {"success": True}
+
+
+@osu_api_blueprint.post('/osu/change-nickname')
+def change_nickname():
+    user = request.json["user"]
+    match = request.json["match"]
+    nickname = request.json["nickname"]
+    if nickname == "":
+        nickname = None
+
+    environment.database.execute(
+        """
+        UPDATE osu_match_users
+        SET nickname = %s
+        WHERE match = %s
+          AND "user" = %s
+        """,
+        params=(nickname, match, user)
+    )
+    return {"success": True}
+
+
+# endregion
+
+
+# region Match API
 
 @osu_api_blueprint.route('/osu/create-match', methods=['POST'])
 def create_match():
@@ -127,3 +190,4 @@ def end_match(id):
         )
 
     return {"success": True}
+# endregion
