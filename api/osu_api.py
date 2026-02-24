@@ -204,8 +204,31 @@ def fetch_osu_data(user_id):
 # <editor-fold desc="osu score farm">
 
 def get_matches():
-    current_matches = environment.database.fetch_all_to_dict("SELECT *, (select count(*) from osu_match_users where match = osu_matches.id) as users FROM osu_matches where ended = false")
-    old_matches = environment.database.fetch_all_to_dict("SELECT *, (select count(*) from osu_match_users where match = osu_matches.id) as users FROM osu_matches where ended = true")
+    matches = environment.database.fetch_all_to_dict(
+        """
+        SELECT id,
+               name,
+               open,
+               pinned,
+               ended,
+               started,
+               opener,
+               (select username
+                from accounts
+                where id = opener)            as creator,
+               (select count(*)
+                from osu_match_users
+                where match = osu_matches.id) as users
+        FROM osu_matches
+        """
+    )
+    current_matches = []
+    old_matches = []
+    for match in matches:
+        if match["ended"]:
+            old_matches.append(match)
+        else:
+            current_matches.append(match)
     return {
         "current": current_matches,
         "old": old_matches

@@ -119,7 +119,7 @@ def change_nickname():
 
 # region Match API
 
-@osu_api_blueprint.route('/osu/create-match', methods=['POST'])
+@osu_api_blueprint.post('/osu/create-match')
 def create_match():
     global team_name
     team_name = None
@@ -129,12 +129,14 @@ def create_match():
         """
         INSERT INTO osu_matches
         (name,
-         opener)
+         opener,
+         open)
         values (%s,
+                %s,
                 %s)
         returning id
         """,
-        params=(data["matchName"], user_id)
+        params=(data["matchName"], user_id, data["open"])
     )[0]
     for player in data["players"]:
         in_team = False
