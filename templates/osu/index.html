@@ -407,14 +407,72 @@
           <div id="section-ongoing" style="flex-direction: column;" data-section="ongoing">
             <h1 style="text-align: center">Current matches</h1>
             {% for match in matches["current"] %}
-            <a class="match-link" data-status="ongoing" data-name="{{ match.name }}" href="/osu/match/{{ match.id }}">{{ match.name }}</a>
+            <a
+              class="match-link"
+              data-status="ongoing"
+              data-name="{{ match.name }}"
+              data-users="{{ match.users | default(0) }}"
+              href="/osu/match/{{ match.id }}"
+            >
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-weight: 700;">{{ match.name }}</span>
+                <span style="display: inline-flex; gap: 6px; align-items: center;">
+                  {% if match.pinned %}
+                    <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #2b2b2b; border: 1px solid #3a3a3a;">Pinned</span>
+                  {% endif %}
+                  {% if match.open %}
+                    <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(0,217,143,0.15); border: 1px solid rgba(0,217,143,0.35);">Open</span>
+                  {% else %}
+                    <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,180,0,0.12); border: 1px solid rgba(255,180,0,0.35);">Closed</span>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div style="margin-top: 6px; font-size: 12px; opacity: 0.85; display: flex; gap: 14px; flex-wrap: wrap;">
+                <span><strong>{{ match.users | default(0) }}</strong> users</span>
+                <span>
+                  Started:
+                  <time class="match-started" datetime="{{ match.started | default('') }}">
+                    {{ match.started | default("—") }}
+                  </time>
+                </span>
+                <span>ID: {{ match.id }}</span>
+              </div>
+            </a>
             {% endfor %}
           </div>
 
           <div id="section-ended" style="flex-direction: column;" data-section="ended">
             <h1 style="text-align: center">Finished matches</h1>
             {% for match in matches["old"] %}
-            <a class="match-link" data-status="ended" data-name="{{ match.name }}" href="/osu/match/{{ match.id }}">{{ match.name }}</a>
+            <a
+              class="match-link"
+              data-status="ended"
+              data-name="{{ match.name }}"
+              data-users="{{ match.users | default(0) }}"
+              href="/osu/match/{{ match.id }}"
+            >
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-weight: 700;">{{ match.name }}</span>
+                <span style="display: inline-flex; gap: 6px; align-items: center;">
+                  <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);">Ended</span>
+                  {% if match.pinned %}
+                    <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #2b2b2b; border: 1px solid #3a3a3a;">Pinned</span>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div style="margin-top: 6px; font-size: 12px; opacity: 0.85; display: flex; gap: 14px; flex-wrap: wrap;">
+                <span><strong>{{ match.users | default(0) }}</strong> users</span>
+                <span>
+                  Started:
+                  <time class="match-started" datetime="{{ match.started | default('') }}">
+                    {{ match.started | default("—") }}
+                  </time>
+                </span>
+                <span>ID: {{ match.id }}</span>
+              </div>
+            </a>
             {% endfor %}
           </div>
         </div>
@@ -451,7 +509,6 @@
               a.style.display = (matchesText && matchesStatus) ? '' : 'none';
             });
 
-            // Hide section headings if their section has no visible links
             function sectionHasVisibleLinks(sectionEl) {
               return Array.from(sectionEl.querySelectorAll('a.match-link'))
                 .some(a => a.style.display !== 'none');
@@ -459,6 +516,26 @@
 
             if (sectionOngoing) sectionOngoing.style.display = sectionHasVisibleLinks(sectionOngoing) ? '' : 'none';
             if (sectionEnded) sectionEnded.style.display = sectionHasVisibleLinks(sectionEnded) ? '' : 'none';
+          }
+
+          // NEW: prettify started timestamps
+          function prettifyStartedTimes() {
+            document.querySelectorAll('time.match-started').forEach(t => {
+              const raw = (t.getAttribute('datetime') || '').trim();
+              if (!raw) return;
+
+              const d = new Date(raw);
+              if (Number.isNaN(d.getTime())) return;
+
+              t.textContent = d.toLocaleString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+              t.title = raw; // keep the original on hover
+            });
           }
 
           filterButtons.forEach(btn => {
@@ -476,6 +553,7 @@
           // Initialize
           setActiveButton(activeFilter);
           applyFilters();
+          prettifyStartedTimes();
         })();
       </script>
     </div>
