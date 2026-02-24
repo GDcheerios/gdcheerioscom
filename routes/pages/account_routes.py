@@ -18,19 +18,29 @@ def account():
 
 
 @account_blueprint.route("/<id>")
-def user(id: int | str): return render_template("account/user-profile.html", account=Account(id),
-                                                rater=environment.gq_rater, gq_level_colors=environment.gq_level_colors)
+def user(id: int | str): return render_template("account/user-profile.html",
+                                                account=Account(id),
+                                                rater=environment.gq_rater,
+                                                gq_level_colors=environment.gq_level_colors,
+                                                osu_redirect_uri=f"{environment.domain}/oauth/osu",
+                                                osu_client_id=environment.osu_client_id
+                                                )
 
 
 @account_blueprint.route("/create")
 def create():
     osu_info = request.args.get("osu_info")
-    if osu_info is not None:
-        osu_info = json.loads(osu_info)
+    google_info = request.args.get("google_info")
+    username = request.args.get("username")
+    email = request.args.get("email")
     return render_template("account/create.html",
-                           client_id=environment.osu_client_id,
-                           redirect_uri=f"{environment.domain}/api/code_grab",
-                           osu_info=osu_info,
+                           osu_client_id=environment.osu_client_id,
+                           osu_redirect_uri=f"{environment.domain}/oauth/osu",
+                           google_client_id=environment.google_client_id,
+                           osu_info=json.loads(osu_info) if osu_info else None,
+                           google_info=json.loads(google_info) if google_info else None,
+                           username=username if username else None,
+                           email=email if email else None,
                            msg=request.args.get("msg")
                            )
 

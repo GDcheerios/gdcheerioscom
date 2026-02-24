@@ -1,4 +1,5 @@
 import hashlib
+import json
 from datetime import datetime, timedelta
 from flask import Blueprint, request, redirect, make_response, render_template, Response
 
@@ -26,10 +27,20 @@ def create_account() -> Response:
     email = request.form.get("em")
     about_me = request.form.get("am")
 
-    supporter_id = request.args.get("supporter_id")
+    supporter_id = request.form.get("supporter_id")
 
-    result = Account.queue(username, password, email, 0, about_me, supporter_id)
+    osu_id = request.form.get("osu_id")
+    google_info = request.form.get("google_info")
 
+    result = Account.queue(
+        username=username,
+        password=password,
+        email=email,
+        about=about_me,
+        supporter_id=supporter_id,
+        osu_id=osu_id,
+        google_info=google_info
+    )
     return redirect(f"/account/create?msg={result['message']}")
 
 
@@ -74,12 +85,15 @@ def login_json():
 def verify_account() -> Response:
     sid = request.args.get("sid")
     token = request.args.get("token")
+    supporter_id = request.args.get("supporter_id")
+    osu_id = request.args.get("osu_id")
+    # google_info = request.args.get("google_info")
 
     if not sid or not token:
         return Response(status=400)
 
     row = environment.database.fetch_to_dict(
-        "SELECT id, email, username, password, osu_id, about, token, expires, supporter_id FROM pending_accounts WHERE id = %s",
+        "SELECT id, email, username, password, about, token, expires FROM pending_accounts WHERE id = %s",
         params=(sid,)
     )
     if not row:
@@ -106,12 +120,14 @@ def verify_account() -> Response:
         row["username"],
         row["password"],
         row["email"],
-        row["osu_id"],
         row["about"]
     )
 
-    if row["supporter_id"] is not None:
-        Account.claim_supporter(row["supporter_id"], account.id)
+    if supporter_id:
+        account.claim_supporter(supporter_id, account.id)
+
+    if osu_id:
+        account.set_osu_id(osu_id)
 
     resp = make_response(redirect(f"/account/{account.id}"))
     resp.set_cookie('session', str(Account.create_session(account.id)), expires=datetime.now() + timedelta(days=360))
@@ -122,9 +138,10 @@ def verify_account() -> Response:
 def send_reset_email():
     email = request.json["email"]
     if not Account.email_exists(email): return Response(status=404)
-    
+
     id = environment.database.fetch_one("select id from accounts where email = %s", params=(email,))
-    code = environment.database.fetch_one("insert into password_resets (\"user\") values (%s) returning id", params=(id,))[0]
+    code = \
+    environment.database.fetch_one("insert into password_resets (\"user\") values (%s) returning id", params=(id,))[0]
     EmailManager.send_reset_password_email(email, code)
     return {"success": True}
 
@@ -147,7 +164,8 @@ def reset_password():
     environment.database.execute("DELETE FROM password_resets WHERE id = %s", params=(code,))
 
     resp = Response(status=200)
-    resp.set_cookie('session', str(Account.create_session(password_reset["user"])), expires=datetime.now() + timedelta(days=360))
+    resp.set_cookie('session', str(Account.create_session(password_reset["user"])),
+                    expires=datetime.now() + timedelta(days=360))
 
     return resp
 

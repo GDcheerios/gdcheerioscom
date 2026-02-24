@@ -1,5 +1,7 @@
 import hashlib
+import json
 import secrets
+import urllib.parse
 
 from datetime import datetime, timedelta, timezone
 
@@ -16,7 +18,7 @@ class Account:
     username: str
     password: str
     email: str
-    osu_id: int
+    links: list
     about: str
     pfp: str
     status: str
@@ -41,7 +43,6 @@ class Account:
                 username,
                 password,
                 email,
-                osu_id,
                 about,
                 status,
                 created,
@@ -67,10 +68,10 @@ class Account:
             self.username = result["username"]
             self.password = result["password"]
             self.email = result["email"]
-            self.has_osu = result["osu_id"] != 0
             self.has_gqc = False
             self.has_gq = result["has_gq"] != 0
-            self.osu_id = result["osu_id"]
+            self.links = database.fetch_all_to_dict("SELECT * FROM auth_identities WHERE user_id = %s",
+                                                    params=(self.id,)) or []
             self.about = result["about"]
             self.status = result["status"]
             self.created = result["created"]
@@ -94,10 +95,9 @@ class Account:
             self.username = "User not found"
             self.password = ""
             self.email = ""
-            self.has_osu = False
+            self.links = []
             self.has_gqc = False
             self.has_gq = False
-            self.osu_id = 0
             self.about = "This user does not exist"
             self.status = "offline"
             self.created = datetime.now()
@@ -111,7 +111,7 @@ class Account:
         self.osu_data = {}
         self.gq_data = {}
 
-        if self.has_osu:
+        if self.get_link("osu"):
             self.osu_data = self.get_osu_data()
 
         if self.has_gq:
@@ -196,10 +196,10 @@ class Account:
 
     # <editor-fold desc="Modifiers">
     @staticmethod
-    def create(username: str, password: str, email: str, osu_id: int, about: str) -> "Account":
+    def create(username: str, password: str, email: str, about: str) -> "Account":
         query = """
-                INSERT INTO accounts (username, password, email, osu_id, about)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO accounts (username, password, email, about)
+                VALUES (%s, %s, %s, %s)
                 RETURNING id
                 """
 
@@ -207,7 +207,6 @@ class Account:
             username,
             password,
             email,
-            osu_id,
             about
         )
 
@@ -215,7 +214,7 @@ class Account:
         return Account(id)
 
     @staticmethod
-    def queue(username: str, password: str, email: str, osu_id: int, about: str, supporter_id=None):
+    def queue(username: str, password: str, email: str, about: str, supporter_id=None, osu_id=None, google_info=None):
 
         now = datetime.now(tz=timezone.utc)
         database.execute(
@@ -231,20 +230,33 @@ class Account:
         password = Account.get_password_hash(str(password))
         pending_id = database.fetch_one(
             """
-            INSERT INTO pending_accounts (username, password, email, osu_id, about, token, supporter_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO pending_accounts (username, password, email, about, token)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id
             """,
-            params=(username, password, email, osu_id, about, token_hash, supporter_id)
+            params=(username, password, email, about, token_hash)
         )[0]
 
         try:
-            EmailManager.send_verification_email(email, username,
-                                                 f"{environment.domain}/api/account/verify?sid={pending_id}&token={raw_token}")
+            url_parts = [
+                f"{environment.domain}/api/account/verify?",
+                f"sid={pending_id}",
+                f"&token={raw_token}"
+            ]
+
+            if supporter_id is not None:
+                url_parts.append(f"&supporter_id={supporter_id}")
+            if osu_id is not None:
+                url_parts.append(f"&osu_id={osu_id}")
+            if google_info is not None:
+                url_parts.append(f"&google_info={urllib.parse.quote(json.dumps(google_info))}")
+
+            verification_url = "".join(url_parts)
+            EmailManager.send_verification_email(email, username, verification_url)
         except ValueError as e:
             return {
                 "success": False,
-                "message": f"Invalid email!"
+                "message": f"{e}"
             }
 
         return {
@@ -357,19 +369,41 @@ class Account:
     def set_osu_id(self, osu_id):
         data = fetch_osu_data(osu_id)
         if data:
-            database.execute("UPDATE accounts SET osu_id = %s where id = %s;", params=(data["id"], self.id))
-            return data
+            database.execute(
+                """
+                INSERT INTO auth_identities (user_id, provider, provider_subject)
+                VALUES (%s, %s, %s)
+                """,
+                params=(self.id, "osu", osu_id)
+            )
 
+            return data
         return None
 
     def get_osu_data(self):
-        data = database.fetch_to_dict("SELECT * FROM osu_users WHERE id = %s;", params=(self.osu_id,))
-        if data:
-            return data
+        link = self.get_link("osu")
+        if link:
+            data = database.fetch_to_dict("SELECT * FROM osu_users WHERE id = %s;", params=(link["provider_subject"],))
+            if data:
+                return data
 
         return None
 
     # </editor-fold>
+
+    def get_link(self, provider):
+        """
+        Retrieves the provider link for the account.
+
+        :param provider: Provider name
+        :return: provider subject
+        """
+
+        for link in self.links:
+            if link["provider"] == provider:
+                return link
+
+        return None
 
     def jsonify(self) -> dict:
         return {
