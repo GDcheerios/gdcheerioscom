@@ -1,4 +1,6 @@
 from PSQLConnector.connector import PSQLConnection as Database
+
+from routes.api.oauth_api_routes import google_login
 from utils.printy import *
 import os
 from dotenv import load_dotenv
@@ -34,6 +36,10 @@ osu_client_id = os.environ['CLIENT_ID']
 stripe_public_key = os.environ['STRIPE_PUBLIC_KEY']
 stripe_secret_key = os.environ['STRIPE_SECRET_KEY']
 stripe_webhook_secret = os.environ['STRIPE_WEBHOOK_SECRET']
+
+google_client_id = os.environ['GOOGLE_CLIENT']
+google_client_secret = os.environ['GOOGLE_SECRET']
+
 print_end()
 # endregion
 

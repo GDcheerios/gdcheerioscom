@@ -12,7 +12,9 @@
   {% if msg %}
     <h1 style="font-size: 300%; text-align: center;">{{ msg }}</h1>
   {% endif %}
-    <div style="display: flex; flex-direction: row; justify-content: space-evenly;">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+      <div style="display: flex; flex-direction: row; justify-content: space-evenly;">
       <div class="account-form">
           <form id="create-form" action="/api/account/create-account" method="POST" novalidate>
               <p><h1>Enter email</h1></p>
@@ -20,6 +22,9 @@
                   <input
                           type="email"
                           name="em"
+                          {% if email %}
+                          value="{{ email }}"
+                          {% endif %}
                           required
                           pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                           autocomplete="email"
@@ -67,15 +72,28 @@
               <div id="osu-source" class="source" style="background: #e15894;">
                   {% if osu_info %}
                     <img src="{{ osu_info.avatar }}" alt="osu! avatar">
-                    <h1>{{ osu_info.username }}</h1>
+                    <h1>Linked as {{ osu_info.username }}</h1>
                   {% else %}
                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Osu%21_Logo_2016.svg/960px-Osu%21_Logo_2016.svg.png" alt="osu! logo">
                     <h1>Link with osu!</h1>
                   {% endif %}
               </div>
+              <div id="google-source" class="source">
+                  {% if google_info %}
+                    <img src={{ google_info['picture'] }}>
+                    <h1>Linked as {{ google_info['name'] }}</h1>
+                  {% else %}
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+                       alt="Google logo">
+                    <h1>Link with Google</h1>
+                  {% endif %}
+
+              </div>
           <div>
     </div>
   <script>
+
+
       function setFieldState(input, messageEl, ok, messageIfError = '') {
           input.classList.remove('input-error', 'input-success');
           if (ok) {
@@ -204,9 +222,15 @@
 
       const osuSource = document.getElementById('osu-source');
       osuSource.addEventListener('click', () => {
-          window.location.href = 'https://osu.ppy.sh/oauth/authorize?redirect_uri={{redirect_uri}}&client_id={{client_id}}&response_type=code&scope=public+identify&state=randomval';
+          window.location.href = 'https://osu.ppy.sh/oauth/authorize?redirect_uri={{osu_redirect_uri}}&client_id={{osu_client_id}}&response_type=code&scope=public+identify&state=randomval';
       });
       osuSource.style.cursor = 'pointer';
+
+      const googleSource = document.getElementById('google-source');
+      googleSource.addEventListener('click', () => {
+          window.location.href = '/oauth/google/login';
+      });
+      googleSource.style.cursor = 'pointer';
   </script>
   {% endblock %}
   </body>
