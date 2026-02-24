@@ -25,6 +25,7 @@ class Account:
     tags: list
     gq_scores: list
     osu_data: dict
+    osu_matches: list
     exists: bool
     is_admin: bool
 
@@ -90,6 +91,23 @@ class Account:
                     self.supporter = True
             else:
                 self.supporter = result["is_supporter"]
+            self.osu_matches = database.fetch_all_to_dict(
+                """
+                SELECT
+                    id,
+                    name,
+                    open,
+                    pinned,
+                    ended,
+                    started,
+                    opener,
+                    (
+                        SELECT count(*) FROM osu_match_users where match = osu_matches.id
+                    ) as users
+                FROM osu_matches
+                WHERE opener = %s
+                """, params=(self.id,))
+
         except TypeError:
             self.id = 0
             self.username = "User not found"
@@ -107,6 +125,7 @@ class Account:
             self.tags = []
             self.exists = False
             self.is_admin = False
+            self.osu_matches = []
 
         self.osu_data = {}
         self.gq_data = {}
@@ -411,6 +430,7 @@ class Account:
             "username": self.username,
             "email": self.email,
             "osu data": self.osu_data,
+            "matches": self.osu_matches,
             "gq data": self.gq_data,
             "about": self.about,
             "pfp": self.pfp,
