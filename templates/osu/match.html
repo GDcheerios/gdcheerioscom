@@ -108,6 +108,15 @@
                 </div>
             {% endif %}
 
+            {% set player_ids = players | map(attribute='id') | map('string') | list %}
+            {% if match.open and not match.ended and current_osu_id and (current_osu_id | string) not in player_ids %}
+            <div class="match-actions">
+                <button id="join-match" class="match-button match-button--refresh" onclick="addUserToMatch({{ current_osu_id }})">
+                    Join match
+                </button>
+            </div>
+            {% endif %}
+
             <div class="match-layout">
                 <div id="match-info" class="match-players-column">
                     <div id="loading-indicator">
@@ -180,41 +189,34 @@
                     }
                 }
 
-                async function addUserToMatch() {
-                    const input = document.getElementById("add-user-input");
-                    const value = input.value.trim();
+                async function addUserToMatch(id = null) {
+                    const inputEl = document.getElementById("add-user-input");
+
+                    const value = (id == null)
+                        ? (inputEl ? inputEl.value.trim() : "")
+                        : String(id).trim();
+
                     if (!value) return;
 
                     try {
                         const res = await fetch("/api/osu/add-user", {
                             method: "POST",
-                            headers: {"Content-Type": "application/json"},
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 user: value,
                                 match: matchId
                             })
                         });
 
-                        if (!res.ok) {
-                            let msg = "Failed to add user.";
-                            try {
-                                const data = await res.json();
-                                if (data && data.error) msg = data.error;
-                            } catch (_) {
-                            }
-                            throw new Error(msg);
+                        const data = await res.json().catch(() => ({}));
+
+                        if (!res.ok || data?.error) {
+                            throw new Error(data?.error || "Failed to add user.");
                         }
 
-                        input.value = "";
                         window.location.reload();
-
                     } catch (e) {
                         alert(e?.message || "Failed to add user.");
-                    } finally {
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.textContent = "Add user";
-                        }
                     }
                 }
 

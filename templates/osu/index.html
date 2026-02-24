@@ -66,6 +66,11 @@
             </div>
             <div id="match-config" class="block">
               <h1>Match Settings</h1>
+              <div class="checkbox-container" style="align-items: center; gap: 10px; margin-top: 10px;">
+                <input type="checkbox" id="matchOpen" name="open" style="width: auto; height: auto; margin: 0;">
+                <label for="matchOpen" style="color: #fff; font-size: 18px; font-weight: 600; cursor: pointer;">Open
+                  Match</label>
+              </div>
             </div>
           </div>
           <script>
@@ -360,11 +365,15 @@
                 return;
               }
 
+              const openCheckbox = document.getElementById('matchOpen');
+              const isOpen = openCheckbox ? openCheckbox.checked : false;
+
               const requestData = {
                 userId: userId,
                 matchName: name,
                 players: Object.values(players).map(p => p.id),
-                teams: teams
+                teams: teams,
+                open: isOpen
               };
 
               fetch('/api/osu/create-match', {
@@ -416,6 +425,7 @@
             >
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
                 <span style="font-weight: 700;">{{ match.name }}</span>
+                <span style="font-size: 13px; opacity: 0.75; margin-left: auto; margin-right: 8px;">by {{ match.creator | default("Unknown") }}</span>
                 <span style="display: inline-flex; gap: 6px; align-items: center;">
                   {% if match.pinned %}
                     <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #2b2b2b; border: 1px solid #3a3a3a;">Pinned</span>
@@ -454,6 +464,7 @@
             >
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
                 <span style="font-weight: 700;">{{ match.name }}</span>
+                <span style="font-size: 13px; opacity: 0.75; margin-left: auto; margin-right: 8px;">by {{ match.creator | default("Unknown") }}</span>
                 <span style="display: inline-flex; gap: 6px; align-items: center;">
                   <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);">Ended</span>
                   {% if match.pinned %}

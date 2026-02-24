@@ -9,6 +9,10 @@
 
 }
 
+.match-link {
+    width: 60%;
+}
+
 /* --- MATCH LAYOUT: players left, teams right --- */
 .match-layout {
     display: flex;
@@ -289,6 +293,65 @@ input::placeholder {
 
 .matches-toolbar #matchSearch {
     width: min(720px, 92vw);
+}
+
+/* NEW/CHANGED: keep the whole matches index content from being super wide */
+.matches-panel {
+    width: min(980px, 92vw);
+    margin: 0 auto;
+}
+
+/* Column list styling for match links */
+#matches [data-section] {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+a.match-link {
+    display: block;              /* makes each match take its own row */
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 12px 14px;
+    border-radius: 12px;
+
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid #ffffff22;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+a.match-link:hover {
+    border-color: #ffffff66;
+    background: rgba(0, 0, 0, 0.7);
+    text-decoration: none;
+}
+/* Column list styling for match links */
+#matches [data-section] {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+a.match-link {
+    display: block;              /* makes each match take its own row */
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 12px 14px;
+    border-radius: 12px;
+
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid #ffffff22;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+a.match-link:hover {
+    border-color: #ffffff66;
+    background: rgba(0, 0, 0, 0.7);
+    text-decoration: none;
 }
 
 .match-filter {
