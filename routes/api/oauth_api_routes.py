@@ -101,7 +101,8 @@ def google_callback():
 @oauth_api_routes.route('/osu')
 def osu_callback():
     code = urllib.parse.parse_qs(request.query_string.decode('utf-8'))["code"][0]
-    supporter_id = urllib.parse.parse_qs(request.query_string.decode('utf-8'))["state"][0]
+    supporter_id = urllib.parse.parse_qs(request.query_string.decode('utf-8')).get("supporter_id", None)
+    supporter_id = supporter_id[0] if supporter_id else None
 
     response = requests.post("https://osu.ppy.sh/oauth/token",
                              json={'client_id': environment.osu_client_id,
