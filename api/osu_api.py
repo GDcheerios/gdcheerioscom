@@ -229,6 +229,11 @@ def get_matches():
             old_matches.append(match)
         else:
             current_matches.append(match)
+
+    old_matches.sort(key=lambda x: x["started"], reverse=True)
+    old_matches.sort(key=lambda x: x["pinned"], reverse=True)
+    current_matches.sort(key=lambda x: x["started"], reverse=True)
+    current_matches.sort(key=lambda x: x["pinned"], reverse=True)
     return {
         "current": current_matches,
         "old": old_matches
