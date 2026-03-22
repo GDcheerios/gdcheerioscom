@@ -7,6 +7,13 @@ import base64, json, hmac, hashlib, time, logging  # debug helpers
 from objects import Account
 
 key_blueprint = Blueprint('key', __name__)
+ALLOWED_SCOPES = {
+    "account:read",
+    "account:write",
+    "leaderboard:read",
+    "leaderboard:write",
+    "admin",
+}
 
 
 # helpy helper
@@ -97,6 +104,11 @@ def create_key():
         logging.warning("[keys] scopes is not a list")
         return jsonify({"error": "scopes_must_be_list"}), 400
 
+    invalid_scopes = [scope for scope in scopes if scope not in ALLOWED_SCOPES]
+    if invalid_scopes:
+        logging.warning("[keys] invalid scopes requested")
+        return jsonify({"error": "invalid_scopes", "invalid_scopes": invalid_scopes}), 400
+
     if 'admin' in scopes and not user_account.is_admin:
         logging.warning("[keys] Unauthorized: user is not an admin")
         return jsonify({"error": "unauthorized"}), 401
@@ -119,7 +131,7 @@ def create_key():
                        key_id,
                        secret_hash,
                        name,
-                       jsonify(scopes).data.decode() if hasattr(jsonify([]), "data") else "[]",
+                       json.dumps(scopes),
                        request.remote_addr,
                        expires_at,
                        expires_at

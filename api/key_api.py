@@ -136,6 +136,26 @@ def issue_access_token(user_id: int | str) -> str:
 
 
 # region API
+def _extract_api_key_from_request() -> str | None:
+    header_key = request.headers.get("X-API-Key")
+    if header_key:
+        return header_key.strip()
+
+    auth = request.headers.get("Authorization", "").strip()
+    if not auth:
+        return None
+
+    # Preferred format: Authorization: ApiKey <key_id.secret>
+    if auth.startswith("ApiKey "):
+        return auth[len("ApiKey "):].strip()
+
+    # Backward-compatible format: Authorization: <key_id.secret>
+    if " " not in auth:
+        return auth
+
+    return None
+
+
 def verify_api_key_header():
     """
     Validates the API key provided in the request header.
@@ -153,9 +173,10 @@ def verify_api_key_header():
     Raises:
         None
     """
+    combined = _extract_api_key_from_request()
+    if not combined:
+        return None
 
-    auth = request.headers.get("Authorization", "")
-    combined = auth.strip()
     if "." not in combined:
         print(f"[API] Missing key ID/secret")
         return None
@@ -171,19 +192,26 @@ def verify_api_key_header():
         return None
 
     if row["status"] != "active":
-        print(f"[API] {row[key_id]} inactive")
+        print(f"[API] key_id={key_id} inactive")
         return None
 
     if row["expires_at"] and row["expires_at"] < environment.database.now():
-        print(f"[API] {row[key_id]} expired")
+        print(f"[API] key_id={key_id} expired")
         return None
 
     if not environment.bcrypt.check_password_hash(row["secret_hash"], secret):
-        print(f"[API] {row[key_id]} invalid secret")
+        print(f"[API] key_id={key_id} invalid secret")
         return None
 
+    scopes = row.get("scopes") or []
+    if isinstance(scopes, str):
+        try:
+            scopes = json.loads(scopes)
+        except json.JSONDecodeError:
+            scopes = []
+
     g.current_user_id = str(row["user_id"])
-    g.current_scopes = row["scopes"]
+    g.current_scopes = scopes if isinstance(scopes, list) else []
     return g.current_user_id
 
 
