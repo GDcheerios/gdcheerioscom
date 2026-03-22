@@ -13,8 +13,7 @@ gentrys_quest_api_blueprint = Blueprint("gentrys_quest_api_blueprint", __name__)
 
 # region Users
 @gentrys_quest_api_blueprint.get("/gq/check-in/<id>")
-def check_in(id: int):
-    return user_api.check_in(id)
+def check_in(id: int): return user_api.check_in(id)
 
 
 @gentrys_quest_api_blueprint.get("/gq/check-out/<id>")

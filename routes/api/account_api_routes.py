@@ -11,6 +11,19 @@ from objects.EmailManager import EmailManager
 account_api_blueprint = Blueprint('account', __name__)
 
 
+def _session_cookie_kwargs() -> dict:
+    return {
+        "expires": datetime.now() + timedelta(days=360),
+        "httponly": True,
+        "secure": environment.is_production,
+        "samesite": "Lax",
+    }
+
+
+def _set_session_cookie(response: Response, session_id: int | str):
+    response.set_cookie("session", str(session_id), **_session_cookie_kwargs())
+
+
 @account_api_blueprint.post("/account/create-account")
 def create_account() -> Response:
     """
@@ -66,7 +79,7 @@ def login_cookie():
             Account.claim_supporter(supporter_id, login_result[0]['data']['id'])
         account = login_result[0]['data']  # set this to only read login data
         resp = make_response(redirect(f"/account/{account['id']}"))
-        resp.set_cookie('session', str(login_result[0]['session_id']), expires=datetime.now() + timedelta(days=360))
+        _set_session_cookie(resp, login_result[0]["session_id"])
         return resp
 
     return resp
@@ -130,7 +143,7 @@ def verify_account() -> Response:
         account.set_osu_id(osu_id)
 
     resp = make_response(redirect(f"/account/{account.id}"))
-    resp.set_cookie('session', str(Account.create_session(account.id)), expires=datetime.now() + timedelta(days=360))
+    _set_session_cookie(resp, Account.create_session(account.id))
     return resp
 
 
@@ -164,16 +177,23 @@ def reset_password():
     environment.database.execute("DELETE FROM password_resets WHERE id = %s", params=(code,))
 
     resp = Response(status=200)
-    resp.set_cookie('session', str(Account.create_session(password_reset["user"])),
-                    expires=datetime.now() + timedelta(days=360))
+    _set_session_cookie(resp, Account.create_session(password_reset["user"]))
 
     return resp
 
 
 @account_api_blueprint.route("/account/signout")
 def signout():
-    resp = make_response(render_template('account/login.html'))
-    resp.delete_cookie('session')
+    session_id = request.cookies.get("session")
+    Account.revoke_session(session_id)
+
+    resp = make_response(render_template("account/login.html"))
+    resp.delete_cookie(
+        "session",
+        httponly=True,
+        secure=environment.is_production,
+        samesite="Lax",
+    )
     return resp
 
 

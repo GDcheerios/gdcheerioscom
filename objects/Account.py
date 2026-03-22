@@ -208,6 +208,13 @@ class Account:
         return session_id[0]
 
     @staticmethod
+    def revoke_session(session_id):
+        if session_id is None:
+            return
+
+        database.execute("DELETE FROM sessions WHERE id = %s", params=(session_id,))
+
+    @staticmethod
     def search(query: str):
         return database.fetch_all_to_dict(
             f"SELECT id, username FROM accounts WHERE username ILIKE %s OR about ILIKE %s LIMIT 5;",

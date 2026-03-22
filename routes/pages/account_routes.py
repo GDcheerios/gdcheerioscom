@@ -57,8 +57,14 @@ def password_reset():
 
 @account_blueprint.route("/signout")
 def signout():
-    resp = make_response(redirect('/account/login'))
-    session_id = request.cookies.get('session')
-    resp.delete_cookie('session')
-    environment.database.execute("DELETE FROM sessions WHERE id = %s", (session_id,))
+    session_id = request.cookies.get("session")
+    Account.revoke_session(session_id)
+
+    resp = make_response(redirect("/account/login"))
+    resp.delete_cookie(
+        "session",
+        httponly=True,
+        secure=environment.is_production,
+        samesite="Lax",
+    )
     return resp
