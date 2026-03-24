@@ -158,8 +158,21 @@ class Account:
                     "id": score["id"]
                 })
 
+            stats = environment.database.fetch_all_to_dict(
+                """
+                SELECT
+                    "type",
+                    COALESCE(SUM(amount), 0) AS total
+                FROM gq_statistics
+                WHERE "user" = %s
+                GROUP BY "type"
+                """,
+                params=(self.id,)
+            ) or []
+
             self.gq_data = {
                 "scores": leaderboards,
+                "stats": stats,
                 "metrics": environment.database.fetch_all_to_dict(
                     """SELECT *
                        FROM gq_metrics
