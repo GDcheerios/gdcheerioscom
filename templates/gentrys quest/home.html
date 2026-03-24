@@ -34,7 +34,7 @@
             <div id="event-leaderboard">
                 <h1>Event Leaderboard</h1>
                 {% set count = namespace(value=1) %}
-                {% for player in get_leaderboard(id=3, amount=5) %}
+                {% for player in get_leaderboard(id=4, amount=5) %}
                     <div class="score-card">
                         <div class="rank-badge" style="background-color: {{ rater.rating_colors[player.rank] }};">
                             <span>{{ count.value }}</span>
