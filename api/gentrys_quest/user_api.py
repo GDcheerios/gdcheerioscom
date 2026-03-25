@@ -54,16 +54,14 @@ def get_xp(id: int) -> dict | str:
         return 'user not found'
 
 
-def get_placement(weighted, score):
+def get_placement(weighted):
     return environment.database.fetch_one(
         """
         SELECT COUNT(*) + 1
         FROM gq_rankings r
-                 JOIN gq_data d ON d.id = r.id
-        WHERE r.weighted > %s
-           OR (r.weighted = %s AND d.score > %s)
+        WHERE r.weighted > %s OR r.weighted = %s
         """,
-        params=(weighted, weighted, score),
+        params=(weighted, weighted),
     )[0]
 
 
@@ -84,7 +82,7 @@ def insert_metrics(id, gp, rank):
         environment.database.execute(
             """
             INSERT INTO gq_metrics (user_id, rank, gp, recorded_at)
-                VALUES (%s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s)
             """,
             params=(id, rank, gp, today)
         )
@@ -144,7 +142,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
     )
     print(f"Updated gq_rankings for user_id={id}")
 
-    placement = get_placement(weighted_rating, score)
+    placement = get_placement(weighted_rating)
     print(f"Calculated placement={placement} for user_id={id}")
     insert_metrics(id, weighted_rating, rank)
 
@@ -159,6 +157,14 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
     return result
 
 
+def get_score(id: int):
+    return environment.database.fetch_one("SELECT SUM(score) FROM gq_scores where \"user\" = %s", params=(id,))[0]
+
+
+def get_money(id: int):
+    return environment.database.fetch_one("SELECT money FROM gq_data WHERE id = %s", params=(id,))[0]
+
+
 def get_ranking(id: int):
     data = environment.database.fetch_to_dict(
         """
@@ -169,7 +175,7 @@ def get_ranking(id: int):
           and d.id = %s
         """, params=(id, id))
 
-    placement = get_placement(data["weighted"], data["score"])
+    placement = get_placement(data["weighted"])
     insert_metrics(id, data["weighted"], placement)
 
     return {

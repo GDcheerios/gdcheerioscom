@@ -9,7 +9,7 @@ import environment
 
 database = environment.database
 from api.osu_api import fetch_osu_data
-from api.gentrys_quest.user_api import get_ranking
+from api.gentrys_quest.user_api import get_ranking, get_score, get_money
 from objects.EmailManager import EmailManager
 
 
@@ -93,16 +93,9 @@ class Account:
                 self.supporter = result["is_supporter"]
             self.osu_matches = database.fetch_all_to_dict(
                 """
-                SELECT
-                    id,
-                    name,
-                    open,
-                    pinned,
-                    ended,
-                    started,
-                    opener,
-                    (
-                        SELECT count(*) FROM osu_match_users where match = osu_matches.id
+                SELECT id,
+                       name, open, pinned, ended, started, opener, (
+                    SELECT count (*) FROM osu_match_users where match = osu_matches.id
                     ) as users
                 FROM osu_matches
                 WHERE opener = %s
@@ -160,9 +153,8 @@ class Account:
 
             stats = environment.database.fetch_all_to_dict(
                 """
-                SELECT
-                    "type",
-                    COALESCE(SUM(amount), 0) AS total
+                SELECT "type",
+                       COALESCE(SUM(amount), 0) AS total
                 FROM gq_statistics
                 WHERE "user" = %s
                 GROUP BY "type"
@@ -179,11 +171,10 @@ class Account:
                        WHERE user_id = %s
                        ORDER BY recorded_at desc""",
                     params=(self.id,)),
-                "metadata": environment.database.fetch_to_dict(
-                    """SELECT *
-                       FROM gq_data
-                       WHERE id = %s""",
-                    params=(self.id,)),
+                "metadata": {
+                    "money": get_money(self.id),
+                    "score": get_score(self.id),
+                },
                 "ranking": get_ranking(self.id),
                 "items": environment.database.fetch_all_to_dict(
                     """SELECT *
@@ -238,8 +229,7 @@ class Account:
     def create(username: str, password: str, email: str, about: str) -> "Account":
         query = """
                 INSERT INTO accounts (username, password, email, about)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
+                VALUES (%s, %s, %s, %s) RETURNING id
                 """
 
         params = (
@@ -270,8 +260,7 @@ class Account:
         pending_id = database.fetch_one(
             """
             INSERT INTO pending_accounts (username, password, email, about, token)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING id
+            VALUES (%s, %s, %s, %s, %s) RETURNING id
             """,
             params=(username, password, email, about, token_hash)
         )[0]
@@ -351,8 +340,7 @@ class Account:
             """
             UPDATE supports
             SET \"user\" = %s
-            WHERE id = %s
-            RETURNING weeks
+            WHERE id = %s RETURNING weeks
             """,
             params=(id, supporter_id)
         )
