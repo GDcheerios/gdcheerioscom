@@ -184,6 +184,39 @@ def remove_item(id: int):
     return ranking
 
 
+@gentrys_quest_api_blueprint.post("/gq/visit/")
+@require_scopes(["account:write"])
+def visit():
+    return environment.database.fetch_to_dict(
+        """
+        INSERT INTO gq_visitations (user_id,
+                                    location)
+        VALUES (%s, %s)
+        RETURNING *
+        """,
+        params=(
+            request.json.get("user_id"),
+            request.json.get("location")
+        )
+    )
+
+
+@gentrys_quest_api_blueprint.post("/gq/depart/<id>")
+@require_scopes(["account:write"])
+def depart():
+    id = request.view_args.get("id")
+    environment.database.fetch_to_dict(
+        """
+        UPDATE gq_visitations
+        SET departure = NOW()
+        WHERE id = %s
+        """,
+        params=(id,)
+    )
+
+    return "Success"
+
+
 # endregion
 
 # region Leaderboards
@@ -206,9 +239,10 @@ def get_leaderboard(id: int):
 @require_scopes(["leaderboard:write"])
 def submit_leaderboard():
     try:
-        leaderboard_id = int(request.form.get("leaderboard_id"))
-        user = int(request.form.get("user"))
-        score = int(request.form.get("score"))
+        leaderboard_id = int(request.json.get("leaderboard_id"))
+        user = int(request.json.get("user"))
+        score = int(request.json.get("score"))
+        visitation = request.form.get("visitation")
     except (TypeError, ValueError):
         return jsonify({"error": "invalid_payload"}), 400
 
@@ -216,5 +250,5 @@ def submit_leaderboard():
     if denied:
         return denied
 
-    return leaderboard_api.submit_leaderboard(leaderboard_id, user, score)
+    return leaderboard_api.submit_leaderboard(leaderboard_id, user, score, visitation)
 # endregion

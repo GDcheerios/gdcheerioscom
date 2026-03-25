@@ -77,20 +77,22 @@ def get_leaderboard(id, amount: int = 0):
         return standings
 
 
-def submit_leaderboard(leaderboard_id: int, user: int, score: int):
+def submit_leaderboard(leaderboard_id: int, user: int, score: int, visitation: str):
     """
     Submits a score to the leaderboard.
 
     :param leaderboard_id: Leaderboard id.
     :param user: User ID.
     :param score: Score.
+    :param visitation: Visitation UUID.
     :return: Object with username and score.
     """
 
     user = Account(user)
     if database.fetch_one("select online from gq_leaderboards where id = %s", params=(leaderboard_id,))[0]:
-        database.execute("INSERT INTO gq_scores (name, score, leaderboard, \"user\") values (%s, %s, %s, %s);",
-                         params=(user.username, int(score), int(leaderboard_id), user.id))
+        database.execute(
+            "INSERT INTO gq_scores (name, score, leaderboard, \"user\", visitation) values (%s, %s, %s, %s, %s);",
+            params=(user.username, int(score), int(leaderboard_id), user.id, visitation))
 
     return {
         "username": user.username,
