@@ -50,6 +50,7 @@ class TaskTracker:
         self.name = name
         self.started_at = time.perf_counter()
         self.active_sections: Dict[str, float] = {}
+        self.active_subtasks: Dict[tuple[str, str], float] = {}
         self.use_color = _supports_color()
         self.overwrite_enabled = sys.stdout.isatty()
         self._active_line: Optional[str] = None
@@ -117,6 +118,23 @@ class TaskTracker:
             self._spinner_thread.join(timeout=0.2)
             self._spinner_thread = None
 
+    def _resume_spinner_for_active_work(self) -> None:
+        if not self.overwrite_enabled:
+            return
+        if self.active_subtasks:
+            (section, subtask), started_at = max(
+                self.active_subtasks.items(),
+                key=lambda item: item[1],
+            )
+            self._start_spinner(f"{section} > {subtask}", started_at)
+            return
+        if self.active_sections:
+            section, started_at = max(
+                self.active_sections.items(),
+                key=lambda item: item[1],
+            )
+            self._start_spinner(section, started_at)
+
     def start(self, section: str, **extra: Any) -> Dict[str, Any]:
         now = time.perf_counter()
         self.active_sections[section] = now
@@ -136,10 +154,39 @@ class TaskTracker:
             self._print_line(line, replace_active=False)
         return payload
 
+    def start_subtask(self, section: str, subtask: str, **extra: Any) -> Dict[str, Any]:
+        now = time.perf_counter()
+        self.active_subtasks[(section, subtask)] = now
+        section_start = self.active_sections.get(section)
+        payload: Dict[str, Any] = {
+            "event": "startup_subtask_start",
+            "startup_name": self.name,
+            "section": section,
+            "subtask": subtask,
+            "section_ms": None if section_start is None else round((now - section_start) * 1000, 2),
+            "total_ms": round((now - self.started_at) * 1000, 2),
+            "ts_utc": _utc_iso_now(),
+        }
+        if extra:
+            payload["extra"] = extra
+        if self.overwrite_enabled:
+            self._start_spinner(f"{section} > {subtask}", now)
+        else:
+            line = _colorize(f"START {section} > {subtask}", ANSI_CYAN, self.use_color)
+            self._print_line(line, replace_active=False)
+        return payload
+
     def done(self, section: str, **extra: Any) -> Dict[str, Any]:
         now = time.perf_counter()
         section_start = self.active_sections.pop(section, None)
         section_ms = None if section_start is None else round((now - section_start) * 1000, 2)
+        unfinished_subtasks = [
+            subtask_name
+            for (section_name, subtask_name) in list(self.active_subtasks.keys())
+            if section_name == section
+        ]
+        for subtask_name in unfinished_subtasks:
+            self.active_subtasks.pop((section, subtask_name), None)
         payload: Dict[str, Any] = {
             "event": "startup_section_done",
             "startup_name": self.name,
@@ -148,16 +195,43 @@ class TaskTracker:
             "total_ms": round((now - self.started_at) * 1000, 2),
             "ts_utc": _utc_iso_now(),
         }
+        if unfinished_subtasks:
+            payload["unfinished_subtasks"] = sorted(unfinished_subtasks)
         if extra:
             payload["extra"] = extra
         time_suffix = "n/a" if section_ms is None else f"{section_ms}ms"
         line = _colorize(f"DONE  {section} [{time_suffix}]", ANSI_GREEN, self.use_color)
         self._stop_spinner()
         self._print_line(line, replace_active=True)
+        self._resume_spinner_for_active_work()
+        return payload
+
+    def done_subtask(self, section: str, subtask: str, **extra: Any) -> Dict[str, Any]:
+        now = time.perf_counter()
+        subtask_start = self.active_subtasks.pop((section, subtask), None)
+        section_start = self.active_sections.get(section)
+        subtask_ms = None if subtask_start is None else round((now - subtask_start) * 1000, 2)
+        payload: Dict[str, Any] = {
+            "event": "startup_subtask_done",
+            "startup_name": self.name,
+            "section": section,
+            "subtask": subtask,
+            "subtask_ms": subtask_ms,
+            "section_ms": None if section_start is None else round((now - section_start) * 1000, 2),
+            "total_ms": round((now - self.started_at) * 1000, 2),
+            "ts_utc": _utc_iso_now(),
+        }
+        if extra:
+            payload["extra"] = extra
+        time_suffix = "n/a" if subtask_ms is None else f"{subtask_ms}ms"
+        line = _colorize(f"DONE  {section} > {subtask} [{time_suffix}]", ANSI_GREEN, self.use_color)
+        self._stop_spinner()
+        self._print_line(line, replace_active=True)
+        self._resume_spinner_for_active_work()
         return payload
 
     def warn_unfinished(self) -> Optional[Dict[str, Any]]:
-        if not self.active_sections:
+        if not self.active_sections and not self.active_subtasks:
             return None
         self._stop_spinner()
         if self._active_line is not None and self.overwrite_enabled:
@@ -169,6 +243,9 @@ class TaskTracker:
             "event": "startup_unfinished_sections",
             "startup_name": self.name,
             "sections": sorted(self.active_sections.keys()),
+            "subtasks": sorted(
+                [f"{section} > {subtask}" for (section, subtask) in self.active_subtasks.keys()]
+            ),
             "total_ms": round((time.perf_counter() - self.started_at) * 1000, 2),
             "ts_utc": _utc_iso_now(),
         }
@@ -191,7 +268,7 @@ class TaskTracker:
             sys.stdout.flush()
             self._active_line = None
             self._active_line_len = 0
-        line = _colorize(f"DONE", ANSI_GREEN, self.use_color)
+        line = _colorize(f"DONE  {payload['startup_name']}", ANSI_GREEN, self.use_color)
         self.logger.info("%s", line)
         return payload
 
