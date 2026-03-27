@@ -19,6 +19,7 @@ port = os.environ['PORT']  # the port
 secret = os.environ['SECRET']
 is_production = int(os.environ['IS_PRODUCTION']) == 1
 debug = not is_production  # debugging?
+websocket_url = os.environ['WEBSOCKET_URL']
 
 smtp_host = os.environ['SMTP_HOST']
 smtp_email = os.environ['SMTP_EMAIL']
