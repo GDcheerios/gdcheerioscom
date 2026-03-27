@@ -6,11 +6,14 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 import environment
+from utils.logger import setup_logger, TaskTracker
 
 database = environment.database
 from api.osu_api import fetch_osu_data
 from api.gentrys_quest.user_api import get_ranking, get_score, get_money
 from objects.EmailManager import EmailManager
+
+logger = setup_logger("objects.account")
 
 
 class Account:
@@ -30,13 +33,17 @@ class Account:
     is_admin: bool
 
     def __init__(self, identifier):
-        print(f"Loading account {identifier}")
+        logger.debug("Loading account %s", identifier)
+        load_task = TaskTracker(logger, "account_load")
+        load_task.start("parse identifier")
         try:
             identifier = int(identifier)
             from_query_string = "id = %s"
         except ValueError:
             from_query_string = "username = %s"
+        load_task.done("parse identifier")
 
+        load_task.start("fetch account data")
         result = database.fetch_to_dict(
             f"""
             SELECT 
@@ -61,7 +68,9 @@ class Account:
             """,
             params=(identifier,)
         )
+        load_task.done("fetch account data")
 
+        load_task.start("initialize data")
         self.pfp = "https://storage.cloud.google.com/gdcheerioscombucket/profile-pictures/huh.png"
 
         try:
@@ -82,6 +91,8 @@ class Account:
                                                    params=(self.id,)) or []
             self.exists = True
             self.is_admin = result["is_admin"]
+
+            load_task.start_subtask("initialize data", "check supporter status")
             if result["supporter_lasts"]:
                 if datetime.now(tz=timezone.utc) > result["supporter_lasts"]:
                     database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}",
@@ -91,6 +102,9 @@ class Account:
                     self.supporter = True
             else:
                 self.supporter = result["is_supporter"]
+            load_task.done_subtask("initialize data", "check supporter status")
+
+            load_task.start_subtask("initialize data", "fetch osu matches")
             self.osu_matches = database.fetch_all_to_dict(
                 """
                 SELECT id,
@@ -100,6 +114,7 @@ class Account:
                 FROM osu_matches
                 WHERE opener = %s
                 """, params=(self.id,))
+            load_task.done_subtask("initialize data", "fetch osu matches")
 
         except TypeError:
             self.id = 0
@@ -123,10 +138,13 @@ class Account:
         self.osu_data = {}
         self.gq_data = {}
 
+        load_task.start_subtask("initialize data", "fetch osu data")
         if self.get_link("osu"):
             self.osu_data = self.get_osu_data()
+        load_task.done_subtask("initialize data", "fetch osu data")
 
         if self.has_gq:
+            load_task.start_subtask("initialize data", "fetch gq data")
             gq_scores = database.fetch_all_to_dict(
                 """
                 SELECT id,
@@ -191,6 +209,10 @@ class Account:
                     break
             self.gq_data["metadata"]["level"] = level
             self.gq_data["metadata"]["required"] = environment.gq_levels[level]
+            load_task.done_subtask("initialize data", "fetch gq data")
+
+        load_task.done("initialize data")
+        load_task.complete()
 
     @staticmethod
     def from_session(session):

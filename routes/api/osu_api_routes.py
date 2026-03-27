@@ -9,8 +9,10 @@ from datetime import date, datetime
 import environment
 from api import osu_api
 from objects import Account
+from utils.logger import setup_logger
 
 osu_api_blueprint = Blueprint('osu_api_blueprint', __name__)
+logger = setup_logger("routes.api.osu")
 
 
 def _json_safe(value):
@@ -43,7 +45,7 @@ def fetch_osu_user(id):
 
     safe_player = _json_safe(data)
 
-    print(f"emitting {safe_player} to\n{len(match_rows)} matches")
+    logger.info("emitting player=%s to matches=%s", safe_player, len(match_rows))
     for (match) in match_rows:
         match = _json_safe(match)
         environment.socket.emit(
@@ -149,7 +151,7 @@ def create_match():
                 team_name = None
 
         player_data = osu_api.fetch_osu_data(player)
-        print(match_id)
+        logger.info("create_match match_id=%s", match_id)
         environment.database.execute(
             "INSERT INTO osu_match_users (match, \"user\", starting_score, starting_playcount, team) values (%s, %s, %s, %s, %s)",
             params=(match_id, player_data["id"], player_data["score"], player_data["playcount"], team_name))
@@ -175,7 +177,7 @@ def end_match(id):
         return {"error": "not your match"}
 
     match_users = environment.database.fetch_all("SELECT \"user\" FROM osu_match_users WHERE match = %s", params=(id,))
-    print(match_users)
+    logger.info("ending match id=%s users=%s", id, match_users)
     environment.database.execute("UPDATE osu_matches SET ended = true WHERE id = %s", params=(id,))
     for user in match_users:
         user = user[0]

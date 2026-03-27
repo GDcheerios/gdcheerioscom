@@ -3,6 +3,9 @@ import datetime as dt
 from datetime import timezone
 
 import environment
+from utils.logger import setup_logger
+
+logger = setup_logger("api.osu")
 
 expiration = 0
 token = 0
@@ -11,7 +14,7 @@ token = 0
 def client_grant():
     global expiration
     global token
-    print("granting client...")
+    logger.info("granting client token")
     response = requests.post(f"https://osu.ppy.sh/oauth/token",
                              headers={"Accept": "application/json", "Content-Type": "application/json"},
                              json={"client_id": environment.osu_client_id, "client_secret": f"{environment.osu_secret}",
@@ -25,16 +28,16 @@ def client_grant():
 def check_access():
     global expiration
     global token
-    print("checking access...")
+    logger.info("checking access")
     dt_obj = dt.datetime.now()
 
     try:
         if round(dt_obj.microsecond / 1000) > expiration:
-            print("renewing token")
+            logger.info("renewing token")
             token = client_grant()
 
     except Exception as E:
-        print(E)
+        logger.exception("error checking osu access token: %s", E)
         token = client_grant()
 
     return token
@@ -66,7 +69,7 @@ def get_user_info(user_identifier):
                 or user_check["last_refresh"]
                 <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=1)
         ):
-            print(f"getting osu user by id {osu_id}")
+            logger.info("getting osu user by id %s", osu_id)
             return requests.get(
                 f"https://osu.ppy.sh/api/v2/users/{osu_id}/osu",
                 headers={
@@ -81,7 +84,7 @@ def get_user_info(user_identifier):
 
     else:
         username = str(user_identifier)
-        print(f"getting osu user by username {username}")
+        logger.info("getting osu user by username %s", username)
         user_check = environment.database.fetch_to_dict(
             "SELECT * FROM osu_users WHERE username = %s",
             params=(username,)
@@ -103,7 +106,7 @@ def get_user_info(user_identifier):
         else:
             return user_check
 
-    print(f"user {osu_id} already checked within last minute\n or user not found")
+    logger.info("user %s already checked within last minute or user not found", osu_id)
 
     return None
 
@@ -191,7 +194,7 @@ def extract_info(data):
 
             return extracted_info
         else:
-            print("user info not found")
+            logger.warning("user info not found")
             return None
     except KeyError as e:
         return data

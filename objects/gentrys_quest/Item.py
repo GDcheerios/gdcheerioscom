@@ -2,6 +2,9 @@ import json
 
 import environment
 from PSQLConnection import PSQLConnection as DB
+from utils.logger import setup_logger
+
+logger = setup_logger("objects.gq_item")
 
 
 class Item:
@@ -14,10 +17,10 @@ class Item:
 
     def __init__(self, id: int, deleted: bool = False):
         super().__init__(id, deleted)
-        print(f"loading item {id}")
+        logger.info("loading item %s", id)
         item_result = DB.get("SELECT id, type, rating, version, owner, metadata FROM gq_items WHERE id = %s", params=(id,))
         if not item_result:
-            print(f"couldn't find item {id}")
+            logger.warning("couldn't find item %s", id)
             return
 
         self.id = id

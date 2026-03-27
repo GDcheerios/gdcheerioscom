@@ -7,8 +7,10 @@ import environment
 from api import account_api
 from objects.Account import Account
 from objects.EmailManager import EmailManager
+from utils.logger import setup_logger
 
 account_api_blueprint = Blueprint('account', __name__)
+logger = setup_logger("routes.api.account")
 
 
 def _session_cookie_kwargs() -> dict:
@@ -227,8 +229,9 @@ def check_username():
 @account_api_blueprint.get("/account/check/email")
 def check_email():
     email = request.args.get("email")
-    print(email, Account.email_exists(email))
-    return {"exists": Account.email_exists(email)}
+    exists = Account.email_exists(email)
+    logger.info("email_exists_check email=%s exists=%s", email, exists)
+    return {"exists": exists}
 
 
 @account_api_blueprint.get("/account/grab/<identifier>")
