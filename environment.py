@@ -101,7 +101,8 @@ tracker.done("Allocating Global Variables")
 
 # region Connecting to Database
 tracker.start("Connecting to Database")
-database.set_logging(False)
+database.set_logging(True)
+database.set_log_level("WARNING")
 database.connect(
     db_user,
     db_password,
@@ -111,7 +112,6 @@ database.connect(
 tracker.done("Connecting to Database")
 # endregion
 
-# region Cleaning Up Database
 # region Cleaning Up Database
 tracker.start("Cleaning Up Database")
 now = dt.datetime.now(tz=dt.timezone.utc)
