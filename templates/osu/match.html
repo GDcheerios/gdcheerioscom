@@ -17,10 +17,14 @@
             }
 
             .player {
+                opacity: 1;
+                transform: translateY(0);
+                transition: transform 0.35s ease, opacity 0.35s ease;
+            }
+            .player.player-enter {
                 opacity: 0;
                 transform: translateY(-10px);
                 animation: fadeSlideIn 0.4s ease-out forwards;
-                transition: transform 0.35s ease, opacity 0.35s ease;
             }
 
             /* --- NEW: score bump + row move animations --- */
@@ -40,10 +44,103 @@
             .player-score-value.score-down {
                 animation: scoreBumpDown 520ms ease-out;
             }
+            .score-delta-badge {
+                position: absolute;
+                right: 0;
+                top: 0;
+                z-index: 5;
+                font-size: 16px;
+                font-weight: 800;
+                letter-spacing: .03em;
+                opacity: 0;
+                pointer-events: none;
+                text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+            }
+            .score-delta-badge.delta-up {
+                color: #5fffc8;
+                animation: scoreDeltaFloatUp 1500ms ease-out forwards;
+            }
+            .score-delta-badge.delta-down {
+                color: #ff9a9a;
+                animation: scoreDeltaFloatDown 1500ms ease-out forwards;
+            }
+            @keyframes scoreDeltaFloatUp {
+                0% { opacity: 0; transform: translateY(8px) scale(0.96); }
+                14% { opacity: 1; transform: translateY(0) scale(1); }
+                100% { opacity: 0; transform: translateY(-18px) scale(1); }
+            }
+            @keyframes scoreDeltaFloatDown {
+                0% { opacity: 0; transform: translateY(-8px) scale(0.96); }
+                14% { opacity: 1; transform: translateY(0) scale(1); }
+                100% { opacity: 0; transform: translateY(18px) scale(1); }
+            }
 
             /* Smooth “move up/down” (FLIP) */
             .player-row {
                 will-change: transform;
+            }
+            .player-row.row-move-up .player {
+                animation: rowMoveUpFlash 520ms ease-out;
+            }
+            .player-row.row-move-down .player {
+                animation: rowMoveDownFlash 520ms ease-out;
+            }
+            .player-row.row-move-up .player-rank {
+                animation: rankLift 520ms ease-out;
+            }
+            .player-row.row-move-down .player-rank {
+                animation: rankDrop 520ms ease-out;
+            }
+
+            @keyframes rowMoveUpFlash {
+                0% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+                35% { box-shadow: 0 14px 28px rgba(47, 255, 171, 0.18), 0 0 18px rgba(47, 255, 171, 0.22); }
+                100% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+            }
+            @keyframes rowMoveDownFlash {
+                0% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+                35% { box-shadow: 0 14px 28px rgba(255, 84, 84, 0.15), 0 0 18px rgba(255, 84, 84, 0.2); }
+                100% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+            }
+            @keyframes rankLift {
+                0% { transform: scale(1) translateY(0); color: inherit; }
+                35% { transform: scale(1.18) translateY(-2px); color: #57ffc6; }
+                100% { transform: scale(1) translateY(0); color: inherit; }
+            }
+            @keyframes rankDrop {
+                0% { transform: scale(1) translateY(0); color: inherit; }
+                35% { transform: scale(1.1) translateY(2px); color: #ff8c8c; }
+                100% { transform: scale(1) translateY(0); color: inherit; }
+            }
+
+            .player {
+                position: relative;
+                overflow: hidden;
+            }
+            .player::after {
+                content: "";
+                position: absolute;
+                top: -120%;
+                left: -40%;
+                width: 45%;
+                height: 300%;
+                transform: rotate(18deg);
+                background: linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.12) 48%,
+                    rgba(255, 255, 255, 0) 100%
+                );
+                opacity: 0;
+                pointer-events: none;
+            }
+            .player:hover::after {
+                animation: cardSheen 900ms ease-out;
+            }
+            @keyframes cardSheen {
+                0% { left: -45%; opacity: 0; }
+                20% { opacity: 1; }
+                100% { left: 125%; opacity: 0; }
             }
 
             .match-actions {
@@ -52,7 +149,44 @@
                 gap: 10px;
                 margin: 10px 0 18px 0;
             }
-
+            .ws-status-wrap {
+                display: flex;
+                justify-content: center;
+                margin: 0 0 12px 0;
+            }
+            .ws-status {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 10px;
+                border-radius: 999px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: rgba(255, 255, 255, 0.06);
+                color: rgba(255, 255, 255, 0.92);
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: .02em;
+            }
+            .ws-status-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #9aa0a6;
+                box-shadow: 0 0 0 2px rgba(154, 160, 166, 0.18);
+            }
+            .ws-status--connected .ws-status-dot {
+                background: #1db954;
+                box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.22);
+            }
+            .ws-status--connecting .ws-status-dot,
+            .ws-status--reconnecting .ws-status-dot {
+                background: #f7c948;
+                box-shadow: 0 0 0 2px rgba(247, 201, 72, 0.22);
+            }
+            .ws-status--disconnected .ws-status-dot {
+                background: #e55353;
+                box-shadow: 0 0 0 2px rgba(229, 83, 83, 0.22);
+            }
             .match-button {
                 padding: 10px 14px;
                 border-radius: 10px;
@@ -78,6 +212,50 @@
                 color: white;
                 outline: none;
                 min-width: 260px;
+            }
+            .admin-test-panel {
+                margin: 0 auto 14px auto;
+                width: min(980px, calc(100% - 24px));
+                padding: 12px;
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                background: rgba(255, 255, 255, 0.05);
+            }
+            .admin-test-title {
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: .03em;
+                margin-bottom: 10px;
+                color: rgba(255, 255, 255, 0.92);
+            }
+            .admin-test-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+            }
+            .admin-test-select,
+            .admin-test-input {
+                padding: 8px 10px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: rgba(255, 255, 255, 0.06);
+                color: white;
+                min-width: 160px;
+            }
+            .admin-test-input {
+                min-width: 120px;
+                max-width: 140px;
+            }
+            .admin-test-btn {
+                padding: 8px 10px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                background: rgba(60, 255, 160, 0.14);
+                color: white;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 12px;
             }
 
             .player-level {
@@ -122,6 +300,177 @@
                 min-width: 54px;
                 text-align: right;
             }
+            .teams-overview {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 10px;
+                align-content: start;
+            }
+            .teams-overview h2 {
+                margin: 0 0 4px 0;
+                font-size: 18px;
+                letter-spacing: .03em;
+                color: rgba(255, 255, 255, 0.95);
+            }
+            .team-card {
+                border-radius: 14px;
+                padding: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+                box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+            }
+            .team-card-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 10px;
+                gap: 8px;
+            }
+            .team-name {
+                font-weight: 800;
+                font-size: 14px;
+                letter-spacing: .02em;
+                color: rgba(255, 255, 255, 0.96);
+            }
+            .team-score {
+                font-weight: 900;
+                font-size: 13px;
+                padding: 4px 8px;
+                border-radius: 999px;
+                background: rgba(60, 255, 160, 0.16);
+                border: 1px solid rgba(60, 255, 160, 0.35);
+                color: rgba(210, 255, 236, 0.98);
+                white-space: nowrap;
+            }
+            .team-player-list {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                display: grid;
+                gap: 6px;
+            }
+            .team-player-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                border-radius: 10px;
+                padding: 6px 8px;
+                background: rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            .team-player-left {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 0;
+            }
+            .team-player-rank {
+                width: 20px;
+                height: 20px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 900;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                color: rgba(255, 255, 255, 0.95);
+                background: rgba(255, 255, 255, 0.16);
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                flex: 0 0 auto;
+            }
+            .team-player-name {
+                font-size: 13px;
+                font-weight: 700;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: rgba(255, 255, 255, 0.92);
+            }
+            .team-player-score {
+                font-size: 12px;
+                font-weight: 800;
+                color: rgba(255, 255, 255, 0.78);
+                white-space: nowrap;
+            }
+
+            @media (max-width: 1100px) {
+                .match-layout {
+                    grid-template-columns: 1fr !important;
+                    gap: 14px;
+                }
+                .teams-overview {
+                    order: 2;
+                }
+                .match-players-column {
+                    order: 1;
+                }
+            }
+
+            @media (max-width: 760px) {
+                .match-actions {
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    margin: 8px 10px 14px 10px;
+                }
+                .match-button {
+                    width: 100%;
+                    max-width: 100%;
+                }
+                .match-add-user-input {
+                    min-width: 0;
+                    width: 100%;
+                }
+                .ws-status-wrap {
+                    margin: 0 10px 10px 10px;
+                }
+                .ws-status {
+                    width: 100%;
+                    justify-content: center;
+                }
+                .admin-test-panel {
+                    margin: 0 10px 12px 10px;
+                    width: auto;
+                }
+                .admin-test-select,
+                .admin-test-input,
+                .admin-test-btn {
+                    width: 100%;
+                    max-width: 100%;
+                }
+                .player-level {
+                    grid-template-columns: 1fr;
+                    gap: 6px;
+                }
+                .player-level-pct {
+                    min-width: 0;
+                    text-align: left;
+                }
+                .team-card {
+                    padding: 10px;
+                }
+            }
+
+            @media (max-width: 520px) {
+                h1 {
+                    font-size: 24px;
+                    margin: 12px 8px;
+                }
+                .player-score {
+                    width: 100%;
+                    margin-top: 10px;
+                }
+                .player-score-value {
+                    font-size: 24px;
+                }
+                .team-card-header {
+                    align-items: flex-start;
+                    flex-direction: column;
+                }
+                .team-score {
+                    align-self: flex-start;
+                }
+            }
         </style>
         {% endblock %}
     </head>
@@ -159,6 +508,26 @@
                 </button>
             </div>
             {% endif %}
+            <div class="ws-status-wrap">
+                <div id="ws-status" class="ws-status ws-status--connecting" aria-live="polite">
+                    <span class="ws-status-dot"></span>
+                    <span id="ws-status-text">Live updates: connecting</span>
+                </div>
+            </div>
+            {% if is_admin %}
+            <div class="admin-test-panel">
+                <div class="admin-test-title">Admin Animation Tests</div>
+                <div class="admin-test-row">
+                    <select id="admin-test-player" class="admin-test-select"></select>
+                    <input id="admin-test-score-delta" class="admin-test-input" type="number" value="1000000" step="1000" />
+                    <input id="admin-test-play-delta" class="admin-test-input" type="number" value="1" step="1" />
+                    <button class="admin-test-btn" type="button" onclick="adminApplyDelta()">Apply Delta</button>
+                    <button class="admin-test-btn" type="button" onclick="adminPassUp()">Force Pass Up</button>
+                    <button class="admin-test-btn" type="button" onclick="adminPassDown()">Force Pass Down</button>
+                    <button class="admin-test-btn" type="button" onclick="adminResetTestData()">Reset Test Data</button>
+                </div>
+            </div>
+            {% endif %}
 
             <div class="match-layout">
                 <div id="match-info" class="match-players-column">
@@ -175,6 +544,9 @@
                 const matchId = {{ match.id | tojson }};
                 const matchEnded = {{ match.ended | tojson }};
                 const isCreator = {{ is_creator | tojson }};
+                const isAdmin = {{ is_admin | tojson }};
+                const configuredWebsocketUrl = {{ websocket_url | tojson }};
+                const originalPlayersSnapshot = JSON.parse(JSON.stringify(players));
 
                 console.log("[match] script loaded", {
                     matchId,
@@ -372,15 +744,73 @@
                 function applyMatchRelativeScores(playersArr) {
                     console.log("[match] applyMatchRelativeScores() start");
                     for (const player of playersArr) {
-                        if (matchEnded) {
-                            player.score = (player.ending_score - player.starting_score);
-                            player.playcount = player.ending_playcount - player.starting_playcount;
+                        const startScoreRaw = Number(player.starting_score);
+                        const startPlayRaw = Number(player.starting_playcount);
+                        const hasEndingScore = player.ending_score != null;
+                        const hasEndingPlaycount = player.ending_playcount != null;
+                        const endScoreRaw = Number(player.ending_score);
+                        const endPlayRaw = Number(player.ending_playcount);
+                        const currentScoreRaw = Number(player.score);
+                        const currentPlayRaw = Number(player.playcount);
+
+                        const startingScore = Number.isFinite(startScoreRaw) ? startScoreRaw : (Number.isFinite(currentScoreRaw) ? currentScoreRaw : 0);
+                        const startingPlaycount = Number.isFinite(startPlayRaw) ? startPlayRaw : (Number.isFinite(currentPlayRaw) ? currentPlayRaw : 0);
+                        const endingScore = (hasEndingScore && Number.isFinite(endScoreRaw)) ? endScoreRaw : null;
+                        const endingPlaycount = (hasEndingPlaycount && Number.isFinite(endPlayRaw)) ? endPlayRaw : null;
+
+                        player.starting_score = startingScore;
+                        player.starting_playcount = startingPlaycount;
+                        player.ending_score = endingScore;
+                        player.ending_playcount = endingPlaycount;
+
+                        if (matchEnded && endingScore != null && endingPlaycount != null) {
+                            player.score = endingScore - startingScore;
+                            player.playcount = endingPlaycount - startingPlaycount;
                         } else {
-                            player.score = (player.score - player.starting_score);
-                            player.playcount = player.playcount - player.starting_playcount;
+                            player.score = (Number.isFinite(currentScoreRaw) ? currentScoreRaw : startingScore) - startingScore;
+                            player.playcount = (Number.isFinite(currentPlayRaw) ? currentPlayRaw : startingPlaycount) - startingPlaycount;
                         }
                     }
                     console.log("[match] applyMatchRelativeScores() done");
+                }
+
+                function computeRelativeFromAbsolute(player, absoluteScore, absolutePlaycount) {
+                    const startScoreRaw = Number(player.starting_score);
+                    const startPlayRaw = Number(player.starting_playcount);
+                    const hasEndingScore = player.ending_score != null;
+                    const hasEndingPlaycount = player.ending_playcount != null;
+                    const endScoreRaw = Number(player.ending_score);
+                    const endPlayRaw = Number(player.ending_playcount);
+
+                    const startingScore = Number.isFinite(startScoreRaw) ? startScoreRaw : (Number.isFinite(absoluteScore) ? absoluteScore : 0);
+                    const startingPlaycount = Number.isFinite(startPlayRaw) ? startPlayRaw : (Number.isFinite(absolutePlaycount) ? absolutePlaycount : 0);
+                    const endingScore = (hasEndingScore && Number.isFinite(endScoreRaw)) ? endScoreRaw : null;
+                    const endingPlaycount = (hasEndingPlaycount && Number.isFinite(endPlayRaw)) ? endPlayRaw : null;
+
+                    player.starting_score = startingScore;
+                    player.starting_playcount = startingPlaycount;
+                    player.ending_score = endingScore;
+                    player.ending_playcount = endingPlaycount;
+
+                    if (matchEnded && endingScore != null && endingPlaycount != null) {
+                        return {
+                            score: endingScore - startingScore,
+                            playcount: endingPlaycount - startingPlaycount,
+                            startingScore,
+                            startingPlaycount,
+                            endingScore,
+                            endingPlaycount,
+                        };
+                    }
+
+                    return {
+                        score: (Number.isFinite(absoluteScore) ? absoluteScore : startingScore) - startingScore,
+                        playcount: (Number.isFinite(absolutePlaycount) ? absolutePlaycount : startingPlaycount) - startingPlaycount,
+                        startingScore,
+                        startingPlaycount,
+                        endingScore,
+                        endingPlaycount,
+                    };
                 }
 
                 applyMatchRelativeScores(players);
@@ -416,11 +846,48 @@
                     requestAnimationFrame(tick);
                 }
 
+                function getAnimationDuration(from, to) {
+                    const delta = Math.abs(Number(to || 0) - Number(from || 0));
+                    if (delta <= 0) return 750;
+                    if (delta < 50000) return 1200;
+                    if (delta < 500000) return 1650;
+                    if (delta < 5000000) return 2200;
+                    if (delta < 50000000) return 2800;
+                    return 3400;
+                }
+
+                function showScoreDelta(scoreEl, from, to) {
+                    if (!scoreEl) return;
+                    const delta = Math.round(Number(to || 0) - Number(from || 0));
+                    if (!delta) return;
+
+                    const host = scoreEl.parentElement;
+                    if (!host) return;
+                    host.style.position = "relative";
+
+                    const existing = host.querySelector(".score-delta-badge");
+                    if (existing) existing.remove();
+
+                    const badge = document.createElement("div");
+                    badge.className = `score-delta-badge ${delta > 0 ? "delta-up" : "delta-down"}`;
+                    badge.textContent = `${delta > 0 ? "+" : ""}${delta.toLocaleString()}`;
+                    host.appendChild(badge);
+
+                    setTimeout(() => {
+                        badge.remove();
+                    }, 1600);
+                }
+
                 function bumpScore(el, direction) {
                     if (!el) return;
                     el.classList.remove("score-up", "score-down");
                     void el.offsetWidth;
                     el.classList.add(direction > 0 ? "score-up" : "score-down");
+                    const clear = () => {
+                        el.classList.remove("score-up", "score-down");
+                    };
+                    el.addEventListener("animationend", clear, { once: true });
+                    setTimeout(clear, 700);
                 }
 
                 function captureRowPositions() {
@@ -443,6 +910,9 @@
                         const dy = prev.top - next.top;
                         if (Math.abs(dy) < 1) return;
                         moved++;
+                        row.classList.remove("row-move-up", "row-move-down");
+                        void row.offsetWidth;
+                        row.classList.add(dy > 0 ? "row-move-up" : "row-move-down");
 
                         row.style.transition = "none";
                         row.style.transform = `translateY(${dy}px)`;
@@ -452,6 +922,7 @@
                             setTimeout(() => {
                                 row.style.transition = "";
                                 row.style.transform = "";
+                                row.classList.remove("row-move-up", "row-move-down");
                             }, 460);
                         });
                     });
@@ -464,47 +935,14 @@
 
                     try {
                         const response = await fetch(
-                            `/api/osu/fetch-user/${encodeURIComponent(player.id)}`,
+                            `/api/osu/fetch-user/${encodeURIComponent(player.id)}?match_id=${encodeURIComponent(String(matchId))}`,
                             { method: "GET" }
                         );
                         if (!response.ok) {
                             throw new Error("Failed to refresh");
                         }
-
-                        const payload = await response.json();
-                        const newScoreAbs = Number(payload?.score);
-                        const newPlayAbs = Number(payload?.playcount);
-                        const oldScoreRel = Number(player.score || 0);
-                        const oldPlayRel = Number(player.playcount || 0);
-                        const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
-                        const startingScore = Number(player.starting_score || 0);
-                        const startingPlaycount = Number(player.starting_playcount || 0);
-                        const endingScore = Number(player.ending_score || 0);
-                        const endingPlaycount = Number(player.ending_playcount || 0);
-
-                        const newScoreRel = matchEnded
-                            ? (startingScore - endingScore)
-                            : (newScoreAbs - startingScore);
-                        const newPlayRel = matchEnded
-                            ? (startingPlaycount - endingPlaycount)
-                            : (newPlayAbs - startingPlaycount);
-                        const newAvg = newPlayRel > 0 ? Math.round(newScoreRel / newPlayRel) : 0;
-
-                        Object.assign(player, payload, {
-                            score: newScoreRel,
-                            playcount: newPlayRel,
-                        });
-
-                        const changeMap = new Map();
-                        changeMap.set(String(player.id), {
-                            scoreFrom: oldScoreRel,
-                            scoreTo: newScoreRel,
-                            playFrom: oldPlayRel,
-                            playTo: newPlayRel,
-                            avgFrom: oldAvg,
-                            avgTo: newAvg,
-                        });
-                        renderAllAnimated(changeMap);
+                        // UI is updated by the websocket event only to avoid double-refresh.
+                        await response.json().catch(() => ({}));
 
                         buttonEl.disabled = false;
                         buttonEl.textContent = "Refresh";
@@ -516,7 +954,7 @@
                     }
                 }
 
-                function createPlayerRow(player, index) {
+                function createPlayerRow(player, index, animateIn = true) {
                     const row = document.createElement('div');
                     row.className = 'player-row';
                     row.dataset.playerId = String(player.id);
@@ -527,7 +965,18 @@
 
                     const card = document.createElement('div');
                     card.className = 'player';
-                    card.style.animationDelay = `${index * 0.1}s`;
+                    if (animateIn) {
+                        card.classList.add('player-enter');
+                        card.style.animationDelay = `${index * 0.1}s`;
+                        card.addEventListener('animationend', () => {
+                            card.classList.remove('player-enter');
+                            card.style.animationDelay = '';
+                        }, { once: true });
+                    } else {
+                        card.style.animation = "none";
+                        card.style.opacity = "1";
+                        card.style.transform = "translateY(0)";
+                    }
 
                     const bg = document.createElement('div');
                     bg.className = 'player-bg';
@@ -751,9 +1200,29 @@
                         team.players
                             .slice()
                             .sort((a, b) => b.score - a.score)
-                            .forEach(p => {
+                            .forEach((p, i) => {
                                 const li = document.createElement('li');
-                                li.textContent = `${p.username} (${Number(p.score || 0).toLocaleString()})`;
+                                li.className = 'team-player-item';
+
+                                const left = document.createElement('div');
+                                left.className = 'team-player-left';
+
+                                const rank = document.createElement('span');
+                                rank.className = 'team-player-rank';
+                                rank.textContent = String(i + 1);
+                                left.appendChild(rank);
+
+                                const name = document.createElement('span');
+                                name.className = 'team-player-name';
+                                name.textContent = p.username || `User ${p.id}`;
+                                left.appendChild(name);
+
+                                const score = document.createElement('span');
+                                score.className = 'team-player-score';
+                                score.textContent = Number(p.score || 0).toLocaleString();
+
+                                li.appendChild(left);
+                                li.appendChild(score);
                                 list.appendChild(li);
                             });
 
@@ -762,14 +1231,15 @@
                     });
                 }
 
-                function renderAll() {
+                function renderAll(options = {}) {
+                    const { animateIn = true } = options;
                     console.log("[render] renderAll() start");
                     const matchInfo = document.getElementById('match-info');
                     matchInfo.innerHTML = "";
 
                     const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
                     sortedPlayers.forEach((player, index) => {
-                        const row = createPlayerRow(player, index);
+                        const row = createPlayerRow(player, index, animateIn);
                         matchInfo.appendChild(row);
                         setPlayerLevelUI(player.id, Number(player.score || 0));
                     });
@@ -780,6 +1250,61 @@
                         renderedPlayers: sortedPlayers.length,
                         teams: teams.length
                     });
+
+                    if (isAdmin) refreshAdminTestOptions();
+                }
+
+                function updatePlayerRowStatic(player) {
+                    const row = document.querySelector(
+                        `#match-info .player-row[data-player-id="${CSS.escape(String(player.id))}"]`
+                    );
+                    if (!row) return;
+
+                    const bg = row.querySelector(".player-bg");
+                    if (bg) {
+                        bg.style.backgroundImage = player.background ? `url('${player.background}')` : "";
+                    }
+
+                    const avatar = row.querySelector(".player-avatar");
+                    if (avatar) {
+                        avatar.src = player.avatar || "";
+                        avatar.alt = player.username || "Player avatar";
+                    }
+
+                    const nameEl = row.querySelector(".player-text-name");
+                    if (nameEl) {
+                        if (player.nickname != null) {
+                            nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.nickname} <span style="font-size: 50%;">(${player.username})</span></a>`;
+                        } else {
+                            nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.username}</a>`;
+                        }
+                    }
+
+                    const metaEl = row.querySelector(".player-text-meta");
+                    if (metaEl) {
+                        const accValue = player.accuracy != null ? `${player.accuracy}%` : "N/A";
+                        const rankValue = player.rank != null ? `#${player.rank}` : "Unranked";
+                        metaEl.textContent = `ACC: ${accValue} • Rank: ${rankValue}`;
+                    }
+                }
+
+                function reorderExistingRowsByScore() {
+                    const matchInfo = document.getElementById("match-info");
+                    const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+                    sortedPlayers.forEach((player, index) => {
+                        const row = matchInfo.querySelector(
+                            `.player-row[data-player-id="${CSS.escape(String(player.id))}"]`
+                        );
+                        if (!row) return;
+
+                        const rankEl = row.querySelector(".player-rank");
+                        if (rankEl) rankEl.textContent = index + 1;
+                        matchInfo.appendChild(row);
+                    });
+
+                    const teams = buildTeams(sortedPlayers);
+                    renderTeamsOverview(teams);
                 }
 
                 // changeMap: Map(userId -> { scoreFrom, scoreTo, playFrom, playTo, avgFrom, avgTo })
@@ -790,12 +1315,18 @@
                     });
 
                     const prevRects = captureRowPositions();
-                    renderAll();
+                    reorderExistingRowsByScore();
                     animateRowReorder(prevRects);
+
+                    document.querySelectorAll(".player-score-value.score-up, .player-score-value.score-down")
+                        .forEach((node) => node.classList.remove("score-up", "score-down"));
 
                     if (!changeMap) return;
 
                     for (const [userId, c] of changeMap.entries()) {
+                        const player = players.find(p => String(p.id) === String(userId));
+                        if (player) updatePlayerRowStatic(player);
+
                         const scoreEl = document.querySelector(
                             `.player-score-value[data-score-for="${CSS.escape(String(userId))}"]`
                         );
@@ -816,13 +1347,282 @@
                         if (scoreEl) {
                             const diff = Number(c.scoreTo) - Number(c.scoreFrom);
                             if (diff !== 0) bumpScore(scoreEl, diff);
-                            animateNumber(scoreEl, c.scoreFrom, c.scoreTo, 650);
+                            animateNumber(scoreEl, c.scoreFrom, c.scoreTo, getAnimationDuration(c.scoreFrom, c.scoreTo));
+                            showScoreDelta(scoreEl, c.scoreFrom, c.scoreTo);
                         }
-                        if (playEl) animateNumber(playEl, c.playFrom, c.playTo, 650);
-                        if (avgEl) animateNumber(avgEl, c.avgFrom, c.avgTo, 650);
+                        if (playEl) animateNumber(playEl, c.playFrom, c.playTo, getAnimationDuration(c.playFrom, c.playTo));
+                        if (avgEl) animateNumber(avgEl, c.avgFrom, c.avgTo, 900);
 
                         setPlayerLevelUI(userId, c.scoreTo);
                     }
+                }
+
+                function buildMatchWebsocketUrl() {
+                    if (configuredWebsocketUrl && String(configuredWebsocketUrl).trim() !== "") {
+                        return String(configuredWebsocketUrl).trim();
+                    }
+
+                    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                    return `${wsProtocol}//${window.location.hostname}:8765`;
+                }
+
+                function applyIncomingUserRefresh(payload) {
+                    console.log("[ws] incoming payload", payload);
+                    const refreshed = payload?.user || {};
+                    const refreshedMatchUser = payload?.match_user || null;
+                    const refreshedId = refreshed?.id;
+                    if (refreshedId == null) {
+                        console.warn("[ws] refreshed payload missing user.id", payload);
+                        return;
+                    }
+
+                    const matchIds = Array.isArray(payload?.match_ids)
+                        ? payload.match_ids.map(v => String(v))
+                        : [];
+                    if (matchIds.length > 0 && !matchIds.includes(String(matchId))) {
+                        console.log("[ws] ignored refresh for different match", { matchIds, matchId });
+                        return;
+                    }
+
+                    const player = players.find(
+                        p => String(p.id) === String(refreshedId) || String(p.user) === String(refreshedId)
+                    );
+                    if (!player) {
+                        console.warn("[ws] no matching player found for refreshed id", refreshedId);
+                        return;
+                    }
+
+                    const newScoreAbs = Number(refreshed?.score);
+                    const newPlayAbs = Number(refreshed?.playcount);
+                    if (!Number.isFinite(newScoreAbs) || !Number.isFinite(newPlayAbs)) {
+                        return;
+                    }
+
+                    if (refreshedMatchUser) {
+                        if (refreshedMatchUser.starting_score !== undefined) player.starting_score = refreshedMatchUser.starting_score;
+                        if (refreshedMatchUser.starting_playcount !== undefined) player.starting_playcount = refreshedMatchUser.starting_playcount;
+                        if (refreshedMatchUser.ending_score !== undefined) player.ending_score = refreshedMatchUser.ending_score;
+                        if (refreshedMatchUser.ending_playcount !== undefined) player.ending_playcount = refreshedMatchUser.ending_playcount;
+                        if (refreshedMatchUser.team !== undefined) player.team = refreshedMatchUser.team;
+                        if (refreshedMatchUser.nickname !== undefined) player.nickname = refreshedMatchUser.nickname;
+                    }
+
+                    const oldScoreRel = Number(player.score || 0);
+                    const oldPlayRel = Number(player.playcount || 0);
+                    const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
+
+                    const relative = computeRelativeFromAbsolute(player, newScoreAbs, newPlayAbs);
+                    const newScoreRel = relative.score;
+                    const newPlayRel = relative.playcount;
+                    const newAvg = newPlayRel > 0 ? Math.round(newScoreRel / newPlayRel) : 0;
+
+                    Object.assign(player, refreshed, {
+                        score: newScoreRel,
+                        playcount: newPlayRel,
+                    });
+
+                    const changeMap = new Map();
+                    changeMap.set(String(player.id), {
+                        scoreFrom: oldScoreRel,
+                        scoreTo: newScoreRel,
+                        playFrom: oldPlayRel,
+                        playTo: newPlayRel,
+                        avgFrom: oldAvg,
+                        avgTo: newAvg,
+                    });
+                    renderAllAnimated(changeMap);
+                }
+
+                function connectMatchWebsocket() {
+                    const url = buildMatchWebsocketUrl();
+                    let socket = null;
+                    let reconnectTimer = null;
+                    let intentionallyClosed = false;
+
+                    const wsStatusEl = document.getElementById("ws-status");
+                    const wsStatusTextEl = document.getElementById("ws-status-text");
+
+                    const setWsStatus = (state, text) => {
+                        if (!wsStatusEl || !wsStatusTextEl) return;
+                        wsStatusEl.classList.remove(
+                            "ws-status--connected",
+                            "ws-status--connecting",
+                            "ws-status--reconnecting",
+                            "ws-status--disconnected"
+                        );
+                        wsStatusEl.classList.add(`ws-status--${state}`);
+                        wsStatusTextEl.textContent = `Live updates: ${text}`;
+                    };
+
+                    const cleanupReconnect = () => {
+                        if (reconnectTimer) {
+                            clearTimeout(reconnectTimer);
+                            reconnectTimer = null;
+                        }
+                    };
+
+                    const openSocket = () => {
+                        cleanupReconnect();
+                        setWsStatus("connecting", "connecting");
+                        try {
+                            socket = new WebSocket(url);
+                        } catch (err) {
+                            setWsStatus("reconnecting", "reconnecting");
+                            reconnectTimer = setTimeout(openSocket, 2000);
+                            return;
+                        }
+
+                        socket.onopen = () => {
+                            setWsStatus("connected", "connected");
+                            socket.send(JSON.stringify({
+                                type: "subscribe_match",
+                                match_id: matchId
+                            }));
+                        };
+
+                        socket.onmessage = (event) => {
+                            try {
+                                const payload = JSON.parse(event.data);
+                                if (payload?.type === "osu_user_refreshed") {
+                                    applyIncomingUserRefresh(payload);
+                                }
+                            } catch (err) {}
+                        };
+
+                        socket.onclose = () => {
+                            if (intentionallyClosed) {
+                                setWsStatus("disconnected", "disconnected");
+                                return;
+                            }
+                            setWsStatus("reconnecting", "reconnecting");
+                            reconnectTimer = setTimeout(openSocket, 2000);
+                        };
+
+                        socket.onerror = () => {
+                            setWsStatus("reconnecting", "reconnecting");
+                            try { socket.close(); } catch (_) {}
+                        };
+                    };
+
+                    openSocket();
+
+                    window.addEventListener("beforeunload", () => {
+                        intentionallyClosed = true;
+                        cleanupReconnect();
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            socket.close(1000, "page_unload");
+                        }
+                    });
+                }
+
+                function getSelectedAdminPlayer() {
+                    const select = document.getElementById("admin-test-player");
+                    if (!select) return null;
+                    const selectedId = select.value;
+                    if (!selectedId) return null;
+                    return players.find(p => String(p.id) === String(selectedId));
+                }
+
+                function refreshAdminTestOptions() {
+                    const select = document.getElementById("admin-test-player");
+                    if (!select) return;
+
+                    const oldValue = select.value;
+                    select.innerHTML = "";
+
+                    const sorted = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+                    for (const p of sorted) {
+                        const opt = document.createElement("option");
+                        opt.value = String(p.id);
+                        opt.textContent = `${p.username || p.id} (score: ${Number(p.score || 0).toLocaleString()})`;
+                        select.appendChild(opt);
+                    }
+
+                    if (oldValue && sorted.some(p => String(p.id) === oldValue)) {
+                        select.value = oldValue;
+                    } else if (sorted.length > 0) {
+                        select.value = String(sorted[0].id);
+                    }
+                }
+
+                function applyAdminLocalChange(player, newScoreRel, newPlayRel) {
+                    if (!player) return;
+
+                    const oldScoreRel = Number(player.score || 0);
+                    const oldPlayRel = Number(player.playcount || 0);
+                    const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
+                    const nextScore = Number.isFinite(newScoreRel) ? newScoreRel : oldScoreRel;
+                    const nextPlay = Number.isFinite(newPlayRel) ? newPlayRel : oldPlayRel;
+                    const nextAvg = nextPlay > 0 ? Math.round(nextScore / nextPlay) : 0;
+
+                    player.score = nextScore;
+                    player.playcount = nextPlay;
+
+                    const changeMap = new Map();
+                    changeMap.set(String(player.id), {
+                        scoreFrom: oldScoreRel,
+                        scoreTo: nextScore,
+                        playFrom: oldPlayRel,
+                        playTo: nextPlay,
+                        avgFrom: oldAvg,
+                        avgTo: nextAvg,
+                    });
+                    renderAllAnimated(changeMap);
+                }
+
+                function adminApplyDelta() {
+                    if (!isAdmin) return;
+                    const player = getSelectedAdminPlayer();
+                    if (!player) return;
+
+                    const scoreDelta = Number(document.getElementById("admin-test-score-delta")?.value || 0);
+                    const playDelta = Number(document.getElementById("admin-test-play-delta")?.value || 0);
+                    applyAdminLocalChange(
+                        player,
+                        Number(player.score || 0) + (Number.isFinite(scoreDelta) ? scoreDelta : 0),
+                        Number(player.playcount || 0) + (Number.isFinite(playDelta) ? playDelta : 0)
+                    );
+                }
+
+                function adminPassUp() {
+                    if (!isAdmin) return;
+                    const player = getSelectedAdminPlayer();
+                    if (!player) return;
+
+                    const sorted = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+                    const idx = sorted.findIndex(p => String(p.id) === String(player.id));
+                    if (idx <= 0) return;
+
+                    const above = sorted[idx - 1];
+                    const target = Number(above.score || 0) + 1;
+                    applyAdminLocalChange(player, target, Number(player.playcount || 0));
+                }
+
+                function adminPassDown() {
+                    if (!isAdmin) return;
+                    const player = getSelectedAdminPlayer();
+                    if (!player) return;
+
+                    const sorted = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+                    const idx = sorted.findIndex(p => String(p.id) === String(player.id));
+                    if (idx < 0 || idx >= sorted.length - 1) return;
+
+                    const below = sorted[idx + 1];
+                    const target = Number(below.score || 0) - 1;
+                    applyAdminLocalChange(player, target, Number(player.playcount || 0));
+                }
+
+                function adminResetTestData() {
+                    if (!isAdmin) return;
+
+                    for (const player of players) {
+                        const original = originalPlayersSnapshot.find(p => String(p.id) === String(player.id));
+                        if (!original) continue;
+                        Object.assign(player, JSON.parse(JSON.stringify(original)));
+                    }
+
+                    applyMatchRelativeScores(players);
+                    renderAll({ animateIn: false });
                 }
 
                 document.addEventListener('DOMContentLoaded', () => {
@@ -832,6 +1632,8 @@
                     if (loading) loading.remove();
 
                     renderAll();
+                    connectMatchWebsocket();
+                    if (isAdmin) refreshAdminTestOptions();
                 });
             </script>
         {% endblock %}
