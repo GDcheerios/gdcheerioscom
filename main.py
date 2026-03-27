@@ -5,7 +5,6 @@ import time
 
 # flask packages
 from flask import Flask, g, request, render_template
-from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_bcrypt import Bcrypt
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -43,30 +42,6 @@ from objects import Account
 
 server_logger = setup_logger("main")
 startup_tracker = TaskTracker(server_logger, name="flask_server_startup")
-
-
-def match_room(match_id: str) -> str:
-    return f"match:{match_id}"
-
-
-def register_socket_handlers(socketio):
-    @socketio.on("join_match")
-    def on_join_match(data):
-        match_id = str((data or {}).get("match_id", "")).strip()
-        if not match_id:
-            emit("error", {"message": "match_id is required"})
-            return
-
-        join_room(match_room(match_id))
-        emit("joined_match", {"match_id": match_id})
-
-    @socketio.on("leave_match")
-    def on_leave_match(data):
-        match_id = str((data or {}).get("match_id", "")).strip()
-        if not match_id:
-            return
-        leave_room(match_room(match_id))
-        emit("left_match", {"match_id": match_id})
 
 
 def register_error_pages():
@@ -180,26 +155,16 @@ def create_app():
 
 
 app = create_app()
-startup_tracker.start("socketio_setup")
-socketio = SocketIO(app, async_mode="eventlet" if not environment.debug else "threading", logger=False,
-                    engineio_logger=False, cors_allowed_origins="*")
-startup_tracker.done("socketio_setup")
-startup_tracker.start("socket_handlers_setup")
-register_socket_handlers(socketio)
-startup_tracker.done("socket_handlers_setup")
 startup_tracker.start("error_pages_setup")
 register_error_pages()
 startup_tracker.done("error_pages_setup")
-environment.socket = socketio
 startup_tracker.warn_unfinished()
 startup_tracker.complete()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", environment.port))
-    socketio.run(
-        app,
+    app.run(
         host="0.0.0.0",
         port=port,
         debug=environment.debug,
-        allow_unsafe_werkzeug=environment.debug,
     )

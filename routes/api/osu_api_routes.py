@@ -38,26 +38,7 @@ def fetch_osu_user(id):
     if not data:
         return {"error": "user not found"}
 
-    match_rows = environment.database.fetch_all_to_dict(
-        "select * from osu_match_users where \"user\" = %s",
-        params=(data["id"],)
-    )
-
-    safe_player = _json_safe(data)
-
-    logger.info("emitting player=%s to matches=%s", safe_player, len(match_rows))
-    for (match) in match_rows:
-        match = _json_safe(match)
-        environment.socket.emit(
-            "match_user_score_updated",
-            {
-                "match": match,
-                "player": safe_player
-            },
-            room=f"match:{match["match"]}"
-        )
-
-    return data
+    return _json_safe(data)
 
 
 @osu_api_blueprint.post('/osu/add-user')

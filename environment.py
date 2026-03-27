@@ -94,7 +94,6 @@ tracker.done("Loading Gentry's Quest")
 # region Allocating Global Variables
 tracker.start("Allocating Global Variables")
 bcrypt = None  # the instance of bcrypt
-socket = None  # the instance of socketio
 database = Database  # the instance of the database
 tracker.done("Allocating Global Variables")
 # endregion
