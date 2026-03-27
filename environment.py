@@ -6,10 +6,10 @@ from GPSystem import GPSystem
 from PSQLConnector.connector import PSQLConnection as Database
 from dotenv import load_dotenv
 
-from utils.logger import setup_logger, StartupTracker
+from utils.logger import setup_logger, TaskTracker
 
 env_logger = setup_logger("environment")
-tracker = StartupTracker(env_logger, name="environment_startup")
+tracker = TaskTracker(env_logger, name="environment_startup")
 
 # region Importing Environment Variables
 tracker.start("Importing environment variables")

@@ -42,7 +42,7 @@ def setup_logger(name: str = "app", level: int = logging.INFO) -> logging.Logger
     return logger
 
 
-class StartupTracker:
+class TaskTracker:
     def __init__(self, logger: logging.Logger, name: str = "startup"):
         self.logger = logger
         self.name = name

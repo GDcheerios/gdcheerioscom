@@ -15,7 +15,7 @@ import environment
 # util
 from utils import bucket_helper as bucket
 from utils.logger import (
-    StartupTracker,
+    TaskTracker,
     build_request_payload,
     log_request,
     request_start,
@@ -42,7 +42,7 @@ from api.key_api import verify_api_key_header
 from objects import Account
 
 server_logger = setup_logger("main")
-startup_tracker = StartupTracker(server_logger, name="flask_server_startup")
+startup_tracker = TaskTracker(server_logger, name="flask_server_startup")
 
 
 def match_room(match_id: str) -> str:
