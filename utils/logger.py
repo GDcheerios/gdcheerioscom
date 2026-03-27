@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -13,6 +14,7 @@ ANSI_RESET = "\033[0m"
 ANSI_CYAN = "\033[36m"
 ANSI_GREEN = "\033[32m"
 ANSI_YELLOW = "\033[33m"
+SPINNER_FRAMES = ("|", "/", "-", "\\")
 
 
 def _utc_iso_now() -> str:
@@ -52,28 +54,68 @@ class TaskTracker:
         self.overwrite_enabled = sys.stdout.isatty()
         self._active_line: Optional[str] = None
         self._active_line_len = 0
+        self._spinner_thread: Optional[threading.Thread] = None
+        self._spinner_stop = threading.Event()
+        self._line_lock = threading.Lock()
 
     def _print_line(self, message: str, replace_active: bool = False) -> None:
         if not self.overwrite_enabled:
             self.logger.info("%s", message)
             return
 
-        if replace_active and self._active_line is not None:
-            visible_len = len(message)
-            clear_padding = " " * max(0, self._active_line_len - visible_len)
-            sys.stdout.write(f"\r{message}{clear_padding}\n")
+        with self._line_lock:
+            if replace_active and self._active_line is not None:
+                self._render_active_line(message, finish=True)
+                return
+
+            if self._active_line is not None:
+                sys.stdout.write("\n")
+
+            self._active_line = message
+            self._active_line_len = len(message)
+            sys.stdout.write(message)
             sys.stdout.flush()
-            self._active_line = None
-            self._active_line_len = 0
+
+    def _render_active_line(self, message: str, finish: bool = False) -> None:
+        visible_len = len(message)
+        clear_padding = " " * max(0, self._active_line_len - visible_len)
+        end = "\n" if finish else ""
+        sys.stdout.write(f"\r{message}{clear_padding}{end}")
+        sys.stdout.flush()
+        self._active_line = None if finish else message
+        self._active_line_len = 0 if finish else visible_len
+
+    def _start_spinner(self, section: str, section_start: float) -> None:
+        if not self.overwrite_enabled:
             return
 
-        if self._active_line is not None:
-            sys.stdout.write("\n")
+        self._stop_spinner()
+        self._spinner_stop.clear()
 
-        self._active_line = message
-        self._active_line_len = len(message)
-        sys.stdout.write(message)
-        sys.stdout.flush()
+        def run() -> None:
+            idx = 0
+            while not self._spinner_stop.is_set():
+                elapsed_s = time.perf_counter() - section_start
+                frame = SPINNER_FRAMES[idx % len(SPINNER_FRAMES)]
+                message = _colorize(
+                    f"START {section} {frame} {elapsed_s:.1f}s",
+                    ANSI_CYAN,
+                    self.use_color,
+                )
+                with self._line_lock:
+                    self._render_active_line(message, finish=False)
+                idx += 1
+                if self._spinner_stop.wait(0.1):
+                    break
+
+        self._spinner_thread = threading.Thread(target=run, daemon=True)
+        self._spinner_thread.start()
+
+    def _stop_spinner(self) -> None:
+        self._spinner_stop.set()
+        if self._spinner_thread is not None:
+            self._spinner_thread.join(timeout=0.2)
+            self._spinner_thread = None
 
     def start(self, section: str, **extra: Any) -> Dict[str, Any]:
         now = time.perf_counter()
@@ -87,8 +129,11 @@ class TaskTracker:
         }
         if extra:
             payload["extra"] = extra
-        line = _colorize(f"START {section}", ANSI_CYAN, self.use_color)
-        self._print_line(line, replace_active=False)
+        if self.overwrite_enabled:
+            self._start_spinner(section, now)
+        else:
+            line = _colorize(f"START {section}", ANSI_CYAN, self.use_color)
+            self._print_line(line, replace_active=False)
         return payload
 
     def done(self, section: str, **extra: Any) -> Dict[str, Any]:
@@ -107,12 +152,14 @@ class TaskTracker:
             payload["extra"] = extra
         time_suffix = "n/a" if section_ms is None else f"{section_ms}ms"
         line = _colorize(f"DONE  {section} [{time_suffix}]", ANSI_GREEN, self.use_color)
+        self._stop_spinner()
         self._print_line(line, replace_active=True)
         return payload
 
     def warn_unfinished(self) -> Optional[Dict[str, Any]]:
         if not self.active_sections:
             return None
+        self._stop_spinner()
         if self._active_line is not None and self.overwrite_enabled:
             sys.stdout.write("\n")
             sys.stdout.flush()
@@ -138,6 +185,7 @@ class TaskTracker:
         }
         if extra:
             payload["extra"] = extra
+        self._stop_spinner()
         if self._active_line is not None and self.overwrite_enabled:
             sys.stdout.write("\n")
             sys.stdout.flush()
