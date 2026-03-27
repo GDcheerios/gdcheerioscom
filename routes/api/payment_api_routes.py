@@ -2,9 +2,11 @@ import stripe
 from flask import Blueprint, redirect, url_for, session, request, jsonify
 import environment
 from objects import Account
+from utils.logger import setup_logger
 
 payments_api_blueprint = Blueprint('payment api', __name__)
 stripe.api_key = environment.stripe_secret_key
+logger = setup_logger("routes.api.payment")
 
 
 @payments_api_blueprint.route('/create-checkout-session', methods=['POST'])
@@ -15,7 +17,7 @@ def create_checkout_session():
 
     try:
         weeks = int(request.form.get('weeks', 0))
-        print(weeks)
+        logger.info("create_checkout_session weeks=%s", weeks)
     except ValueError:
         return "Invalid input", 400
 
@@ -62,10 +64,10 @@ def stripe_webhook():
             payload, sig_header, environment.stripe_webhook_secret
         )
     except stripe.error.SignatureVerificationError as e:
-        print(f"Signature verification failed: {e}")
+        logger.warning("Signature verification failed: %s", e)
         return jsonify(success=False), 400
     except ValueError as e:
-        print(f"Invalid payload: {e}")
+        logger.warning("Invalid payload: %s", e)
         return jsonify(success=False), 400
 
     if event['type'] == 'checkout.session.completed':

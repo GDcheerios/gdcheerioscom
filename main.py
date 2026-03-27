@@ -14,6 +14,13 @@ import environment
 
 # util
 from utils import bucket_helper as bucket
+from utils.logger import (
+    StartupTracker,
+    build_request_payload,
+    log_request,
+    request_start,
+    setup_logger,
+)
 
 # routes
 #   api
@@ -33,6 +40,9 @@ from routes.pages.osu_routes import osu_blueprint
 # apis and objects
 from api.key_api import verify_api_key_header
 from objects import Account
+
+server_logger = setup_logger("main")
+startup_tracker = StartupTracker(server_logger, name="flask_server_startup")
 
 
 def match_room(match_id: str) -> str:
@@ -74,38 +84,47 @@ def register_error_pages():
 
 
 def create_app():
+    startup_tracker.start("app_creation")
     app = Flask(  # Create a flask app
         __name__,
         template_folder='templates',  # Name of HTML file folder
         static_folder='static',  # Name of directory for static files
     )
+    startup_tracker.done("app_creation")
 
+    startup_tracker.start("middleware_and_config")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
     app.config['SECRET_KEY'] = environment.secret
     environment.bcrypt = Bcrypt(app)
+    startup_tracker.done("middleware_and_config")
 
+    startup_tracker.start("context_processor")
     @app.context_processor
     def inject_template_vars():
         return {
             "bucket": bucket
         }
+    startup_tracker.done("context_processor")
 
     # logging config
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.NOTSET)
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    logging.getLogger("flask.app").setLevel(logging.ERROR)
 
     # set up events
+    startup_tracker.start("request_hooks")
     @app.before_request
     def before_request():
-        g.req_start = time.perf_counter()
+        request_start()
 
     @app.after_request
     def after_request(response):
         g.req_duration = time.perf_counter() - g.req_start
         g.req_endpoint = request.path
+        static = True
 
         if not g.req_endpoint.startswith('/static'):
             user_id = Account.id_from_session(request.cookies.get("session"))
+            static = False
 
             if user_id is None:
                 api_key = request.headers.get("X-API-Key") or request.headers.get("Authorization")
@@ -130,9 +149,19 @@ def create_app():
                     success
                 )
             )
+
+        request_payload = build_request_payload(
+            response_status=response.status_code,
+            user_id=user_id if 'user_id' in locals() else None,
+            successful=(200 <= response.status_code < 500),
+        )
+        if not static: log_request(server_logger, request_payload)
+
         return response
+    startup_tracker.done("request_hooks")
 
     # load blueprints
+    startup_tracker.start("blueprint_registration")
     #   api
     app.register_blueprint(key_blueprint, url_prefix='/auth')
     app.register_blueprint(oauth_api_routes, url_prefix='/oauth')
@@ -146,15 +175,24 @@ def create_app():
     app.register_blueprint(gentrys_quest_blueprint, url_prefix='/gentrys-quest')
     app.register_blueprint(account_blueprint, url_prefix='/account')
     app.register_blueprint(osu_blueprint, url_prefix='/osu')
+    startup_tracker.done("blueprint_registration")
     return app
 
 
 app = create_app()
+startup_tracker.start("socketio_setup")
 socketio = SocketIO(app, async_mode="eventlet" if not environment.debug else "threading", logger=False,
                     engineio_logger=False, cors_allowed_origins="*")
+startup_tracker.done("socketio_setup")
+startup_tracker.start("socket_handlers_setup")
 register_socket_handlers(socketio)
+startup_tracker.done("socket_handlers_setup")
+startup_tracker.start("error_pages_setup")
 register_error_pages()
+startup_tracker.done("error_pages_setup")
 environment.socket = socketio
+startup_tracker.warn_unfinished()
+startup_tracker.complete()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", environment.port))

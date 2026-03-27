@@ -3,6 +3,9 @@ import logging
 
 import environment
 from environment import database
+from utils.logger import setup_logger
+
+logger = setup_logger("api.gentrys_quest.user")
 
 
 def check_in(id: int):
@@ -78,7 +81,7 @@ def insert_metrics(id, gp, rank):
     )[0]
 
     if not has_today_metrics:
-        print(f"Inserting new gq_metrics for user_id={id}, date={today}")
+        logger.debug("Inserting new gq_metrics for user_id=%s, date=%s", id, today)
         environment.database.execute(
             """
             INSERT INTO gq_metrics (user_id, rank, gp, recorded_at)
@@ -87,7 +90,7 @@ def insert_metrics(id, gp, rank):
             params=(id, rank, gp, today)
         )
     else:
-        print(f"Updating existing gq_metrics for user_id={id}, date={today}")
+        logger.debug("Updating existing gq_metrics for user_id=%s, date=%s", id, today)
         environment.database.execute(
             """
             UPDATE gq_metrics
@@ -101,7 +104,7 @@ def insert_metrics(id, gp, rank):
 
 
 def rate_user(id: int, custom_rating: int = None) -> dict:
-    print(f"rate_user called for user_id={id}, custom_rating={custom_rating}")
+    logger.debug("rate_user called for user_id=%s, custom_rating=%s", id, custom_rating)
     today = datetime.datetime.now(tz=datetime.timezone.utc).date()
     user_items = environment.database.fetch_all_to_dict(
         """
@@ -111,7 +114,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
         """,
         params=(id,)
     )
-    print(f"Fetched {len(user_items)} items for user_id={id}")
+    logger.debug("Fetched %s items for user_id=%s", len(user_items), id)
     weighted_rating = 0
     unweighted_rating = 0
     score = environment.database.fetch_one("SELECT score FROM gq_data WHERE id = %s", params=(id,))
@@ -124,9 +127,14 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
         weighted_rating = custom_rating
         unweighted_rating = custom_rating
 
-    print(f"Calculated ratings for user_id={id}: weighted={weighted_rating}, unweighted={unweighted_rating}")
+    logger.debug(
+        "Calculated ratings for user_id=%s: weighted=%s, unweighted=%s",
+        id,
+        weighted_rating,
+        unweighted_rating,
+    )
     rank, tier = environment.gq_rater.get_rank(weighted_rating)
-    print(f"Determined rank={rank}, tier={tier} for user_id={id}")
+    logger.debug("Determined rank=%s, tier=%s for user_id=%s", rank, tier, id)
 
     environment.database.fetch_all_to_dict(
         """
@@ -140,10 +148,10 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
         """,
         params=(weighted_rating, unweighted_rating, rank, tier, id)
     )
-    print(f"Updated gq_rankings for user_id={id}")
+    logger.debug("Updated gq_rankings for user_id=%s", id)
 
     placement = get_placement(weighted_rating)
-    print(f"Calculated placement={placement} for user_id={id}")
+    logger.debug("Calculated placement=%s for user_id=%s", placement, id)
     insert_metrics(id, weighted_rating, rank)
 
     result = {
@@ -153,7 +161,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
         "tier": tier,
         "placement": placement
     }
-    print(f"rate_user completed for user_id={id}, result={result}")
+    logger.debug("rate_user completed for user_id=%s, result=%s", id, result)
     return result
 
 

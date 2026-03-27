@@ -1,15 +1,18 @@
-from PSQLConnector.connector import PSQLConnection as Database
-
-from routes.api.oauth_api_routes import google_login
-from utils.printy import *
-import os
-from dotenv import load_dotenv
-from GPSystem import GPSystem
-import math
 import datetime as dt
+import math
+import os
+
+from GPSystem import GPSystem
+from PSQLConnector.connector import PSQLConnection as Database
+from dotenv import load_dotenv
+
+from utils.logger import setup_logger, StartupTracker
+
+env_logger = setup_logger("environment")
+tracker = StartupTracker(env_logger, name="environment_startup")
 
 # region Importing Environment Variables
-print_start("Importing Environment Variables")
+tracker.start("Importing environment variables")
 load_dotenv()
 domain = os.environ['DOMAIN']
 port = os.environ['PORT']  # the port
@@ -40,11 +43,11 @@ stripe_webhook_secret = os.environ['STRIPE_WEBHOOK_SECRET']
 google_client_id = os.environ['GOOGLE_CLIENT']
 google_client_secret = os.environ['GOOGLE_SECRET']
 
-print_end()
+tracker.done("Importing environment variables")
 # endregion
 
 # region Loading Gentry's Quest
-print_start("Loading Gentry's Quest")
+tracker.start("Loading Gentry's Quest")
 gq_rater = GPSystem().rater
 gq_version = "V"
 gq_levels = []
@@ -85,45 +88,49 @@ gq_level_colors = [
     [100, "#fff200", "#ffb900"],
 ]
 
-print_end()
+tracker.done("Loading Gentry's Quest")
 # endregion
 
 # region Allocating Global Variables
-print_start("Allocating Global Variables")
+tracker.start("Allocating Global Variables")
 bcrypt = None  # the instance of bcrypt
 socket = None  # the instance of socketio
 database = Database  # the instance of the database
-print_end()
+tracker.done("Allocating Global Variables")
 # endregion
 
 # region Connecting to Database
-print_start("Connecting to Database")
+tracker.start("Connecting to Database")
+database.set_logging(False)
 database.connect(
     db_user,
     db_password,
     db_hostname,
     db
 )
-print_end()
+tracker.done("Connecting to Database")
 # endregion
 
 # region Cleaning Up Database
-print_start("Cleaning Up Database")
+# region Cleaning Up Database
+tracker.start("Cleaning Up Database")
 now = dt.datetime.now(tz=dt.timezone.utc)
 Database.execute(
     """
     DELETE
     FROM api_keys
     WHERE expires_at < %s
-        AND expires_at IS NOT NULL
+      AND expires_at IS NOT NULL
     """,
     params=(now,)
 )
-print_end()
+tracker.done("Cleaning Up Database")
 # endregion
 
 # region Payment Setup
-print_start("Payment Setup")
+tracker.start("Payment Setup")
 weekly_cost = 100  # cents
-print_end()
+tracker.done("Payment Setup")
 # endregion
+
+tracker.complete()

@@ -2,6 +2,9 @@ import environment
 import time, base64, hmac, hashlib, os, json
 from flask import request, jsonify, g
 from functools import wraps
+from utils.logger import setup_logger
+
+logger = setup_logger("api.key")
 
 
 JWT_SECRET = environment.secret
@@ -178,7 +181,7 @@ def verify_api_key_header():
         return None
 
     if "." not in combined:
-        print(f"[API] Missing key ID/secret")
+        logger.warning("[API] Missing key ID/secret")
         return None
     key_id, secret = combined.split(".", 1)
 
@@ -188,19 +191,19 @@ def verify_api_key_header():
     )
     
     if row is None:
-        print(f"[API] Invalid key ID")
+        logger.warning("[API] Invalid key ID")
         return None
 
     if row["status"] != "active":
-        print(f"[API] key_id={key_id} inactive")
+        logger.warning("[API] key_id=%s inactive", key_id)
         return None
 
     if row["expires_at"] and row["expires_at"] < environment.database.now():
-        print(f"[API] key_id={key_id} expired")
+        logger.warning("[API] key_id=%s expired", key_id)
         return None
 
     if not environment.bcrypt.check_password_hash(row["secret_hash"], secret):
-        print(f"[API] key_id={key_id} invalid secret")
+        logger.warning("[API] key_id=%s invalid secret", key_id)
         return None
 
     scopes = row.get("scopes") or []

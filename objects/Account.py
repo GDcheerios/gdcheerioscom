@@ -6,11 +6,14 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 import environment
+from utils.logger import setup_logger
 
 database = environment.database
 from api.osu_api import fetch_osu_data
 from api.gentrys_quest.user_api import get_ranking, get_score, get_money
 from objects.EmailManager import EmailManager
+
+logger = setup_logger("objects.account")
 
 
 class Account:
@@ -30,7 +33,7 @@ class Account:
     is_admin: bool
 
     def __init__(self, identifier):
-        print(f"Loading account {identifier}")
+        logger.debug("Loading account %s", identifier)
         try:
             identifier = int(identifier)
             from_query_string = "id = %s"
