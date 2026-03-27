@@ -169,7 +169,6 @@
                 <div id="teams-overview" class="teams-overview">
                 </div>
             </div>
-            <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
             <script>
                 const players = {{ players | tojson }};
                 const currentOsuId = {{ current_osu_id|tojson }};  // may be null
@@ -460,7 +459,6 @@
                 }
 
                 async function refreshPlayer(player, buttonEl) {
-
                     buttonEl.disabled = true;
                     buttonEl.textContent = "Refreshing...";
 
@@ -472,12 +470,44 @@
                         if (!response.ok) {
                             throw new Error("Failed to refresh");
                         }
-                        else {
-                            setTimeout(() => {
-                                buttonEl.disabled = false
-                                buttonEl.textContent = "Refresh";
-                            }, 5000);
-                        }
+
+                        const payload = await response.json();
+                        const newScoreAbs = Number(payload?.score);
+                        const newPlayAbs = Number(payload?.playcount);
+                        const oldScoreRel = Number(player.score || 0);
+                        const oldPlayRel = Number(player.playcount || 0);
+                        const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
+                        const startingScore = Number(player.starting_score || 0);
+                        const startingPlaycount = Number(player.starting_playcount || 0);
+                        const endingScore = Number(player.ending_score || 0);
+                        const endingPlaycount = Number(player.ending_playcount || 0);
+
+                        const newScoreRel = matchEnded
+                            ? (startingScore - endingScore)
+                            : (newScoreAbs - startingScore);
+                        const newPlayRel = matchEnded
+                            ? (startingPlaycount - endingPlaycount)
+                            : (newPlayAbs - startingPlaycount);
+                        const newAvg = newPlayRel > 0 ? Math.round(newScoreRel / newPlayRel) : 0;
+
+                        Object.assign(player, payload, {
+                            score: newScoreRel,
+                            playcount: newPlayRel,
+                        });
+
+                        const changeMap = new Map();
+                        changeMap.set(String(player.id), {
+                            scoreFrom: oldScoreRel,
+                            scoreTo: newScoreRel,
+                            playFrom: oldPlayRel,
+                            playTo: newPlayRel,
+                            avgFrom: oldAvg,
+                            avgTo: newAvg,
+                        });
+                        renderAllAnimated(changeMap);
+
+                        buttonEl.disabled = false;
+                        buttonEl.textContent = "Refresh";
                     } catch (e) {
                         console.error(e);
                         buttonEl.disabled = false;
@@ -802,98 +832,6 @@
                     if (loading) loading.remove();
 
                     renderAll();
-
-                    console.log("[socket] initializing socket.io");
-                    const socket = io({
-                        transports: ["websocket", "polling"],
-                    });
-
-                    socket.on("connect", () => {
-                        console.log("[socket] connected", {
-                            id: socket.id,
-                            transport: socket.io.engine?.transport?.name
-                        });
-                        console.log("[socket] joining match room", { matchId: String(matchId) });
-                        socket.emit("join_match", { match_id: String(matchId) });
-                    });
-
-                    socket.on("disconnect", (reason) => {
-                        console.warn("[socket] disconnected", { reason });
-                    });
-
-                    socket.on("connect_error", (err) => {
-                        console.error("[socket] connect_error", err);
-                    });
-
-                    socket.onAny((eventName, ...args) => {
-                        if (eventName !== "match_user_score_updated") return;
-                        console.log("[socket] event received:", eventName, args?.[0]);
-                    });
-
-                    socket.on("match_user_score_updated", (payload) => {
-                        if (!payload) return;
-                        if (String(payload.match.match) !== String(matchId)) return;
-
-                        const userId = String(payload.player?.id);
-                        const newScoreAbs = Number(payload.player?.score);
-                        const newPlayAbs = Number(payload.player?.playcount);
-
-                        const p = players.find(x => String(x.id) === userId);
-                        if (!p) return;
-
-                        console.log("[socket] match_user_score_updated - current player state:", {
-                            userId,
-                            matchEnded,
-                            payload: payload,
-                            currentPlayer: {
-                                score: p.score,
-                                playcount: p.playcount,
-                                starting_score: p.starting_score,
-                                starting_playcount: p.starting_playcount,
-                                ending_score: p.ending_score,
-                                ending_playcount: p.ending_playcount
-                            }
-                        });
-
-                        const oldScoreRel = Number(p.score || 0);
-                        const oldPlayRel = Number(p.playcount || 0);
-                        const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
-
-                        const startingScore = Number(payload.match.starting_score || 0);
-                        const startingPlaycount = Number(payload.match.starting_playcount || 0);
-
-                        const endingScore = Number(payload.match.ending_score || 0);
-                        const endingPlaycount = Number(payload.match.ending_playcount || 0);
-
-                        // IMPORTANT: your requested rule
-                        // - not ended: current - starting
-                        // - ended:     starting - ending (ending is what we receive in payload in this case)
-                        const newScoreRel = matchEnded
-                            ? (startingScore - endingScore)
-                            : (newScoreAbs - startingScore);
-
-                        const newPlayRel = matchEnded
-                            ? (startingPlaycount - endingPlaycount)
-                            : (newPlayAbs - startingPlaycount);
-
-                        const newAvg = newPlayRel > 0 ? Math.round(newScoreRel / newPlayRel) : 0;
-
-                        // keep local state in sync (these are match-relative)
-                        p.score = newScoreRel;
-                        p.playcount = newPlayRel;
-
-                        const changeMap = new Map();
-                        changeMap.set(userId, {
-                            scoreFrom: oldScoreRel,
-                            scoreTo: newScoreRel,
-                            playFrom: oldPlayRel,
-                            playTo: newPlayRel,
-                            avgFrom: oldAvg,
-                            avgTo: newAvg,
-                        });
-
-                        renderAllAnimated(changeMap);
-                    });
                 });
             </script>
         {% endblock %}
