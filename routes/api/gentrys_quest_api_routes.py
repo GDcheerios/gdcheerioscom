@@ -232,7 +232,7 @@ def top_players():
 @gentrys_quest_api_blueprint.route("/gq/get-leaderboard/<int:id>", methods=["GET"])
 @require_scopes(["leaderboard:read"])
 def get_leaderboard(id: int):
-    amount = requests.args.get('amount', 0)
+    amount = int(request.args.get('amount', 0))
     return leaderboard_api.get_leaderboard(id, amount)
 
 
