@@ -23,7 +23,7 @@
                             <div class="player-name">
                                 {{ player["username"] }}
                                 {% if player["you"] %}
-                                    <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(You)</span>
+                                    <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(you)</span>
                                 {% endif %}
                             </div>
                             <div class="player-score">
@@ -38,17 +38,15 @@
                 {% if event_leaderboard and event_leaderboard["leaderboard"] %}
                     {% for player in event_leaderboard["leaderboard"] %}
                         <div class="score-card"
-                                {% if event_leaderboard["user_placement"] and event_leaderboard["user_placement"]["id"] == player["id"] %}
-                             style="border: 3px solid {{ rater.rating_colors[player["rank"]] }}; box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);"
-                                {% endif %}>
+                             {% if player["you"] %}style="border: 3px solid {{ rater.rating_colors[player["rank"]] }}; box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);"{% endif %}>
                             <div class="rank-badge" style="background-color: {{ rater.rating_colors[player["rank"]] }};">
                                 #{{ player["placement"] }}
                             </div>
                             <div class="score-details">
                                 <div class="player-name">
                                     {{ player["username"] }}
-                                    {% if event_leaderboard["user_placement"] and event_leaderboard["user_placement"]["id"] == player["id"] %}
-                                        <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(You)</span>
+                                    {% if player["you"] %}
+                                        <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(you)</span>
                                     {% endif %}
                                 </div>
                                 <div class="player-score">
