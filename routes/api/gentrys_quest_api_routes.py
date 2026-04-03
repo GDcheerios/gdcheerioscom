@@ -262,8 +262,9 @@ def submit_leaderboard():
         leaderboard_id = int(request.json.get("leaderboard_id"))
         user = int(request.json.get("user"))
         score = int(request.json.get("score"))
-        visitation = request.form.get("visitation")
+        visitation = request.json.get("visitation")
     except (TypeError, ValueError):
+        print(request.json)
         return jsonify({"error": "invalid_payload"}), 400
 
     denied = _enforce_user_scope(user)
