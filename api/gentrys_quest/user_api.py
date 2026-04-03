@@ -57,14 +57,28 @@ def get_xp(id: int) -> dict | str:
         return 'user not found'
 
 
-def get_placement(weighted):
+def get_placement(user_id: int):
     return environment.database.fetch_one(
         """
-        SELECT COUNT(*) + 1
-        FROM gq_rankings r
-        WHERE r.weighted > %s OR r.weighted = %s
+        SELECT placement
+        FROM (
+            SELECT
+                r.id,
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                        r.weighted DESC,
+                        COALESCE((
+                            SELECT COALESCE(SUM(s.score), 0)
+                            FROM gq_scores s
+                            WHERE s."user" = r.id
+                        ), 0) DESC,
+                        r.id ASC
+                ) AS placement
+            FROM gq_rankings r
+        ) ranked
+        WHERE id = %s
         """,
-        params=(weighted, weighted),
+        params=(user_id,),
     )[0]
 
 
@@ -150,7 +164,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
     )
     logger.debug("Updated gq_rankings for user_id=%s", id)
 
-    placement = get_placement(weighted_rating)
+    placement = get_placement(id)
     logger.debug("Calculated placement=%s for user_id=%s", placement, id)
     insert_metrics(id, weighted_rating, rank)
 
@@ -188,7 +202,7 @@ def get_ranking(id: int):
           and d.id = %s
         """, params=(id, id))
 
-    placement = get_placement(data["weighted"])
+    placement = get_placement(id)
     insert_metrics(id, data["weighted"], placement)
 
     return {
