@@ -443,8 +443,8 @@
                             <button type="button" data-range="all" class="gq-timeframe-btn">All</button>
                         </div>
                     </div>
-                    <div id="gq-chart" style="height:220px; position:relative;">
-                        <canvas id="gqChartCanvas" height="220" style="width:100%; height:100%;"></canvas>
+                    <div id="gq-chart" style="height:320px; position:relative;">
+                        <canvas id="gqChartCanvas" height="320" style="width:100%; height:100%;"></canvas>
                     </div>
                 </div>
                 <!-- Load Chart.js once -->
@@ -453,6 +453,118 @@
                     const metrics = {{ account.gq_data["metrics"] | tojson | safe }} || [];
 
                     (function () {
+                        // GP milestones that map to rank cutoffs (tier 1 of each rank).
+                        const gpMilestones = [
+                            { value: Number({{ rater.get_tiers()['copper']['1'] | int }}), label: 'Copper', color: '{{ rater.rating_colors["copper"] }}' },
+                            { value: Number({{ rater.get_tiers()['bronze']['1'] | int }}), label: 'Bronze', color: '{{ rater.rating_colors["bronze"] }}' },
+                            { value: Number({{ rater.get_tiers()['silver']['1'] | int }}), label: 'Silver', color: '{{ rater.rating_colors["silver"] }}' },
+                            { value: Number({{ rater.get_tiers()['gold']['1'] | int }}), label: 'Gold', color: '{{ rater.rating_colors["gold"] }}' },
+                            { value: Number({{ rater.get_tiers()['platinum']['1'] | int }}), label: 'Platinum', color: '{{ rater.rating_colors["platinum"] }}' },
+                            { value: Number({{ rater.get_tiers()['diamond']['1'] | int }}), label: 'Diamond', color: '{{ rater.rating_colors["diamond"] }}' },
+                            { value: Number({{ rater.get_tiers()['champion']['1'] | int }}), label: 'Champion', color: '{{ rater.rating_colors["champion"] }}' },
+                            { value: Number({{ rater.get_tiers()['gentry warrior']['1'] | int }}), label: 'Gentry Warrior', color: '{{ rater.rating_colors["gentry warrior"] }}' }
+                        ];
+                        gpMilestones.sort((a, b) => a.value - b.value);
+                        let highlightedGpMilestoneValues = new Set();
+
+                        const gpMilestonePlugin = {
+                            id: 'gpMilestonePlugin',
+                            afterDraw(chart) {
+                                const yScale = chart.scales?.yGP;
+                                const area = chart.chartArea;
+                                if (!yScale || !area) return;
+
+                                const ctx = chart.ctx;
+                                const top = Math.min(yScale.min, yScale.max);
+                                const bottom = Math.max(yScale.min, yScale.max);
+
+                                ctx.save();
+                                ctx.lineWidth = 1;
+                                ctx.setLineDash([6, 4]);
+                                ctx.font = '11px sans-serif';
+                                ctx.textBaseline = 'bottom';
+                                const visibleMilestones = [];
+                                gpMilestones.forEach((m) => {
+                                    if (m.value < top || m.value > bottom) return;
+                                    const y = yScale.getPixelForValue(m.value);
+                                    if (!Number.isFinite(y) || y < area.top || y > area.bottom) return;
+
+                                    const isHighlighted = highlightedGpMilestoneValues.has(m.value);
+                                    const text = `${m.label} (${Number(m.value).toLocaleString()} GP)`;
+                                    const padX = 6;
+                                    const padY = 3;
+                                    const boxH = 16;
+                                    const boxW = ctx.measureText(text).width + padX * 2;
+
+                                    visibleMilestones.push({
+                                        m, y, isHighlighted, text, padX, padY, boxH, boxW,
+                                        alpha: isHighlighted ? 1 : 0.62
+                                    });
+                                });
+
+                                // Draw milestone guide lines first.
+                                visibleMilestones.forEach((item) => {
+                                    ctx.strokeStyle = item.m.color;
+                                    ctx.globalAlpha = item.alpha;
+                                    ctx.lineWidth = item.isHighlighted ? 1.8 : 1;
+                                    ctx.beginPath();
+                                    ctx.moveTo(area.left, item.y);
+                                    ctx.lineTo(area.right, item.y);
+                                    ctx.stroke();
+                                });
+
+                                // Collision-aware label layout.
+                                visibleMilestones.sort((a, b) => a.y - b.y);
+                                const edgePad = 2;
+                                const gap = 3;
+                                let cursorTop = area.top + edgePad;
+                                visibleMilestones.forEach((item) => {
+                                    const desiredTop = item.y - item.boxH - 2;
+                                    item.boxY = Math.max(desiredTop, cursorTop);
+                                    cursorTop = item.boxY + item.boxH + gap;
+                                });
+
+                                let cursorBottom = area.bottom - edgePad;
+                                for (let i = visibleMilestones.length - 1; i >= 0; i--) {
+                                    const item = visibleMilestones[i];
+                                    const maxTop = cursorBottom - item.boxH;
+                                    item.boxY = Math.min(item.boxY, maxTop);
+                                    item.boxY = Math.max(item.boxY, area.top + edgePad);
+                                    cursorBottom = item.boxY - gap;
+                                }
+
+                                // Draw labels and connectors.
+                                visibleMilestones.forEach((item) => {
+                                    const boxX = area.left + 4;
+                                    const labelAnchorY = item.boxY + item.boxH - item.padY - 5;
+
+                                    if (Math.abs(labelAnchorY - item.y) > 2) {
+                                        ctx.strokeStyle = item.m.color;
+                                        ctx.globalAlpha = item.alpha;
+                                        ctx.lineWidth = 1;
+                                        ctx.beginPath();
+                                        ctx.moveTo(boxX + item.boxW + 1, labelAnchorY);
+                                        ctx.lineTo(area.left + 1, item.y);
+                                        ctx.stroke();
+                                    }
+
+                                    ctx.setLineDash([]);
+                                    ctx.globalAlpha = 1;
+                                    ctx.fillStyle = item.isHighlighted ? 'rgba(10,10,10,0.84)' : 'rgba(10,10,10,0.62)';
+                                    ctx.fillRect(boxX, item.boxY, item.boxW, item.boxH);
+                                    ctx.strokeStyle = item.m.color;
+                                    ctx.globalAlpha = item.alpha;
+                                    ctx.strokeRect(boxX, item.boxY, item.boxW, item.boxH);
+                                    ctx.fillStyle = item.m.color;
+                                    ctx.fillText(item.text, boxX + item.padX, item.boxY + item.boxH - item.padY - 1);
+                                    ctx.globalAlpha = 1;
+                                    ctx.setLineDash([6, 4]);
+                                });
+
+                                ctx.restore();
+                            }
+                        };
+
                         const nowUTC = Date.UTC(
                             new Date().getUTCFullYear(),
                             new Date().getUTCMonth(),
@@ -549,6 +661,22 @@
                             if (!data.length) return;
 
                             const { labels, datasets, minGP, maxGP, minRank, maxRank } = buildDataset(data);
+                            const currentGP = Number({{ account.gq_data["ranking"]["weighted"] | int }});
+                            let prevMilestone = null;
+                            let nextMilestone = null;
+                            for (const m of gpMilestones) {
+                                if (m.value <= currentGP) prevMilestone = m;
+                                if (m.value > currentGP) {
+                                    nextMilestone = m;
+                                    break;
+                                }
+                            }
+                            highlightedGpMilestoneValues = new Set(
+                                [prevMilestone?.value, nextMilestone?.value].filter(v => Number.isFinite(v))
+                            );
+                            const highlightedVals = [...highlightedGpMilestoneValues];
+                            const yGpMin = highlightedVals.length ? Math.min(minGP, ...highlightedVals) : minGP;
+                            const yGpMax = highlightedVals.length ? Math.max(maxGP, ...highlightedVals) : maxGP;
 
                             const ctx = canvas.getContext('2d');
 
@@ -558,6 +686,7 @@
 
                             gqChart = new Chart(ctx, {
                                 type: 'line',
+                                plugins: [gpMilestonePlugin],
                                 data: {
                                     labels,
                                     datasets
@@ -606,13 +735,13 @@
                                             ticks: {
                                                 color: 'rgba(255,255,255,0.7)',
                                                 callback: (v) => v.toLocaleString(),
-                                                maxTicksLimit: 5
+                                                maxTicksLimit: 10
                                             },
                                             grid: {
                                                 color: '#2b2b2b'
                                             },
-                                            suggestedMin: minGP,
-                                            suggestedMax: maxGP
+                                            suggestedMin: yGpMin,
+                                            suggestedMax: yGpMax
                                         },
                                         yRank: {
                                             position: 'right',
@@ -620,7 +749,7 @@
                                             ticks: {
                                                 color: '#ffae00',
                                                 callback: (v) => `#${Number(v).toLocaleString()}`,
-                                                maxTicksLimit: 5
+                                                maxTicksLimit: 10
                                             },
                                             grid: {
                                                 drawOnChartArea: false
