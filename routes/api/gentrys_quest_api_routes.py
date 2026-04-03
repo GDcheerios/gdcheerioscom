@@ -233,8 +233,8 @@ def top_players():
 @require_scopes(["leaderboard:read"])
 def get_leaderboard(id: int):
     amount = int(request.args.get('amount', 0))
-    standings = leaderboard_api.get_leaderboard(id, amount)
-    standings.append()
+    user_id: str | None = request.args.get('user_id', None)
+    standings = leaderboard_api.get_leaderboard(id, amount, user_id)
     return standings
 
 
