@@ -12,25 +12,41 @@ def get_top_players(start: int = 0, amount: int = 50, online: bool = False):
     :return: Player leaderboard data.
     """
     query = f"""
-                SELECT gq_rankings.id, accounts.username,
-                gq_rankings.weighted, gq_rankings.rank, gq_rankings.tier
-                FROM gq_rankings
-                INNER JOIN accounts ON gq_rankings.id = accounts.id
-                INNER JOIN gq_data d ON gq_rankings.id = d.id
-                WHERE accounts.status NOT IN ('restricted', 'test') {f"AND accounts.status = 'gq_online'" if online else ""}
-                ORDER BY weighted desc
-                LIMIT %s OFFSET %s;
-            """
+        WITH ranked AS (
+            SELECT
+                r.id,
+                a.username,
+                r.weighted,
+                COALESCE((
+                    SELECT COALESCE(SUM(s.score), 0)
+                    FROM gq_scores s
+                    WHERE s."user" = r.id
+                ), 0) AS score,
+                r.rank,
+                r.tier,
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                        r.weighted DESC,
+                        COALESCE((
+                            SELECT COALESCE(SUM(s.score), 0)
+                            FROM gq_scores s
+                            WHERE s."user" = r.id
+                        ), 0) DESC,
+                        r.id ASC
+                ) AS placement
+            FROM gq_rankings r
+            INNER JOIN accounts a ON r.id = a.id
+            INNER JOIN gq_data d ON r.id = d.id
+            WHERE a.status NOT IN ('restricted', 'test')
+              {f"AND a.status = 'gq_online'" if online else ""}
+        )
+        SELECT id, username, weighted, score, rank, tier, placement
+        FROM ranked
+        ORDER BY placement
+        LIMIT %s OFFSET %s;
+    """
 
-    players = database.fetch_all_to_dict(query, params=(amount, start))
-
-    if players is not None:
-        placement = start + 1
-        for player in players:
-            player["placement"] = placement
-            placement += 1
-
-    return players
+    return database.fetch_all_to_dict(query, params=(amount, start))
 
 
 def get_leaderboard(id, amount: int = 0, user_id: int | None = None):
