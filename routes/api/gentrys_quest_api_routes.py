@@ -228,9 +228,9 @@ def depart(id: str):
 @gentrys_quest_api_blueprint.route("/gq/get-top-players", methods=["GET"])
 @require_scopes(["leaderboard:read"])
 def top_players():
-    start = request.args.get("start", 0)
-    amount = request.args.get("amount", 10)
-    online = request.args.get("online")
+    start = request.args.get("start", 0, type=int)
+    amount = request.args.get("amount", 10, type=int)
+    online = request.args.get("online", "false")
     return leaderboard_api.get_top_players(start=start, amount=amount, online=online == "true")
 
 
