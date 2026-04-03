@@ -184,6 +184,12 @@ def remove_item(id: int):
     return ranking
 
 
+@gentrys_quest_api_blueprint.get("/gq/get-ranking/<id>")
+@require_scopes(["account:read"])
+def get_ranking(id: int):
+    return user_api.get_ranking(id)
+
+
 @gentrys_quest_api_blueprint.post("/gq/visit/")
 @require_scopes(["account:write"])
 def visit():
