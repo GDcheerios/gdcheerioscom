@@ -166,11 +166,13 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
 
 
 def get_score(id: int):
-    return environment.database.fetch_one("SELECT SUM(score) FROM gq_scores where \"user\" = %s", params=(id,))[0]
+    result = environment.database.fetch_one("SELECT SUM(score) FROM gq_scores where \"user\" = %s", params=(id,))[0]
+    return result if result is not None else 0
 
 
 def get_money(id: int):
-    return environment.database.fetch_one("SELECT money FROM gq_data WHERE id = %s", params=(id,))[0]
+    result = environment.database.fetch_one("SELECT money FROM gq_data WHERE id = %s", params=(id,))[0]
+    return result if result is not None else 0
 
 
 def get_ranking(id: int):
