@@ -75,7 +75,7 @@ def gq_create():
     check = environment.database.fetch_one("SELECT id FROM gq_data WHERE id = %s", params=(target_id,))
     if check is None:
         environment.database.execute(
-            "INSERT INTO gq_data (id, money, score) VALUES (%s, 0, 0)",
+            "INSERT INTO gq_data (id, money) VALUES (%s, 0)",
             params=(target_id,)
         )
         return "Success", 200
@@ -223,8 +223,8 @@ def depart():
 @gentrys_quest_api_blueprint.route("/gq/get-top-players", methods=["GET"])
 @require_scopes(["leaderboard:read"])
 def top_players():
-    start = request.args.get("start")
-    amount = request.args.get("amount")
+    start = request.args.get("start", 0)
+    amount = request.args.get("amount", 10)
     online = request.args.get("online")
     return leaderboard_api.get_top_players(start=start, amount=amount, online=online == "true")
 
@@ -233,7 +233,21 @@ def top_players():
 @require_scopes(["leaderboard:read"])
 def get_leaderboard(id: int):
     amount = int(request.args.get('amount', 0))
-    return leaderboard_api.get_leaderboard(id, amount)
+    standings = leaderboard_api.get_leaderboard(id, amount)
+    standings.append()
+    return standings
+
+
+@gentrys_quest_api_blueprint.get("/gq/get-leaderboard-placement/<int:id>")
+@require_scopes(["leaderboard:read"])
+def get_placement(id: int):
+    user_id = request.args.get(
+        "user",
+        Account.id_from_session(request.cookies.get('session'))
+    )
+
+    result = leaderboard_api.get_placement(id, user_id)
+    return result if result else {"error": 404, "message": "No user placement found"}
 
 
 @gentrys_quest_api_blueprint.route("/gq/submit-leaderboard", methods=["POST"])

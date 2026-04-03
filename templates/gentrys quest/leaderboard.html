@@ -9,26 +9,57 @@
   <body style="background-color: black;">
     {% include 'navbar.html' %}
     {% block body %}
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <h1 style="font-size: 300%;">Gentry's Quest Leaderboard</h1>
-    	  	{% for player in players %}
-                <div class="score-card"
-                     {% if player["you"] %}style="border: 3px solid {{ rater.rating_colors[player["rank"]] }}; box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);"{% endif %}>
-                    <div class="rank-badge" style="background-color: {{ rater.rating_colors[player["rank"]] }};">
-                        #{{ player["placement"] }}
-                    </div>
-                    <div class="score-details">
-                        <div class="player-name">
-                            {{ player["username"] }}{% if player["you"] %}
-                                <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(You)</span>{% endif %}
+        <h1 style="text-align: center; font-size: 300%;">Gentry's Quest Leaderboard</h1>
+        <div style="display: flex; justify-content: space-evenly; flex-direction: row;">
+            <div style="display: flex; flex-direction: column;">
+                <h2 style="margin-top: 30px;">Player Rankings</h2>
+                {% for player in players %}
+                    <div class="score-card"
+                         {% if player["you"] %}style="border: 3px solid {{ rater.rating_colors[player["rank"]] }}; box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);"{% endif %}>
+                        <div class="rank-badge" style="background-color: {{ rater.rating_colors[player["rank"]] }};">
+                            #{{ player["placement"] }}
                         </div>
-                        <div class="player-score">
-                            {{ "{:,}".format(player["weighted"]|int) }} GP
+                        <div class="score-details">
+                            <div class="player-name">
+                                {{ player["username"] }}
+                                {% if player["you"] %}
+                                    <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(you)</span>
+                                {% endif %}
+                            </div>
+                            <div class="player-score">
+                                {{ "{:,}".format(player["weighted"]|int) }} GP
+                            </div>
                         </div>
                     </div>
-                </div>
-    	  	{% endfor %}
+                {% endfor %}
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <h2 style="margin-top: 40px;">Event Leaderboard</h2>
+                {% if event_leaderboard and event_leaderboard["leaderboard"] %}
+                    {% for player in event_leaderboard["leaderboard"] %}
+                        <div class="score-card"
+                             {% if player["you"] %}style="border: 3px solid {{ rater.rating_colors[player["rank"]] }}; box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);"{% endif %}>
+                            <div class="rank-badge" style="background-color: {{ rater.rating_colors[player["rank"]] }};">
+                                #{{ player["placement"] }}
+                            </div>
+                            <div class="score-details">
+                                <div class="player-name">
+                                    {{ player["username"] }}
+                                    {% if player["you"] %}
+                                        <span style="color: {{ rater.rating_colors[player["rank"]] }}; font-weight: bold;">(you)</span>
+                                    {% endif %}
+                                </div>
+                                <div class="player-score">
+                                    {{ "{:,}".format(player["score"]|int) }} Score
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: white;">No event leaderboard entries found.</p>
+                {% endif %}
+            </div>
         </div>
-  	{% endblock %}
+    {% endblock %}
   </body>
 </html>
