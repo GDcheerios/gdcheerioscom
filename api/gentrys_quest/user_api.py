@@ -165,9 +165,12 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
     return result
 
 
-def get_score(id: int):
-    result = environment.database.fetch_one("SELECT SUM(score) FROM gq_scores where \"user\" = %s", params=(id,))[0]
-    return result if result is not None else 0
+def get_score(id: int) -> int:
+    result = database.fetch_one(
+        'SELECT COALESCE(SUM(score), 0) FROM gq_scores WHERE "user" = %s',
+        params=(id,)
+    )[0]
+    return int(result)
 
 
 def get_money(id: int):
