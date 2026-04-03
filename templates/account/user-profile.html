@@ -81,15 +81,27 @@
             "title": "{{ account.status }}",
             "type": "{{ account.status }}"
         }
+        const supporterExpiresAt = {{ (account.supporter_lasts.isoformat() if account.supporter_lasts else none) | tojson }};
+
+        function buildSupporterTitle() {
+            if (!supporterExpiresAt) return "Supporter";
+
+            const expiresAt = new Date(supporterExpiresAt);
+            if (Number.isNaN(expiresAt.getTime())) return "Supporter";
+
+            const msLeft = expiresAt.getTime() - Date.now();
+            if (msLeft <= 0) return "Supporter";
+
+            const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+            return `Supporter (${daysLeft}d)`;
+        }
 
         const supporterTag = {
             "account": {{ account.id }},
             "id": 1,
-            "title": "Supporter",
+            "title": buildSupporterTitle(),
             "type": "supporter"
         }
-
-
         const sortedTags = tags.sort((a, b) => {
             const priorityA = typePriority[a.type] || 100;
             const priorityB = typePriority[b.type] || 100;
