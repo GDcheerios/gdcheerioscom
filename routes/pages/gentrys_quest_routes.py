@@ -51,7 +51,7 @@ def gentrys_quest_leaderboard():
         for player in players:
             player["you"] = False
 
-    event_leaderboard = get_leaderboard(3, amount=5, user_id=user_id)
+    event_leaderboard = get_leaderboard(4, amount=5, user_id=user_id)
     if event_leaderboard:
         event_rows = event_leaderboard.get("leaderboard") or []
         found_you = False
@@ -93,8 +93,8 @@ def gentrys_quest_levels(): return render_template(
 
 @gentrys_quest_blueprint.route("/ranking")
 def gentrys_quest_ranking():
-    global user_ranking
     user_id = Account.id_from_session(request.cookies.get("session"))
+    user_ranking = None
     if user_id:
         user_ranking = Account(user_id).gq_data["ranking"]
     return render_template("gentrys quest/ranking.html", user_ranking=user_ranking)
