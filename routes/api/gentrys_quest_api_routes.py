@@ -209,12 +209,11 @@ def visit():
 
 @gentrys_quest_api_blueprint.post("/gq/depart/<id>")
 @require_scopes(["account:write"])
-def depart():
-    id = request.view_args.get("id")
+def depart(id: str):
     environment.database.fetch_to_dict(
         """
         UPDATE gq_visitations
-        SET departure = NOW()
+        SET departed = NOW()
         WHERE id = %s
         """,
         params=(id,)
