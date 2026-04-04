@@ -9,49 +9,17 @@
     <body>
         {% include 'navbar.html' %}
         {% block body %}
-        <h1 class="block" style="font-size: 350%;">Gentry's Quest</h1>
-        <div style="display: flex; flex-direction: row; justify-content: space-evenly; text-align: center;">
-            <div id="top-players">
-                <h1>Top Players</h1>
-                {% set count = namespace(value=1) %}
-                {% for player in get_top_players(amount=5) %}
-                    <div class="score-card">
-                        <div class="rank-badge" style="background-color: {{ rater.rating_colors[player.rank] }};">
-                            <span>{{ count.value }}</span>
-                        </div>
-                        <div class="score-details">
-                            <div class="player-name">
-                                {{ player.username }}
-                            </div>
-                            <div class="player-score">
-                                {{ "{:,}".format(player.weighted|int) }} GP
-                            </div>
-                        </div>
-                    </div>
-                {% set count.value = count.value + 1 %}
-                {% endfor %}
-            </div>
-            <div id="event-leaderboard">
-                <h1>Event Leaderboard</h1>
-                {% set count = namespace(value=1) %}
-                {% for player in get_leaderboard(id=4, amount=5) %}
-                    <div class="score-card">
-                        <div class="rank-badge" style="background-color: {{ rater.rating_colors[player.rank] }};">
-                            <span>{{ count.value }}</span>
-                        </div>
-                        <div class="score-details">
-                            <div class="player-name">
-                                {{ player.username }}
-                            </div>
-                            <div class="player-score">
-                                {{ "{:,}".format(player.score|int) }} score
-                            </div>
-                        </div>
-                    </div>
-                {% set count.value = count.value + 1 %}
-                {% endfor %}
-            </div>
-        </div>
+        <section class="block" style="display: grid; gap: 16px; justify-items: center; text-align: center; max-width: 700px; margin: 0 auto;">
+            <h1 style="font-size: 350%; margin: 0;">Gentry's Quest</h1>
+            <p class="muted" style="margin: 0;">Download the latest Windows installer below.</p>
+            <a
+                href="https://github.com/gdcheerios/GentrysQuest/releases/latest/download/GentrysQuest-win-Setup.exe"
+                class="button"
+                style="padding: 12px 24px; font-size: 16px; font-weight: bold; background: #2b2b2b; color: white; text-decoration: none; border-radius: 8px; display: inline-block; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #3a3a3a;"
+            >
+                Download for Windows
+            </a>
+        </section>
         {% endblock %}
     </body>
 </html>
