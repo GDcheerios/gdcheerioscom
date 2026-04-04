@@ -9,6 +9,8 @@ logger = setup_logger("api.key")
 
 JWT_SECRET = environment.secret
 JWT_TTL = 3600
+EXPIRED_KEY_CLEANUP_INTERVAL_SECONDS = 300
+_last_expired_key_cleanup_at = 0.0
 
 
 # region Helpers
@@ -135,6 +137,44 @@ def issue_access_token(user_id: int | str) -> str:
     return sign_jwt(payload)
 
 
+def cleanup_expired_api_keys(force: bool = False) -> int:
+    """
+    Deletes expired API keys from storage.
+
+    The cleanup runs at most once per interval unless `force=True`.
+    """
+    global _last_expired_key_cleanup_at
+
+    now_ts = time.time()
+    if not force and (now_ts - _last_expired_key_cleanup_at) < EXPIRED_KEY_CLEANUP_INTERVAL_SECONDS:
+        return 0
+
+    _last_expired_key_cleanup_at = now_ts
+
+    try:
+        deleted_count = environment.database.fetch_one(
+            """
+            WITH deleted AS (
+                DELETE
+                FROM api_keys
+                WHERE expires_at IS NOT NULL
+                  AND expires_at < now()
+                RETURNING 1
+            )
+            SELECT COUNT(*)
+            FROM deleted
+            """
+        )[0]
+    except Exception:
+        logger.exception("[API] Failed to cleanup expired API keys")
+        return 0
+
+    if deleted_count:
+        logger.info("[API] Deleted %s expired API key(s)", deleted_count)
+
+    return int(deleted_count)
+
+
 # endregion
 
 
@@ -176,6 +216,8 @@ def verify_api_key_header():
     Raises:
         None
     """
+    cleanup_expired_api_keys()
+
     combined = _extract_api_key_from_request()
     if not combined:
         return None
@@ -189,7 +231,7 @@ def verify_api_key_header():
         "SELECT user_id, secret_hash, scopes, status, expires_at FROM api_keys WHERE key_id = %s",
         params=(key_id,)
     )
-    
+
     if row is None:
         logger.warning("[API] Invalid key ID")
         return None
