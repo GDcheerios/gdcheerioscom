@@ -262,6 +262,8 @@ class Account:
         )
 
         id = database.fetch_one(query, params)[0]
+        database.execute("INSERT INTO gq_data (id) VALUES (%s)", params=(id,))
+        database.execute("INSERT INTO gq_rankings (user_id) VALUES (%s)", params=(id,))
         return Account(id)
 
     @staticmethod

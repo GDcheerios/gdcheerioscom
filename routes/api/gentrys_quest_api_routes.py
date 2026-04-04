@@ -60,29 +60,6 @@ def get(id: int):
     return Account(id).jsonify()["gq data"]
 
 
-@gentrys_quest_api_blueprint.post("/gq/create/")
-@require_scopes(["account:write"])
-def gq_create():
-    data = request.get_json(silent=True) or {}
-    target_id = data.get("ID")
-    if target_id is None:
-        return jsonify({"error": "missing_ID"}), 400
-
-    denied = _enforce_user_scope(target_id)
-    if denied:
-        return denied
-
-    check = environment.database.fetch_one("SELECT id FROM gq_data WHERE id = %s", params=(target_id,))
-    if check is None:
-        environment.database.execute(
-            "INSERT INTO gq_data (id, money) VALUES (%s, 0)",
-            params=(target_id,)
-        )
-        return "Success", 200
-
-    return "User already exists", 400
-
-
 @gentrys_quest_api_blueprint.post("/gq/add-item/")
 @require_scopes(["account:write"])
 def add_item():
