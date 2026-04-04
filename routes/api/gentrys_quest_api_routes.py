@@ -255,6 +255,180 @@ def get_placement(id: int):
     return result if result else {"error": 404, "message": "No user placement found"}
 
 
+@gentrys_quest_api_blueprint.get("/gq/get-statistics")
+@require_scopes(["leaderboard:read"])
+def get_statistics():
+    leaderboard_id = request.args.get("leaderboard_id", type=int)
+
+    raw_user_id = request.args.get("user_id")
+    if raw_user_id is None:
+        target_user_id = g.get("current_user_id")
+    else:
+        try:
+            target_user_id = int(raw_user_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "invalid_user_id"}), 400
+
+    denied = _enforce_user_scope(target_user_id)
+    if denied:
+        return denied
+
+    score_overview = environment.database.fetch_to_dict(
+        """
+        SELECT COUNT(DISTINCT "user")::bigint  AS total_players,
+               COUNT(*)::bigint                AS total_plays,
+               COALESCE(SUM(score), 0)::bigint AS total_score,
+               AVG(score)::float               AS average_score
+        FROM gq_scores
+        WHERE (%s IS NULL OR leaderboard = %s)
+        """,
+        params=(leaderboard_id, leaderboard_id)
+    ) or {}
+
+    leaderboard_statistics = environment.database.fetch_to_dict(
+        """
+        SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
+               AVG(amount)::float               AS average_amount
+        FROM gq_statistics
+        WHERE (%s IS NULL OR leaderboard = %s)
+        """,
+        params=(leaderboard_id, leaderboard_id)
+    ) or {}
+
+    leaderboard_statistics_by_type = environment.database.fetch_all_to_dict(
+        """
+        SELECT "type",
+               COALESCE(SUM(amount), 0)::bigint AS total_amount,
+               AVG(amount)::float               AS average_amount
+        FROM gq_statistics
+        WHERE (%s IS NULL OR leaderboard = %s)
+        GROUP BY "type"
+        ORDER BY "type"
+        """,
+        params=(leaderboard_id, leaderboard_id)
+    ) or []
+
+    user_score_overview = environment.database.fetch_to_dict(
+        """
+        SELECT COUNT(*)::bigint                 AS total_plays,
+               COALESCE(SUM(score), 0)::bigint AS total_score,
+               AVG(score)::float               AS average_score
+        FROM gq_scores
+        WHERE "user" = %s
+          AND (%s IS NULL OR leaderboard = %s)
+        """,
+        params=(target_user_id, leaderboard_id, leaderboard_id)
+    ) or {}
+
+    user_statistics = environment.database.fetch_to_dict(
+        """
+        SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
+               AVG(amount)::float               AS average_amount
+        FROM gq_statistics
+        WHERE "user" = %s
+          AND (%s IS NULL OR leaderboard = %s)
+        """,
+        params=(target_user_id, leaderboard_id, leaderboard_id)
+    ) or {}
+
+    user_statistics_by_type = environment.database.fetch_all_to_dict(
+        """
+        SELECT "type",
+               COALESCE(SUM(amount), 0)::bigint AS total_amount,
+               AVG(amount)::float               AS average_amount
+        FROM gq_statistics
+        WHERE "user" = %s
+          AND (%s IS NULL OR leaderboard = %s)
+        GROUP BY "type"
+        ORDER BY "type"
+        """,
+        params=(target_user_id, leaderboard_id, leaderboard_id)
+    ) or []
+
+    last_run_row = environment.database.fetch_to_dict(
+        """
+        SELECT visitation, score
+        FROM gq_scores
+        WHERE "user" = %s
+          AND (%s IS NULL OR leaderboard = %s)
+          AND visitation IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        params=(target_user_id, leaderboard_id, leaderboard_id)
+    ) or {}
+
+    last_run = None
+    visitation = last_run_row.get("visitation")
+
+    if visitation:
+        last_run_stats = environment.database.fetch_to_dict(
+            """
+            SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
+                   AVG(amount)::float               AS average_amount
+            FROM gq_statistics
+            WHERE "user" = %s
+              AND visitation = %s
+              AND (%s IS NULL OR leaderboard = %s)
+            """,
+            params=(target_user_id, visitation, leaderboard_id, leaderboard_id)
+        ) or {}
+
+        last_run_stats_by_type = environment.database.fetch_all_to_dict(
+            """
+            SELECT "type",
+                   COALESCE(SUM(amount), 0)::bigint AS total_amount,
+                   AVG(amount)::float               AS average_amount
+            FROM gq_statistics
+            WHERE "user" = %s
+              AND visitation = %s
+              AND (%s IS NULL OR leaderboard = %s)
+            GROUP BY "type"
+            ORDER BY "type"
+            """,
+            params=(target_user_id, visitation, leaderboard_id, leaderboard_id)
+        ) or []
+
+        last_run = {
+            "visitation": visitation,
+            "score": last_run_row.get("score"),
+            "statistics": {
+                "total_amount": last_run_stats.get("total_amount") or 0,
+                "average_amount": last_run_stats.get("average_amount"),
+                "by_type": last_run_stats_by_type,
+            },
+        }
+
+    return {
+        "leaderboard_id": leaderboard_id,
+        "leaderboard": {
+            "total_players": score_overview.get("total_players") or 0,
+            "total_plays": score_overview.get("total_plays") or 0,
+            "total_score": score_overview.get("total_score") or 0,
+            "average_score": score_overview.get("average_score"),
+            "statistics": {
+                "total_amount": leaderboard_statistics.get("total_amount") or 0,
+                "average_amount": leaderboard_statistics.get("average_amount"),
+                "by_type": leaderboard_statistics_by_type,
+            },
+        },
+        "user": {
+            "id": int(target_user_id),
+            "scores": {
+                "total_plays": user_score_overview.get("total_plays") or 0,
+                "total_score": user_score_overview.get("total_score") or 0,
+                "average_score": user_score_overview.get("average_score"),
+            },
+            "statistics": {
+                "total_amount": user_statistics.get("total_amount") or 0,
+                "average_amount": user_statistics.get("average_amount"),
+                "by_type": user_statistics_by_type,
+            },
+            "last_run": last_run,
+        },
+    }
+
+
 @gentrys_quest_api_blueprint.route("/gq/submit-leaderboard", methods=["POST"])
 @require_scopes(["leaderboard:write"])
 def submit_leaderboard():
