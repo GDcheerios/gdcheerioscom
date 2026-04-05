@@ -17,6 +17,22 @@ ALLOWED_SCOPES = {
 
 
 # helpy helper
+def _extract_api_key_from_headers() -> str | None:
+    header_key = request.headers.get("X-API-Key")
+    if header_key:
+        return header_key.strip()
+
+    auth = request.headers.get("Authorization", "").strip()
+    if auth.startswith("ApiKey "):
+        return auth[len("ApiKey "):].strip()
+
+    if auth and " " not in auth:
+        return auth
+
+    return None
+
+
+# helpy helper
 def _get_current_user_id_from_bearer():
     """
     Extracts and verifies a Bearer JWT from the Authorization header.
@@ -146,5 +162,49 @@ def create_key():
         "key_id": key_id,
         "name": name,
         "scopes": scopes,
-        "expires_at": expires_at
+        "expires_at": expires_at,
+        "tokens": issue_api_key_tokens_from_combined_key(combined),
     }), 201
+
+
+@key_blueprint.post("/keys/token")
+def issue_api_key_tokens():
+    """
+    Exchanges an API key for an API access token + refresh token pair.
+    Accepted headers:
+      - X-API-Key: <key_id.secret>
+      - Authorization: ApiKey <key_id.secret>
+    """
+    combined = _extract_api_key_from_headers()
+    if not combined:
+        return jsonify({"error": "missing_api_key"}), 401
+
+    tokens = issue_api_key_tokens_from_combined_key(combined)
+    if not tokens:
+        return jsonify({"error": "unauthorized"}), 401
+
+    return jsonify({
+        "token_type": "Bearer",
+        **tokens
+    }), 200
+
+
+@key_blueprint.post("/keys/refresh")
+def refresh_api_key_token():
+    """
+    Rotates refresh token and issues a new access token for API-key clients.
+    Body (JSON): { "refresh_token": "rtk.<key_id>.<secret>" }
+    """
+    payload = request.get_json(silent=True) or {}
+    refresh_token = payload.get("refresh_token")
+    if not refresh_token:
+        return jsonify({"error": "missing_refresh_token"}), 400
+
+    tokens = refresh_api_key_tokens(refresh_token)
+    if not tokens:
+        return jsonify({"error": "invalid_refresh_token"}), 401
+
+    return jsonify({
+        "token_type": "Bearer",
+        **tokens
+    }), 200
