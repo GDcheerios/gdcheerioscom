@@ -58,7 +58,7 @@ def get_xp(id: int) -> dict | str:
 
 
 def get_placement(user_id: int):
-    return environment.database.fetch_one(
+    row = environment.database.fetch_one(
         """
         SELECT placement
         FROM (
@@ -79,7 +79,8 @@ def get_placement(user_id: int):
         WHERE id = %s
         """,
         params=(user_id,),
-    )[0]
+    )
+    return row[0] if row else None
 
 
 def insert_metrics(id, gp, rank):
@@ -202,8 +203,38 @@ def get_ranking(id: int):
           and d.id = %s
         """, params=(id, id))
 
+    if data is None:
+        environment.database.execute(
+            """
+            INSERT INTO gq_rankings (id)
+            VALUES (%s)
+            ON CONFLICT (id) DO NOTHING
+            """,
+            params=(id,),
+        )
+        data = environment.database.fetch_to_dict(
+            """
+            SELECT *
+            FROM gq_rankings r,
+                 gq_data d
+            WHERE r.id = %s
+              and d.id = %s
+            """,
+            params=(id, id),
+        )
+
+    if data is None:
+        return {
+            "placement": None,
+            "rank": None,
+            "tier": None,
+            "unweighted": 0,
+            "weighted": 0,
+        }
+
     placement = get_placement(id)
-    insert_metrics(id, data["weighted"], placement)
+    if placement is not None:
+        insert_metrics(id, data["weighted"], placement)
 
     return {
         "placement": placement,
