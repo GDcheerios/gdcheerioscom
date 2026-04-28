@@ -73,11 +73,11 @@ def create_app():
     startup_tracker.done("middleware_and_config")
 
     startup_tracker.start("context_processor")
+
     @app.context_processor
     def inject_template_vars():
-        return {
-            "bucket": bucket
-        }
+        return {}
+
     startup_tracker.done("context_processor")
 
     # logging config
@@ -86,6 +86,7 @@ def create_app():
 
     # set up events
     startup_tracker.start("request_hooks")
+
     @app.before_request
     def before_request():
         request_start()
@@ -132,6 +133,7 @@ def create_app():
         if not static: log_request(server_logger, request_payload)
 
         return response
+
     startup_tracker.done("request_hooks")
 
     # load blueprints
