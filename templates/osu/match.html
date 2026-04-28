@@ -1438,11 +1438,13 @@
                     let socket = null;
                     let reconnectTimer = null;
                     let intentionallyClosed = false;
+                    let connectionAttempt = 0;
 
                     const wsStatusEl = document.getElementById("ws-status");
                     const wsStatusTextEl = document.getElementById("ws-status-text");
 
                     const setWsStatus = (state, text) => {
+                        console.log("[ws] status change", { state, text });
                         if (!wsStatusEl || !wsStatusTextEl) return;
                         wsStatusEl.classList.remove(
                             "ws-status--connected",
@@ -1456,6 +1458,7 @@
 
                     const cleanupReconnect = () => {
                         if (reconnectTimer) {
+                            console.log("[ws] clearing reconnect timer");
                             clearTimeout(reconnectTimer);
                             reconnectTimer = null;
                         }
@@ -1463,42 +1466,93 @@
 
                     const openSocket = () => {
                         cleanupReconnect();
+                        connectionAttempt += 1;
+                        console.log("[ws] opening socket", {
+                            url,
+                            matchId,
+                            attempt: connectionAttempt
+                        });
                         setWsStatus("connecting", "connecting");
                         try {
                             socket = new WebSocket(url);
                         } catch (err) {
+                            console.error("[ws] failed to create WebSocket", {
+                                url,
+                                matchId,
+                                attempt: connectionAttempt,
+                                error: err
+                            });
                             setWsStatus("reconnecting", "reconnecting");
+                            console.log("[ws] scheduling reconnect", { delayMs: 2000 });
                             reconnectTimer = setTimeout(openSocket, 2000);
                             return;
                         }
 
-                        socket.onopen = () => {
+                        socket.onopen = (event) => {
+                            console.log("[ws] socket open", {
+                                url,
+                                matchId,
+                                attempt: connectionAttempt,
+                                readyState: socket.readyState,
+                                event
+                            });
                             setWsStatus("connected", "connected");
-                            socket.send(JSON.stringify({
+                            const subscribeMessage = {
                                 type: "subscribe_match",
                                 match_id: matchId
-                            }));
+                            };
+                            console.log("[ws] sending subscribe", subscribeMessage);
+                            socket.send(JSON.stringify(subscribeMessage));
                         };
 
                         socket.onmessage = (event) => {
+                            console.log("[ws] message received", {
+                                bytes: typeof event.data === "string" ? event.data.length : null,
+                                raw: event.data
+                            });
                             try {
                                 const payload = JSON.parse(event.data);
+                                console.log("[ws] message parsed", payload);
                                 if (payload?.type === "osu_user_refreshed") {
                                     applyIncomingUserRefresh(payload);
+                                } else {
+                                    console.log("[ws] message ignored", {
+                                        reason: "unsupported_type",
+                                        type: payload?.type,
+                                        payload
+                                    });
                                 }
-                            } catch (err) {}
+                            } catch (err) {
+                                console.error("[ws] failed to parse message", {
+                                    raw: event.data,
+                                    error: err
+                                });
+                            }
                         };
 
-                        socket.onclose = () => {
+                        socket.onclose = (event) => {
+                            console.warn("[ws] socket closed", {
+                                code: event.code,
+                                reason: event.reason,
+                                wasClean: event.wasClean,
+                                intentionallyClosed,
+                                attempt: connectionAttempt
+                            });
                             if (intentionallyClosed) {
                                 setWsStatus("disconnected", "disconnected");
                                 return;
                             }
                             setWsStatus("reconnecting", "reconnecting");
+                            console.log("[ws] scheduling reconnect", { delayMs: 2000 });
                             reconnectTimer = setTimeout(openSocket, 2000);
                         };
 
-                        socket.onerror = () => {
+                        socket.onerror = (event) => {
+                            console.error("[ws] socket error", {
+                                event,
+                                readyState: socket ? socket.readyState : null,
+                                attempt: connectionAttempt
+                            });
                             setWsStatus("reconnecting", "reconnecting");
                             try { socket.close(); } catch (_) {}
                         };
@@ -1507,6 +1561,10 @@
                     openSocket();
 
                     window.addEventListener("beforeunload", () => {
+                        console.log("[ws] beforeunload closing socket", {
+                            hasSocket: Boolean(socket),
+                            readyState: socket ? socket.readyState : null
+                        });
                         intentionallyClosed = true;
                         cleanupReconnect();
                         if (socket && socket.readyState === WebSocket.OPEN) {
