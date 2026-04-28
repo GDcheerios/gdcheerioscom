@@ -25,8 +25,6 @@ smtp_host = os.environ['SMTP_HOST']
 smtp_email = os.environ['SMTP_EMAIL']
 smtp_password = os.environ['SMTP_PASSWORD']
 
-bucket_path = os.environ['BUCKET_PATH']
-
 db_user = os.environ['DB_USER']
 db_password = os.environ['DB_PASSWORD']
 db_hostname = os.environ['DB_HOSTNAME']

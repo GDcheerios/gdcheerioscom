@@ -71,7 +71,7 @@ class Account:
         load_task.done("fetch account data")
 
         load_task.start("initialize data")
-        self.pfp = "https://storage.cloud.google.com/gdcheerioscombucket/profile-pictures/huh.png"
+        self.pfp = ""
 
         try:
             self.id = result["id"]

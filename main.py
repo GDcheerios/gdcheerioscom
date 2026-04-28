@@ -12,7 +12,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import environment
 
 # util
-from utils import bucket_helper as bucket
 from utils.logger import (
     TaskTracker,
     build_request_payload,

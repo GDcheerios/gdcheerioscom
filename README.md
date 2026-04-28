@@ -6,22 +6,32 @@ https://gdcheerios.com
 make a .env file like this:
 ```txt
 DOMAIN = "http://127.0.0.1"
-PORT = 8080
-SECRET = "MySecret"
-IS_PRODUCTION = 0 OR 1  # TRUE | FALSE
+PORT = 80
+SECRET = "secret"
+IS_PRODUCTION = 0
+WEBSOCKET_URL = "ws://127.0.0.1/ws/"
 
-BUCKET_PATH = "bucket/path"
+# Leave This empty to ignore account verification
+SMTP_HOST = ""
+SMTP_EMAIL = ""
+SMTP_PASSWORD = ""
 
-SMTP_HOST = "smtp.gmail.com"
-SMTP_EMAIL = "no-reply@domain.com"
-SMTP_PASSWORD = "password"
+DB_HOSTNAME = "http://127.0.0.1"
+DB_PASSWORD = "1234"
+DB_USER = "postgres"
+DB = "test"
 
-DB_HOSTNAME = "hostname"
-DB_PASSWORD = "password"
-DB_USER = "user"
-DB = "database"
+# Leave this empty to ignore osu account linking
+OSU_API_KEY = ""
+OSU_SECRET = ""
+CLIENT_ID = 0
 
-OSU_API_KEY = "apikey"
-OSU_SECRET = "secret"
-CLIENT_ID = 1234
+# Leave this empty to ignore payment system
+STRIPE_PUBLIC_KEY = ""
+STRIPE_SECRET_KEY = ""
+STRIPE_WEBHOOK_SECRET = ""
+
+# Leave this empty to ignore google account linking
+GOOGLE_CLIENT = ""
+GOOGLE_SECRET = ""
 ```
