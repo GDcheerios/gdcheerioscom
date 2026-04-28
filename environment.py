@@ -15,7 +15,6 @@ tracker = TaskTracker(env_logger, name="environment_startup")
 tracker.start("Importing environment variables")
 load_dotenv()
 domain = os.environ['DOMAIN']
-port = os.environ['PORT']  # the port
 secret = os.environ['SECRET']
 is_production = int(os.environ['IS_PRODUCTION']) == 1
 debug = not is_production  # debugging?
