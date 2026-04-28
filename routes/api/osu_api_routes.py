@@ -28,7 +28,7 @@ def _json_safe(value):
 
 
 def _notify_osu_user_refreshed(user_data, match_id=None):
-    websocket_url = getattr(environment, "websocket_url", None)
+    websocket_url = getattr(environment, "backend_websocket_url", None)
     if not websocket_url:
         logger.debug("websocket_url is not configured; skipping refresh notification")
         return

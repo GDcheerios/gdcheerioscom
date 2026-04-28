@@ -9,7 +9,8 @@ DOMAIN = "http://127.0.0.1"
 PORT = 80
 SECRET = "secret"
 IS_PRODUCTION = 0
-WEBSOCKET_URL = "ws://127.0.0.1/ws/"
+BACKEND_WEBSOCKET_URL = "ws://127.0.0.1:8765"
+FRONTEND_WEBSOCKET_URL = "ws://127.0.0.1:8765"
 
 # Leave This empty to ignore account verification
 SMTP_HOST = ""

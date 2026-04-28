@@ -65,7 +65,7 @@ def osu_match(id):
         current_osu_id=current_osu_id,
         is_creator=is_creator,
         is_admin=is_admin,
-        websocket_url=environment.websocket_url,
+        websocket_url=environment.frontend_websocket_url,
     )
 
 
