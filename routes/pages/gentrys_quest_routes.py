@@ -23,7 +23,7 @@ def gentrys_quest_home(): return render_template("gentrys quest/home.html")
 
 @gentrys_quest_blueprint.route("/leaderboard")
 def gentrys_quest_leaderboard():
-    players = get_top_players(amount=5)
+    players = get_top_players(amount=10)
     user_id = Account.id_from_session(request.cookies.get("session"))
     if user_id:
         user_id = int(user_id)
@@ -51,7 +51,7 @@ def gentrys_quest_leaderboard():
         for player in players:
             player["you"] = False
 
-    event_leaderboard = get_leaderboard(4, amount=5, user_id=user_id)
+    event_leaderboard = get_leaderboard(5, amount=10, user_id=user_id)
     if event_leaderboard:
         event_rows = event_leaderboard.get("leaderboard") or []
         found_you = False
