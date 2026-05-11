@@ -8,6 +8,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN pip install opentelemetry-distro opentelemetry-exporter-otlp
+RUN opentelemetry-bootstrap -a install
+
 COPY . .
 
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "main:app"]
+CMD ["opentelemetry-instrument", "gunicorn", "-b", "0.0.0.0:8000", "main:app"]
