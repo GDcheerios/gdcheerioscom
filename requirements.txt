@@ -6,5 +6,15 @@ python-dotenv==1.0.1
 stripe==14.1.0
 gunicorn==23.0.0
 websockets==16.0
+
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+opentelemetry-distro
+opentelemetry-instrumentation
+opentelemetry-instrumentation-wsgi
+opentelemetry-instrumentation-dbapi
+opentelemetry-instrumentation-flask
+
 GPSystem @ git+https://github.com/GDcheerios/GPSystem.git
 PSQLConnection @ git+https://github.com/GDcheerios/PSQLConnection.git
