@@ -7,7 +7,6 @@ import time
 from flask import Flask, g, request, render_template
 from flask_bcrypt import Bcrypt
 from werkzeug.middleware.proxy_fix import ProxyFix
-from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
 # environment
 import environment
@@ -66,7 +65,6 @@ def create_app():
         static_folder='static',  # Name of directory for static files
     )
     startup_tracker.done("app_creation")
-    FlaskInstrumentor().instrument_app(app)
 
     startup_tracker.start("middleware_and_config")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
