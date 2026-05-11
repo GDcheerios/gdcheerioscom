@@ -2,6 +2,10 @@
 import logging
 import os
 import time
+from opentelemetry import _logs
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 
 # flask packages
 from flask import Flask, g, request, render_template
@@ -39,7 +43,13 @@ from routes.pages.osu_routes import osu_blueprint
 from api.key_api import verify_api_key_header
 from objects import Account
 
+logger_provider = LoggerProvider()
+_logs.set_logger_provider(logger_provider)
+otel_log_exporter = OTLPLogExporter(endpoint="http://status:4318/v1/logs")
+logger_provider.add_log_record_processor(BatchLogRecordProcessor(otel_log_exporter))
+otel_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
 server_logger = setup_logger("main")
+server_logger.addHandler(otel_handler)
 startup_tracker = TaskTracker(server_logger, name="flask_server_startup")
 
 

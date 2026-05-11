@@ -13,4 +13,4 @@ RUN opentelemetry-bootstrap -a install
 
 COPY . .
 
-CMD ["opentelemetry-instrument", "gunicorn", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "debug", "-b", "0.0.0.0:8000", "main:app"]
+CMD ["opentelemetry-instrument", "gunicorn", "-b", "0.0.0.0:8000", "main:app"]
