@@ -1,6 +1,8 @@
 import hashlib
 import json
 from datetime import datetime, timedelta
+from unittest import result
+
 from flask import Blueprint, request, redirect, make_response, render_template, Response
 
 import environment
@@ -47,16 +49,21 @@ def create_account() -> Response:
     osu_id = request.form.get("osu_id")
     google_info = request.form.get("google_info")
 
-    result = Account.queue(
-        username=username,
-        password=password,
-        email=email,
-        about=about_me,
-        supporter_id=supporter_id,
-        osu_id=osu_id,
-        google_info=google_info
-    )
-    return redirect(f"/account/create?msg={result['message']}")
+    if environment.email_verification:
+        result = Account.queue(
+            username=username,
+            password=password,
+            email=email,
+            about=about_me,
+            supporter_id=supporter_id,
+            osu_id=osu_id,
+            google_info=google_info
+        )
+        return redirect(f"/account/create?msg={result['message']}")
+    else:
+        result = Account.create(username, password, email, about_me)
+        return redirect(f"/account/{result.id}")
+
 
 
 @account_api_blueprint.post('/account/login-form')

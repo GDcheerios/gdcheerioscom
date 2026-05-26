@@ -9,7 +9,9 @@
         <ul class="dropdown-content">
           <li><a href="/">Home</a></li>
           <li><a href="/about">About Me</a></li>
-            <li><a href="/supporter">Support</a></li>
+            {% if stripe %}
+                <li><a href="/supporter">Support</a></li>
+            {% endif %}
             <li><a target="_blank" href="/status">Status</a></li>
             <li><a href="https://github.com/GDcheeriosYT/website-project" target="_blank">GitHub</a></li>
         </ul>
@@ -26,10 +28,11 @@
 <!--      <li><a href="/osu">Osu</a></li>-->
 
       <!-- Osu dropdown -->
-      <li class="dropdown">
-        <a href="/osu">Osu</a>
-        <ul class="dropdown-content">
-        </ul>
+      {% if osu %}
+        <li class="dropdown">
+          <a href="/osu">Osu</a>
+        </li>
+      {% endif %}
       
       <li><a href="/search">Search</a></li>
 

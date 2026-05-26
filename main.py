@@ -86,7 +86,13 @@ def create_app():
 
     @app.context_processor
     def inject_template_vars():
-        return {}
+        return {
+            'email_verification': environment.email_verification,
+            'osu': environment.osu,
+            'stripe': environment.stripe,
+            'google': environment.google,
+            'debug': environment.debug,
+        }
 
     startup_tracker.done("context_processor")
 
@@ -120,20 +126,6 @@ def create_app():
 
             ip_address = request.remote_addr
             success = 200 <= response.status_code < 500
-
-            environment.database.execute(
-                """
-                INSERT INTO requests (endpoint, duration, \"user\", ip, successful)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                params=(
-                    g.req_endpoint,
-                    g.req_duration,
-                    user_id,
-                    ip_address,
-                    success
-                )
-            )
 
         request_payload = build_request_payload(
             response_status=response.status_code,
