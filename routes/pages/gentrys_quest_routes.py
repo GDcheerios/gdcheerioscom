@@ -51,7 +51,7 @@ def gentrys_quest_leaderboard():
         for player in players:
             player["you"] = False
 
-    event_leaderboard = get_leaderboard(5, amount=10, user_id=user_id)
+    event_leaderboard = get_leaderboard(6, amount=10, user_id=user_id)
     if event_leaderboard:
         event_rows = event_leaderboard.get("leaderboard") or []
         found_you = False
