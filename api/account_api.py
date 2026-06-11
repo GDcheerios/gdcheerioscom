@@ -38,4 +38,4 @@ def login(username, password) -> tuple[dict, int]:
 
 
 def get_account_count() -> int:
-    return environment.database.fetch_one("SELECT COUNT(*) FROM accounts")[0]
+    return environment.database.fetch_one("SELECT COUNT(*) FROM account.users")[0]

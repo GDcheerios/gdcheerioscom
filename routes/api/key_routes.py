@@ -137,7 +137,7 @@ def create_key():
         logging.debug("[keys] Inserting key (user_id present: %s, key_id length: %s, expires_at set: %s)",
                       bool(user_id), len(key_id), bool(expires_at))
         db.execute("""
-                   INSERT INTO api_keys (user_id, key_id, secret_hash, name, scopes, created_by_ip, expires_at, status,
+                   INSERT INTO api.keys (user_id, key_id, secret_hash, name, scopes, created_by_ip, expires_at, status,
                                          created_at)
                    VALUES (%s, %s, %s, %s, %s::jsonb, %s,
                            CASE WHEN %s IS NULL THEN NULL ELSE %s::timestamptz END,

@@ -19,7 +19,7 @@ def osu():
 
 @osu_blueprint.route("/match/<id>")
 def osu_match(id):
-    match = environment.database.fetch_to_dict("SELECT * FROM osu_matches WHERE id = %s", params=(id,))
+    match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
     players = environment.database.fetch_all_to_dict(
         """
         SELECT

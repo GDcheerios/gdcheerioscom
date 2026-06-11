@@ -128,7 +128,7 @@ now = dt.datetime.now(tz=dt.timezone.utc)
 Database.execute(
     """
     DELETE
-    FROM api_keys
+    FROM api.keys
     WHERE expires_at < %s
       AND expires_at IS NOT NULL
     """,

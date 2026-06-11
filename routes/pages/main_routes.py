@@ -27,7 +27,7 @@ def search_results():
         return redirect("/search")
 
     users_result = Account.search(query)
-    osu_result = environment.database.fetch_all_to_dict("select * from osu_matches where name ilike %s limit 5",
+    osu_result = environment.database.fetch_all_to_dict("select * from osu.matches where name ilike %s limit 5",
                                                         params=(f"%{query}%",))
     return {
         "users": users_result,
@@ -42,7 +42,7 @@ def supporter(): return render_template("supporter.html", logged_in=request.cook
 @main_blueprint.route("/supporter/claim/<id>")
 def supporter_claim(id):
     session_id = request.cookies.get("session")
-    support_data = database.fetch_to_dict("SELECT * FROM supports WHERE id = %s", (id,))
+    support_data = database.fetch_to_dict("SELECT * FROM account.supports WHERE id = %s", (id,))
     if not support_data: return "Invalid supporter ID"
     if support_data["user"] is not None: return "Supporter has already been claimed"
 
