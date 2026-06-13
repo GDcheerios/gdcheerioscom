@@ -216,21 +216,21 @@ class Account:
 
     @staticmethod
     def from_session(session):
-        id = database.fetch_one("SELECT \"user\" FROM account.sessions WHERE id = %s", params=(session,))
+        id = database.fetch_one("SELECT user_id FROM account.sessions WHERE id = %s", params=(session,))
         if id:
             return Account(id[0])
         return None
 
     @staticmethod
     def id_from_session(session):
-        id = database.fetch_one("SELECT \"user\" FROM account.sessions WHERE id = %s", params=(session,))
+        id = database.fetch_one("SELECT user_id FROM account.sessions WHERE id = %s", params=(session,))
         if id:
             return id[0]
         return None
 
     @staticmethod
     def create_session(id: int):
-        session_id = database.fetch_one("INSERT INTO account.sessions (\"user\") VALUES (%s) RETURNING id", params=(id,))
+        session_id = database.fetch_one("INSERT INTO account.sessions (user_id) VALUES (%s) RETURNING id", params=(id,))
         return session_id[0]
 
     @staticmethod
