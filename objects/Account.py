@@ -63,7 +63,7 @@ class Account:
                     FROM gq.profile
                     WHERE gq.data.id = accounts.id
                 ) AS has_gq
-            FROM account.user 
+            FROM account.users
             WHERE {from_query_string}
             """,
             params=(identifier,)

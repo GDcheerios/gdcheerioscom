@@ -161,7 +161,7 @@ def send_reset_email():
     email = request.json["email"]
     if not Account.email_exists(email): return Response(status=404)
 
-    id = environment.database.fetch_one("select id from account.user where email = %s", params=(email,))
+    id = environment.database.fetch_one("select id from account.users where email = %s", params=(email,))
     code = \
     environment.database.fetch_one("insert into account.password_resets (\"user\") values (%s) returning id", params=(id,))[0]
     EmailManager.send_reset_password_email(email, code)

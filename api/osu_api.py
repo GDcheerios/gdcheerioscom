@@ -217,7 +217,7 @@ def get_matches():
                started,
                opener,
                (select username
-                from account.user
+                from account.users
                 where id = opener)            as creator,
                (select count(*)
                 from osu.match_users

@@ -34,7 +34,7 @@ def get_top_players(start: int = 0, amount: int = 50):
                         r.id ASC
                 ) AS placement
             FROM gq.rankings r
-            INNER JOIN account.user a ON r.id = a.id
+            INNER JOIN account.users a ON r.id = a.id
             INNER JOIN gq.profiles d ON r.id = d.id
             WHERE a.status NOT IN ('restricted', 'test')
         )
@@ -66,7 +66,7 @@ def get_leaderboard(id, amount: int = 0, user_id: int | None = None):
                gr.rank       AS rank,
                gr.tier       AS tier
         FROM gq.scores gs
-                 LEFT JOIN account.user a ON a.id = gs."user"
+                 LEFT JOIN account.users a ON a.id = gs."user"
                  LEFT JOIN gq.rankings gr ON gr.id = gs."user"
         WHERE gs.leaderboard = %s
         GROUP BY gs."user", a.username, gr.weighted, gr.rank, gr.tier
@@ -129,7 +129,7 @@ def get_placement(leaderboard_id: int, user: int):
                       AND s2.score > MAX(gs.score)
                 ) AS placement
             FROM gq.scores gs
-            LEFT JOIN account.user a ON a.id = gs."user"
+            LEFT JOIN account.users a ON a.id = gs."user"
             LEFT JOIN gq.rankings gr ON gr.id = gs."user"
             WHERE gs.leaderboard = %s
               AND gs."user" = %s
@@ -151,7 +151,7 @@ def get_placement(leaderboard_id: int, user: int):
                     WHERE r2.weighted > gr.weighted
                 ) AS placement
             FROM gq.rankings gr
-            LEFT JOIN account.user a ON a.id = gr.id
+            LEFT JOIN account.users a ON a.id = gr.id
             WHERE gr.id = %s
             LIMIT 1
         """

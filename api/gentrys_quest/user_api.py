@@ -9,12 +9,12 @@ logger = setup_logger("api.gentrys_quest.user")
 
 
 def check_in(id: int):
-    database.execute("UPDATE account.user SET status = 'gq_online' WHERE id = %s", params=(id,))
+    database.execute("UPDATE account.users SET status = 'gq_online' WHERE id = %s", params=(id,))
     return True
 
 
 def check_out(id: int):
-    database.execute("UPDATE account.user SET status = 'offline' WHERE id = %s", params=(id,))
+    database.execute("UPDATE account.users SET status = 'offline' WHERE id = %s", params=(id,))
     return True
 
 
