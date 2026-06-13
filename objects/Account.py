@@ -60,7 +60,7 @@ class Account:
                 is_admin,
                 EXISTS (
                     SELECT 1
-                    FROM gq.profile
+                    FROM gq.profiles
                     WHERE gq.data.id = accounts.id
                 ) AS has_gq
             FROM account.users
