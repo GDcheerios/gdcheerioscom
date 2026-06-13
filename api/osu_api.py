@@ -215,10 +215,10 @@ def get_matches():
                pinned,
                ended,
                started,
-               opener,
+               opener_id,
                (select username
                 from account.users
-                where id = opener)            as creator,
+                where id = opener_id)            as creator,
                (select count(*)
                 from osu.match_users
                 where match = osu.matches.id) as users

@@ -23,7 +23,7 @@ def osu_match(id):
     players = environment.database.fetch_all_to_dict(
         """
         SELECT
-            omu.match,
+            omu.match_id,
             omu."user",
             omu.starting_score,
             omu.starting_playcount,
@@ -43,13 +43,13 @@ def osu_match(id):
             ou.last_refresh AS last_refresh
         FROM public.osu_match_users omu
         LEFT JOIN public.osu_users ou ON omu."user" = ou.id
-        WHERE omu.match = %s
+        WHERE omu.match_id = %s
         """,
         params=(id,)
     )
     current_osu_id = None
     request_id = Account.id_from_session(request.cookies.get('session'))
-    is_creator = str(request_id) == str(match["opener"])
+    is_creator = str(request_id) == str(match["opener_id"])
     is_admin = False
     if request_id:
         account = Account(request_id)

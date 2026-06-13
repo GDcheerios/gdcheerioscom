@@ -47,24 +47,24 @@ class Account:
         result = database.fetch_to_dict(
             f"""
             SELECT 
-                id,
-                username,
-                password,
-                email,
-                about,
-                status,
-                created,
-                is_supporter,
-                last_support,
-                supporter_lasts,
-                is_admin,
+                u.id,
+                u.username,
+                u.password,
+                u.email,
+                u.about,
+                u.status,
+                u.created,
+                u.is_supporter,
+                u.last_support,
+                u.supporter_lasts,
+                u.is_admin,
                 EXISTS (
                     SELECT 1
                     FROM gq.profiles
-                    WHERE gq.data.id = accounts.id
+                    WHERE gq.profiles.account_id = u.id
                 ) AS has_gq
-            FROM account.users
-            WHERE {from_query_string}
+            FROM account.users u
+            WHERE u.{from_query_string}
             """,
             params=(identifier,)
         )
@@ -87,7 +87,7 @@ class Account:
             self.created = result["created"]
             self.last_support = result["last_support"]
             self.supporter_lasts = result["supporter_lasts"]
-            self.tags = database.fetch_all_to_dict("SELECT * FROM account.tags WHERE account = %s",
+            self.tags = database.fetch_all_to_dict("SELECT * FROM account.tags WHERE account_id = %s",
                                                    params=(self.id,)) or []
             self.exists = True
             self.is_admin = result["is_admin"]
@@ -108,11 +108,11 @@ class Account:
             self.osu_matches = database.fetch_all_to_dict(
                 """
                 SELECT id,
-                       name, open, pinned, ended, started, opener, (
-                    SELECT count (*) FROM osu.match_users where match = osu.matches.id
+                       name, open, pinned, ended, started, opener_id, (
+                    SELECT count (*) FROM osu.match_users where match_id = osu.matches.id
                     ) as users
                 FROM osu.matches
-                WHERE opener = %s
+                WHERE opener_id = %s
                 """, params=(self.id,))
             load_task.done_subtask("initialize data", "fetch osu matches")
 
@@ -262,11 +262,7 @@ class Account:
         )
 
         id = database.fetch_one(query, params)[0]
-        database.execute("INSERT INTO gq.data (id) VALUES (%s)", params=(id,))
-        database.execute(
-            "INSERT INTO gq.rankings (id) VALUES (%s) ON CONFLICT (id) DO NOTHING",
-            params=(id,),
-        )
+        database.execute("INSERT INTO gq.profiles (account_id) VALUES (%s)", params=(id,))
         return Account(id)
 
     @staticmethod

@@ -105,8 +105,6 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
     logger.debug("Fetched %s items for user_id=%s", len(user_items), id)
     weighted_rating = 0
     unweighted_rating = 0
-    score = environment.database.fetch_one("SELECT score FROM gq.profiles WHERE id = %s", params=(id,))
-    score = score[0] if score is not None else 0
     if custom_rating is None:
         if user_items:
             unweighted_rating = sum(item["rating"] for item in user_items if item.get("rating") is not None)
