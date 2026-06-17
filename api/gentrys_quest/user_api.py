@@ -19,7 +19,7 @@ def check_out(id: int):
 
 
 def get_items(id: int):
-    items = database.fetch_all_to_dict("SELECT * FROM gq.items WHERE owner = %s", params=(id,))
+    items = database.fetch_all_to_dict("SELECT * FROM gq.items WHERE owner_id = %s", params=(id,))
     return items
 
 
@@ -39,17 +39,17 @@ def get_placement(user_id: int):
     row = environment.database.fetch_one(
         """
         SELECT placement
-        FROM (SELECT r.id,
+        FROM (SELECT p.account_id,
                      ROW_NUMBER() OVER (
                          ORDER BY
-                             r.weighted DESC,
+                             p.weighted DESC,
                              COALESCE((SELECT COALESCE(SUM(s.score), 0)
                                        FROM gq.scores s
-                                       WHERE s."user" = r.id), 0) DESC,
-                             r.id ASC
+                                       WHERE s.user_id = p.account_id), 0) DESC,
+                             p.account_id ASC
                          ) AS placement
-              FROM gq.rankings r) ranked
-        WHERE id = %s
+              FROM gq.profiles p) ranked
+        WHERE account_id = %s
         """,
         params=(user_id,),
     )
@@ -98,7 +98,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
         """
         SELECT type, rating
         FROM gq.items
-        WHERE owner = %s
+        WHERE owner_id = %s
         """,
         params=(id,)
     )
@@ -124,7 +124,7 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
 
     environment.database.fetch_all_to_dict(
         """
-        UPDATE gq.rankings
+        UPDATE gq.profiles
         SET weighted   = %s,
             unweighted = %s,
             rank       = %s,
@@ -153,14 +153,14 @@ def rate_user(id: int, custom_rating: int = None) -> dict:
 
 def get_score(id: int) -> int:
     result = database.fetch_one(
-        'SELECT COALESCE(SUM(score), 0) FROM gq.scores WHERE "user" = %s',
+        'SELECT COALESCE(SUM(score), 0) FROM gq.scores WHERE user_id = %s',
         params=(id,)
     )[0]
     return int(result)
 
 
 def get_money(id: int):
-    result = environment.database.fetch_one("SELECT money FROM gq.profiles WHERE id = %s", params=(id,))[0]
+    result = environment.database.fetch_one("SELECT money FROM gq.profiles WHERE account_id = %s", params=(id,))[0]
     return result if result is not None else 0
 
 
@@ -168,30 +168,26 @@ def get_ranking(id: int):
     data = environment.database.fetch_to_dict(
         """
         SELECT *
-        FROM gq.rankings r,
-             gq.profiles d
-        WHERE r.id = %s
-          and d.id = %s
-        """, params=(id, id))
+        FROM gq.profiles
+        WHERE account_id = %s
+        """, params=(id,))
 
     if data is None:
         environment.database.execute(
             """
-            INSERT INTO gq.rankings (id)
+            INSERT INTO gq.profiles (account_id)
             VALUES (%s)
-            ON CONFLICT (id) DO NOTHING
+            ON CONFLICT (account_id) DO NOTHING
             """,
             params=(id,),
         )
         data = environment.database.fetch_to_dict(
             """
             SELECT *
-            FROM gq.rankings r,
-                 gq.profiles d
-            WHERE r.id = %s
-              and d.id = %s
+            FROM gq.profiles
+            WHERE account_id = %s
             """,
-            params=(id, id),
+            params=(id,),
         )
 
     if data is None:

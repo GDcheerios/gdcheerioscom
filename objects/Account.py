@@ -151,9 +151,9 @@ class Account:
                        score,
                        (SELECT gq.leaderboards.name
                         from gq.leaderboards
-                        where gq.leaderboards.id = gq.scores.leaderboard) as name
+                        where gq.leaderboards.id = gq.scores.leaderboard_id) as name
                 FROM gq.scores
-                WHERE "user" = %s
+                WHERE user_id = %s
                 """,
                 params=(self.id,)
             ) or []
@@ -174,7 +174,7 @@ class Account:
                 SELECT "type",
                        COALESCE(SUM(amount), 0) AS total
                 FROM gq.statistics
-                WHERE "user" = %s
+                WHERE user_id = %s
                 GROUP BY "type"
                 """,
                 params=(self.id,)
@@ -197,7 +197,7 @@ class Account:
                 "items": environment.database.fetch_all_to_dict(
                     """SELECT *
                        FROM gq.items
-                       WHERE owner = %s""",
+                       WHERE owner_id = %s""",
                     params=(self.id,))
             }
 

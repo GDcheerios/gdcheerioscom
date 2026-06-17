@@ -19,7 +19,7 @@ def get_top_players(start: int = 0, amount: int = 50):
                 COALESCE((
                     SELECT COALESCE(SUM(s.score), 0)
                     FROM gq.scores s
-                    WHERE s."user" = r.id
+                    WHERE s.user_id = r.id
                 ), 0) AS score,
                 r.rank,
                 r.tier,
@@ -29,11 +29,11 @@ def get_top_players(start: int = 0, amount: int = 50):
                         COALESCE((
                             SELECT COALESCE(SUM(s.score), 0)
                             FROM gq.scores s
-                            WHERE s."user" = r.id
+                            WHERE s.user_id = r.id
                         ), 0) DESC,
                         r.id ASC
                 ) AS placement
-            FROM gq.rankings r
+            FROM gq.profiles r
             INNER JOIN account.users a ON r.id = a.id
             INNER JOIN gq.profiles d ON r.id = d.id
             WHERE a.status NOT IN ('restricted', 'test')
@@ -60,16 +60,16 @@ def get_leaderboard(id, amount: int = 0, user_id: int | None = None):
     leaderboard_data = database.fetch_all_to_dict(
         """
         SELECT MAX(gs.score) AS hs,
-               gs."user"     AS account_id,
+               gs.user_id     AS account_id,
                a.username    AS username,
                gr.weighted   AS weighted,
                gr.rank       AS rank,
                gr.tier       AS tier
         FROM gq.scores gs
-                 LEFT JOIN account.users a ON a.id = gs."user"
-                 LEFT JOIN gq.rankings gr ON gr.id = gs."user"
+                 LEFT JOIN account.users a ON a.id = gs.user_id
+                 LEFT JOIN gq.profiles gr ON gr.id = gs.user_id
         WHERE gs.leaderboard = %s
-        GROUP BY gs."user", a.username, gr.weighted, gr.rank, gr.tier
+        GROUP BY gs.user_id, a.username, gr.weighted, gr.rank, gr.tier
         ORDER BY hs DESC;
         """,
         params=(id,)
@@ -116,7 +116,7 @@ def get_placement(leaderboard_id: int, user: int):
     if leaderboard_id:
         query = """
             SELECT
-                gs."user" AS id,
+                gs.user_id AS id,
                 a.username AS username,
                 MAX(gs.score) AS score,
                 gr.weighted AS weighted,
@@ -129,11 +129,11 @@ def get_placement(leaderboard_id: int, user: int):
                       AND s2.score > MAX(gs.score)
                 ) AS placement
             FROM gq.scores gs
-            LEFT JOIN account.users a ON a.id = gs."user"
-            LEFT JOIN gq.rankings gr ON gr.id = gs."user"
+            LEFT JOIN account.users a ON a.id = gs.user_id
+            LEFT JOIN gq.profiles gr ON gr.id = gs.user_id
             WHERE gs.leaderboard = %s
-              AND gs."user" = %s
-            GROUP BY gs.leaderboard, gs."user", a.username, gr.weighted, gr.rank, gr.tier
+              AND gs.user_id = %s
+            GROUP BY gs.leaderboard, gs.user_id, a.username, gr.weighted, gr.rank, gr.tier
             LIMIT 1
         """
         params = (leaderboard_id, user)
@@ -147,10 +147,10 @@ def get_placement(leaderboard_id: int, user: int):
                 gr.tier AS tier,
                 (
                     SELECT COUNT(*) + 1
-                    FROM gq.rankings r2
+                    FROM gq.profiles r2
                     WHERE r2.weighted > gr.weighted
                 ) AS placement
-            FROM gq.rankings gr
+            FROM gq.profiles gr
             LEFT JOIN account.users a ON a.id = gr.id
             WHERE gr.id = %s
             LIMIT 1
@@ -174,7 +174,7 @@ def submit_leaderboard(leaderboard_id: int, user: int, score: int, visitation: s
     user = Account(user)
     if database.fetch_one("select online from gq.leaderboards where id = %s", params=(leaderboard_id,))[0]:
         database.execute(
-            "INSERT INTO gq.scores (name, score, leaderboard, \"user\", visitation) values (%s, %s, %s, %s, %s);",
+            "INSERT INTO gq.scores (name, score, leaderboard, user_id, visitation) values (%s, %s, %s, %s, %s);",
             params=(user.username, int(score), int(leaderboard_id), user.id, visitation))
 
     return {

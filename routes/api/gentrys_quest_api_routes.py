@@ -233,7 +233,7 @@ def get_statistics():
 
     score_overview = environment.database.fetch_to_dict(
         """
-        SELECT COUNT(DISTINCT "user")::bigint  AS total_players,
+        SELECT COUNT(DISTINCT user_id)::bigint  AS total_players,
                COUNT(*)::bigint                AS total_plays,
                COALESCE(SUM(score), 0)::bigint AS total_score,
                AVG(score)::float               AS average_score
@@ -272,7 +272,7 @@ def get_statistics():
                COALESCE(SUM(score), 0)::bigint AS total_score,
                AVG(score)::float               AS average_score
         FROM gq.scores
-        WHERE "user" = %s
+        WHERE user_id = %s
           AND (%s IS NULL OR leaderboard = %s)
         """,
         params=(target_user_id, leaderboard_id, leaderboard_id)
@@ -283,7 +283,7 @@ def get_statistics():
         SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
         FROM gq.statistics
-        WHERE "user" = %s
+        WHERE user_id = %s
           AND (%s IS NULL OR leaderboard = %s)
         """,
         params=(target_user_id, leaderboard_id, leaderboard_id)
@@ -295,7 +295,7 @@ def get_statistics():
                COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
         FROM gq.statistics
-        WHERE "user" = %s
+        WHERE user_id = %s
           AND (%s IS NULL OR leaderboard = %s)
         GROUP BY "type"
         ORDER BY "type"
@@ -307,7 +307,7 @@ def get_statistics():
         """
         SELECT visitation, score
         FROM gq.scores
-        WHERE "user" = %s
+        WHERE user_id = %s
           AND (%s IS NULL OR leaderboard = %s)
           AND visitation IS NOT NULL
         ORDER BY id DESC
@@ -325,7 +325,7 @@ def get_statistics():
             SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
                    AVG(amount)::float               AS average_amount
             FROM gq.statistics
-            WHERE "user" = %s
+            WHERE user_id = %s
               AND visitation = %s
               AND (%s IS NULL OR leaderboard = %s)
             """,
@@ -338,7 +338,7 @@ def get_statistics():
                    COALESCE(SUM(amount), 0)::bigint AS total_amount,
                    AVG(amount)::float               AS average_amount
             FROM gq.statistics
-            WHERE "user" = %s
+            WHERE user_id = %s
               AND visitation = %s
               AND (%s IS NULL OR leaderboard = %s)
             GROUP BY "type"

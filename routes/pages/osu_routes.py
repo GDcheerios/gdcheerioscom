@@ -24,7 +24,7 @@ def osu_match(id):
         """
         SELECT
             omu.match_id,
-            omu."user",
+            omu.user_id,
             omu.starting_score,
             omu.starting_playcount,
             omu.ending_score,
@@ -42,7 +42,7 @@ def osu_match(id):
             ou.background AS background,
             ou.last_refresh AS last_refresh
         FROM public.osu_match_users omu
-        LEFT JOIN public.osu_users ou ON omu."user" = ou.id
+        LEFT JOIN public.osu_users ou ON omu.user_id = ou.id
         WHERE omu.match_id = %s
         """,
         params=(id,)
