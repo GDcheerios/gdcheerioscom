@@ -63,8 +63,9 @@ def create_account() -> Response:
         return redirect(f"/account/create?msg={result['message']}")
     else:
         result = Account.create(username, password, email, about_me)
-        return redirect(f"/account/{result.id}")
-
+        resp = make_response(redirect(f"/account/{result.id}"))
+        _set_session_cookie(resp, Account.create_session(result.id))
+        return resp
 
 
 @account_api_blueprint.post('/account/login-form')
