@@ -41,6 +41,7 @@ def create_account() -> Response:
         return redirect("/account/create")
 
     password = request.form.get("pw")
+    password = Account.get_password_hash(str(password))
     email = request.form.get("em")
     about_me = request.form.get("am")
 

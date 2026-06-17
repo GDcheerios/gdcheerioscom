@@ -279,7 +279,6 @@ class Account:
         )
         raw_token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-        password = Account.get_password_hash(str(password))
         pending_id = database.fetch_one(
             """
             INSERT INTO account.pending (username, password, email, about, token)
