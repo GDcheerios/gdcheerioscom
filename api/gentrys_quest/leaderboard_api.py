@@ -13,32 +13,32 @@ def get_top_players(start: int = 0, amount: int = 50):
     query = f"""
         WITH ranked AS (
             SELECT
-                r.id,
-                a.username,
-                r.weighted,
+                profile.account_id,
+                u.username,
+                profile.weighted,
                 COALESCE((
-                    SELECT COALESCE(SUM(s.score), 0)
-                    FROM gq.scores s
-                    WHERE s.user_id = r.id
+                    SELECT COALESCE(SUM(score.score), 0)
+                    FROM gq.scores score
+                    WHERE score.user_id = profile.account_id
                 ), 0) AS score,
-                r.rank,
-                r.tier,
+                profile.rank,
+                profile.tier,
                 ROW_NUMBER() OVER (
                     ORDER BY
-                        r.weighted DESC,
+                        profile.weighted DESC,
                         COALESCE((
                             SELECT COALESCE(SUM(s.score), 0)
                             FROM gq.scores s
-                            WHERE s.user_id = r.id
+                            WHERE s.user_id = profile.account_id
                         ), 0) DESC,
-                        r.id ASC
+                        profile.account_id ASC
                 ) AS placement
-            FROM gq.profiles r
-            INNER JOIN account.users a ON r.id = a.id
-            INNER JOIN gq.profiles d ON r.id = d.id
-            WHERE a.status NOT IN ('restricted', 'test')
+            FROM gq.profiles profile
+            INNER JOIN account.users u ON profile.account_id = u.id
+            INNER JOIN gq.profiles p ON profile.account_id = p.account_id
+            WHERE u.status NOT IN ('restricted', 'test')
         )
-        SELECT id, username, weighted, score, rank, tier, placement
+        SELECT account_id, username, weighted, score, rank, tier, placement
         FROM ranked
         ORDER BY placement
         LIMIT %s OFFSET %s;
@@ -59,17 +59,17 @@ def get_leaderboard(id, amount: int = 0, user_id: int | None = None):
 
     leaderboard_data = database.fetch_all_to_dict(
         """
-        SELECT MAX(gs.score) AS hs,
-               gs.user_id     AS account_id,
-               a.username    AS username,
-               gr.weighted   AS weighted,
-               gr.rank       AS rank,
-               gr.tier       AS tier
-        FROM gq.scores gs
-                 LEFT JOIN account.users a ON a.id = gs.user_id
-                 LEFT JOIN gq.profiles gr ON gr.id = gs.user_id
-        WHERE gs.leaderboard = %s
-        GROUP BY gs.user_id, a.username, gr.weighted, gr.rank, gr.tier
+        SELECT MAX(score.score) AS hs,
+               score.user_id     AS account_id,
+               u.username    AS username,
+               profile.weighted   AS weighted,
+               profile.rank       AS rank,
+               profile.tier       AS tier
+        FROM gq.scores score
+                 LEFT JOIN account.users u ON u.id = score.user_id
+                 LEFT JOIN gq.profiles profile ON profile.account_id = score.user_id
+        WHERE score.leaderboard_id = %s
+        GROUP BY score.user_id, u.username, profile.weighted, profile.rank, profile.tier
         ORDER BY hs DESC;
         """,
         params=(id,)
@@ -116,43 +116,43 @@ def get_placement(leaderboard_id: int, user: int):
     if leaderboard_id:
         query = """
             SELECT
-                gs.user_id AS id,
-                a.username AS username,
-                MAX(gs.score) AS score,
-                gr.weighted AS weighted,
-                gr.rank AS rank,
-                gr.tier AS tier,
+                score.user_id AS id,
+                u.username AS username,
+                MAX(score.score) AS score,
+                profile.weighted AS weighted,
+                profile.rank AS rank,
+                profile.tier AS tier,
                 (
                     SELECT COUNT(*) + 1
                     FROM gq.scores s2
-                    WHERE s2.leaderboard = gs.leaderboard
-                      AND s2.score > MAX(gs.score)
+                    WHERE s2.leaderboard_id = score.leaderboard_id
+                      AND s2.score > MAX(score.score)
                 ) AS placement
-            FROM gq.scores gs
-            LEFT JOIN account.users a ON a.id = gs.user_id
-            LEFT JOIN gq.profiles gr ON gr.id = gs.user_id
-            WHERE gs.leaderboard = %s
-              AND gs.user_id = %s
-            GROUP BY gs.leaderboard, gs.user_id, a.username, gr.weighted, gr.rank, gr.tier
+            FROM gq.scores score
+            LEFT JOIN account.users u ON u.id = score.user_id
+            LEFT JOIN gq.profiles profile ON profile.account_id = score.user_id
+            WHERE score.leaderboard_id = %s
+              AND score.user_id = %s
+            GROUP BY score.leaderboard_id, score.user_id, u.username, profile.weighted, profile.rank, profile.tier
             LIMIT 1
         """
         params = (leaderboard_id, user)
     else:
         query = """
             SELECT
-                gr.id AS id,
-                a.username AS username,
-                gr.weighted AS weighted,
-                gr.rank AS rank,
-                gr.tier AS tier,
+                profile.id AS id,
+                u.username AS username,
+                profile.weighted AS weighted,
+                profile.rank AS rank,
+                profile.tier AS tier,
                 (
                     SELECT COUNT(*) + 1
                     FROM gq.profiles r2
-                    WHERE r2.weighted > gr.weighted
+                    WHERE r2.weighted > profile.weighted
                 ) AS placement
-            FROM gq.profiles gr
-            LEFT JOIN account.users a ON a.id = gr.id
-            WHERE gr.id = %s
+            FROM gq.profiles profile
+            LEFT JOIN account.users u ON u.id = profile.account_id
+            WHERE profile.account_id = %s
             LIMIT 1
         """
         params = (user,)
