@@ -41,8 +41,8 @@ def osu_match(id):
             ou.avatar     AS avatar,
             ou.background AS background,
             ou.last_refresh AS last_refresh
-        FROM public.osu_match_users omu
-        LEFT JOIN public.osu_users ou ON omu.user_id = ou.id
+        FROM osu.match_users omu
+        LEFT JOIN osu.users ou ON omu.user_id = ou.id
         WHERE omu.match_id = %s
         """,
         params=(id,)
