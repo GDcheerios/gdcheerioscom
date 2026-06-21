@@ -221,7 +221,7 @@ def get_matches():
                 where id = opener_id)            as creator,
                (select count(*)
                 from osu.match_users
-                where match = osu.matches.id) as users
+                where match_id = osu.matches.id) as users
         FROM osu.matches
         """
     )
