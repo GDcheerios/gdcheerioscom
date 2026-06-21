@@ -58,7 +58,7 @@ def _notify_osu_user_refreshed(user_data, match_id=None):
 
     payload = {
         "type": "osu_user_refreshed",
-        "match_id": int(match_id) if match_id is not None else None,
+        "match": int(match_id) if match_id is not None else None,
         "match_ids": match_ids,
         "user": _json_safe(user_data),
     }
@@ -100,7 +100,7 @@ def _notify_osu_user_refreshed(user_data, match_id=None):
 
 @osu_api_blueprint.get('/osu/fetch-user/<id>')
 def fetch_osu_user(id):
-    match_id = request.args.get("match_id")
+    match_id = request.args.get("match")
     if match_id is not None:
         try:
             match_id = int(match_id)
@@ -119,7 +119,7 @@ def fetch_osu_user(id):
 @osu_api_blueprint.post('/osu/add-user')
 def fetch_osu_user_matches():
     user = request.json["user"]
-    match_id = request.json["match_id"]
+    match_id = request.json["match"]
 
     user = osu_api.fetch_osu_data(user)
 
@@ -138,7 +138,7 @@ def fetch_osu_user_matches():
 @osu_api_blueprint.post('/osu/remove-user')
 def remove_osu_user_from_match():
     user = request.json["user"]
-    match_id = request.json["match_id"]
+    match_id = request.json["match"]
 
     environment.database.execute(
         """
