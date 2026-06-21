@@ -177,7 +177,7 @@ def change_nickname():
 
 # region match_id API
 
-@osu_api_blueprint.post('/osu/create-match_id')
+@osu_api_blueprint.post('/osu/create-match')
 def create_match():
     global team_name
     team_name = None
@@ -228,7 +228,7 @@ def refresh_all_in_match(id: int):
     return {"success": True}
 
 
-@osu_api_blueprint.post('/osu/end-match_id/<id>')
+@osu_api_blueprint.post('/osu/end-match/<id>')
 def end_match(id):
     match_id = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
     if str(Account.id_from_session(request.cookies.get("session"))) != str(match_id["opener_id"]):
