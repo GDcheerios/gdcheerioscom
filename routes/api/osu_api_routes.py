@@ -58,7 +58,7 @@ def _notify_osu_user_refreshed(user_data, match_id=None):
 
     payload = {
         "type": "osu_user_refreshed",
-        "match": int(match_id) if match_id is not None else None,
+        "match_id": int(match_id) if match_id is not None else None,
         "match_ids": match_ids,
         "user": _json_safe(user_data),
     }
@@ -125,7 +125,7 @@ def fetch_osu_user_matches():
 
     environment.database.execute(
         """
-        INSERT INTO osu_match_users 
+        INSERT INTO osu.match_users 
             (match_id, user_id, starting_score, starting_playcount)
         values 
             (%s, %s, %s, %s)
@@ -235,7 +235,7 @@ def end_match(id):
         return {"error": "not your match_id"}
 
     match_users = environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s", params=(id,))
-    logger.info("ending match_id id=%s users=%s", id, match_users)
+    logger.info("ending match id=%s users=%s", id, match_users)
     environment.database.execute("UPDATE osu.matches SET ended = true WHERE id = %s", params=(id,))
     for user in match_users:
         user = user[0]
