@@ -174,7 +174,7 @@ def submit_leaderboard(leaderboard_id: int, user: int, score: int, visitation: s
     user = Account(user)
     if database.fetch_one("select online from gq.leaderboards where id = %s", params=(leaderboard_id,))[0]:
         database.execute(
-            "INSERT INTO gq.scores (name, score, leaderboard, user_id, visitation) values (%s, %s, %s, %s, %s);",
+            "INSERT INTO gq.scores (name, score, leaderboard_id, user_id, visitation_id) values (%s, %s, %s, %s, %s);",
             params=(user.username, int(score), int(leaderboard_id), user.id, visitation))
 
     return {

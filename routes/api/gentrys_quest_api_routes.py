@@ -238,7 +238,7 @@ def get_statistics():
                COALESCE(SUM(score), 0)::bigint AS total_score,
                AVG(score)::float               AS average_score
         FROM gq.scores
-        WHERE (%s IS NULL OR leaderboard = %s)
+        WHERE (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(leaderboard_id, leaderboard_id)
     ) or {}
@@ -248,7 +248,7 @@ def get_statistics():
         SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
         FROM gq.statistics
-        WHERE (%s IS NULL OR leaderboard = %s)
+        WHERE (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(leaderboard_id, leaderboard_id)
     ) or {}
@@ -259,7 +259,7 @@ def get_statistics():
                COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
         FROM gq.statistics
-        WHERE (%s IS NULL OR leaderboard = %s)
+        WHERE (%s IS NULL OR leaderboard_id = %s)
         GROUP BY "type"
         ORDER BY "type"
         """,
@@ -273,7 +273,7 @@ def get_statistics():
                AVG(score)::float               AS average_score
         FROM gq.scores
         WHERE user_id = %s
-          AND (%s IS NULL OR leaderboard = %s)
+          AND (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(target_user_id, leaderboard_id, leaderboard_id)
     ) or {}
@@ -284,7 +284,7 @@ def get_statistics():
                AVG(amount)::float               AS average_amount
         FROM gq.statistics
         WHERE user_id = %s
-          AND (%s IS NULL OR leaderboard = %s)
+          AND (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(target_user_id, leaderboard_id, leaderboard_id)
     ) or {}
@@ -296,7 +296,7 @@ def get_statistics():
                AVG(amount)::float               AS average_amount
         FROM gq.statistics
         WHERE user_id = %s
-          AND (%s IS NULL OR leaderboard = %s)
+          AND (%s IS NULL OR leaderboard_id = %s)
         GROUP BY "type"
         ORDER BY "type"
         """,
@@ -305,11 +305,11 @@ def get_statistics():
 
     last_run_row = environment.database.fetch_to_dict(
         """
-        SELECT visitation, score
+        SELECT visitation_id, score
         FROM gq.scores
         WHERE user_id = %s
-          AND (%s IS NULL OR leaderboard = %s)
-          AND visitation IS NOT NULL
+          AND (%s IS NULL OR leaderboard_id = %s)
+          AND visitation_id IS NOT NULL
         ORDER BY id DESC
         LIMIT 1
         """,
@@ -326,8 +326,8 @@ def get_statistics():
                    AVG(amount)::float               AS average_amount
             FROM gq.statistics
             WHERE user_id = %s
-              AND visitation = %s
-              AND (%s IS NULL OR leaderboard = %s)
+              AND visitation_id = %s
+              AND (%s IS NULL OR leaderboard_id = %s)
             """,
             params=(target_user_id, visitation, leaderboard_id, leaderboard_id)
         ) or {}
@@ -339,8 +339,8 @@ def get_statistics():
                    AVG(amount)::float               AS average_amount
             FROM gq.statistics
             WHERE user_id = %s
-              AND visitation = %s
-              AND (%s IS NULL OR leaderboard = %s)
+              AND visitation_id = %s
+              AND (%s IS NULL OR leaderboard_id = %s)
             GROUP BY "type"
             ORDER BY "type"
             """,
