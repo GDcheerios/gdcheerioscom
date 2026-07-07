@@ -41,6 +41,7 @@ def create_account() -> Response:
         return redirect("/account/create")
 
     password = request.form.get("pw")
+    password = Account.get_password_hash(str(password))
     email = request.form.get("em")
     about_me = request.form.get("am")
 
@@ -62,8 +63,9 @@ def create_account() -> Response:
         return redirect(f"/account/create?msg={result['message']}")
     else:
         result = Account.create(username, password, email, about_me)
-        return redirect(f"/account/{result.id}")
-
+        resp = make_response(redirect(f"/account/{result.id}"))
+        _set_session_cookie(resp, Account.create_session(result.id))
+        return resp
 
 
 @account_api_blueprint.post('/account/login-form')
@@ -115,7 +117,7 @@ def verify_account() -> Response:
         return Response(status=400)
 
     row = environment.database.fetch_to_dict(
-        "SELECT id, email, username, password, about, token, expires FROM pending_accounts WHERE id = %s",
+        "SELECT id, email, username, password, about, token, expires FROM account.pending WHERE id = %s",
         params=(sid,)
     )
     if not row:
@@ -124,7 +126,7 @@ def verify_account() -> Response:
     environment.database.execute(
         """
         DELETE
-        FROM pending_accounts
+        FROM account.pending
         WHERE expires < NOW()
            OR id = %s
         """,
@@ -161,9 +163,9 @@ def send_reset_email():
     email = request.json["email"]
     if not Account.email_exists(email): return Response(status=404)
 
-    id = environment.database.fetch_one("select id from accounts where email = %s", params=(email,))
+    id = environment.database.fetch_one("select id from account.users where email = %s", params=(email,))
     code = \
-    environment.database.fetch_one("insert into password_resets (\"user\") values (%s) returning id", params=(id,))[0]
+    environment.database.fetch_one("insert into account.password_resets (\"user\") values (%s) returning id", params=(id,))[0]
     EmailManager.send_reset_password_email(email, code)
     return {"success": True}
 
@@ -174,16 +176,16 @@ def reset_password():
     password = request.json["password"]
 
     password_reset = environment.database.fetch_to_dict(
-        "select * from password_resets where id = %s and expires_at > NOW() - INTERVAL '24 hours'", params=(code,))
+        "select * from account.password_resets where id = %s and expires_at > NOW() - INTERVAL '24 hours'", params=(code,))
     if not password_reset:
         environment.database.execute(
-            "DELETE FROM password_resets WHERE id = %s OR expires_at <= NOW() - INTERVAL '24 hours'", params=(code,))
+            "DELETE FROM account.password_resets WHERE id = %s OR expires_at <= NOW() - INTERVAL '24 hours'", params=(code,))
         return Response(status=404)
 
     password_hash = Account.get_password_hash(password)
-    environment.database.execute("UPDATE accounts SET password = %s WHERE id = %s",
+    environment.database.execute("UPDATE account.users SET password = %s WHERE id = %s",
                                  params=(password_hash, password_reset["user"]))
-    environment.database.execute("DELETE FROM password_resets WHERE id = %s", params=(code,))
+    environment.database.execute("DELETE FROM account.password_resets WHERE id = %s", params=(code,))
 
     resp = Response(status=200)
     _set_session_cookie(resp, Account.create_session(password_reset["user"]))

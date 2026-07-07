@@ -174,7 +174,7 @@ def cleanup_expired_api_keys(force: bool = False) -> int:
             """
             WITH deleted AS (
                 DELETE
-                FROM api_keys
+                FROM api.keys
                 WHERE expires_at IS NOT NULL
                   AND expires_at < now()
                 RETURNING 1
@@ -273,7 +273,7 @@ def _touch_api_key_usage(key_id: str):
     try:
         environment.database.execute(
             """
-            UPDATE api_keys
+            UPDATE api.keys
             SET last_used_at = now(),
                 last_used_ip = %s
             WHERE key_id = %s
@@ -293,7 +293,7 @@ def verify_api_key_value(combined: str, update_usage: bool = True) -> dict | Non
     key_id, secret = combined.split(".", 1)
 
     row = environment.database.fetch_to_dict(
-        "SELECT key_id, user_id, secret_hash, scopes, status, expires_at, metadata FROM api_keys WHERE key_id = %s",
+        "SELECT key_id, user_id, secret_hash, scopes, status, expires_at, metadata FROM api.keys WHERE key_id = %s",
         params=(key_id,),
     )
 
@@ -405,7 +405,7 @@ def rotate_refresh_token_for_key(key_id: str, metadata: dict | None = None) -> t
 
     environment.database.execute(
         """
-        UPDATE api_keys
+        UPDATE api.keys
         SET metadata = %s::jsonb
         WHERE key_id = %s
         """,
@@ -421,7 +421,7 @@ def refresh_api_key_tokens(refresh_token: str) -> dict | None:
 
     _, key_id, secret = parts
     row = environment.database.fetch_to_dict(
-        "SELECT key_id, user_id, scopes, status, expires_at, metadata FROM api_keys WHERE key_id = %s",
+        "SELECT key_id, user_id, scopes, status, expires_at, metadata FROM api.keys WHERE key_id = %s",
         params=(key_id,),
     )
 

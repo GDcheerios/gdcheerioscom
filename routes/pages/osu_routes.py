@@ -19,12 +19,12 @@ def osu():
 
 @osu_blueprint.route("/match/<id>")
 def osu_match(id):
-    match = environment.database.fetch_to_dict("SELECT * FROM osu_matches WHERE id = %s", params=(id,))
+    match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
     players = environment.database.fetch_all_to_dict(
         """
         SELECT
-            omu.match,
-            omu."user",
+            omu.match_id,
+            omu.user_id,
             omu.starting_score,
             omu.starting_playcount,
             omu.ending_score,
@@ -41,15 +41,15 @@ def osu_match(id):
             ou.avatar     AS avatar,
             ou.background AS background,
             ou.last_refresh AS last_refresh
-        FROM public.osu_match_users omu
-        LEFT JOIN public.osu_users ou ON omu."user" = ou.id
-        WHERE omu.match = %s
+        FROM osu.match_users omu
+        LEFT JOIN osu.users ou ON omu.user_id = ou.id
+        WHERE omu.match_id = %s
         """,
         params=(id,)
     )
     current_osu_id = None
     request_id = Account.id_from_session(request.cookies.get('session'))
-    is_creator = str(request_id) == str(match["opener"])
+    is_creator = str(request_id) == str(match["opener_id"])
     is_admin = False
     if request_id:
         account = Account(request_id)

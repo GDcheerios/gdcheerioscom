@@ -60,7 +60,7 @@ def get_user_info(user_identifier):
 
     if is_id:
         user_check = environment.database.fetch_to_dict(
-            "SELECT * FROM osu_users WHERE id = %s",
+            "SELECT * FROM osu.users WHERE id = %s",
             params=(osu_id,)
         )
 
@@ -86,7 +86,7 @@ def get_user_info(user_identifier):
         username = str(user_identifier)
         logger.info("getting osu user by username %s", username)
         user_check = environment.database.fetch_to_dict(
-            "SELECT * FROM osu_users WHERE username = %s",
+            "SELECT * FROM osu.users WHERE username = %s",
             params=(username,)
         )
 
@@ -141,14 +141,14 @@ def extract_info(data):
 
             db = environment.database
             existing = db.fetch_one(
-                "SELECT id FROM osu_users WHERE id = %s",
+                "SELECT id FROM osu.users WHERE id = %s",
                 params=(data['id'],)
             )
 
             if existing:
                 db.execute(
                     """
-                    UPDATE osu_users
+                    UPDATE osu.users
                     SET username     = %s,
                         score        = %s,
                         playcount    = %s,
@@ -175,7 +175,7 @@ def extract_info(data):
             else:
                 db.execute(
                     """
-                    INSERT INTO osu_users
+                    INSERT INTO osu.users
                     (id, username, score, playcount, accuracy, performance, rank, avatar, background, last_refresh)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                     """,
@@ -215,14 +215,14 @@ def get_matches():
                pinned,
                ended,
                started,
-               opener,
+               opener_id,
                (select username
-                from accounts
-                where id = opener)            as creator,
+                from account.users
+                where id = opener_id)            as creator,
                (select count(*)
-                from osu_match_users
-                where match = osu_matches.id) as users
-        FROM osu_matches
+                from osu.match_users
+                where match_id = osu.matches.id) as users
+        FROM osu.matches
         """
     )
     current_matches = []

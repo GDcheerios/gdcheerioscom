@@ -32,25 +32,6 @@ def get_items(id: int):
     return {"items": user_api.get_items(id)}
 
 
-@gentrys_quest_api_blueprint.get("/gq/set-xp/<int:id>/<int:xp>")
-@require_scopes(["account:write"])
-def set_xp(id: int, xp: int):
-    denied = _enforce_user_scope(id)
-    if denied:
-        return denied
-    user_api.set_xp(id, xp)
-    return user_api.get_xp(id)
-
-
-@gentrys_quest_api_blueprint.get("/gq/get-xp/<int:id>")
-@require_scopes(["account:read"])
-def get_xp(id: int):
-    denied = _enforce_user_scope(id)
-    if denied:
-        return denied
-    return user_api.get_xp(id)
-
-
 @gentrys_quest_api_blueprint.get("/gq/get/<int:id>")
 @require_scopes(["account:read"])
 def get(id: int):
@@ -78,7 +59,7 @@ def add_item():
     rating = environment.gq_rater.get_rating(item_type, item_data)
     created_item = environment.database.fetch_to_dict(
         """
-        INSERT INTO gq_items (type, metadata, owner, rating)
+        INSERT INTO gq.items (type, metadata, owner, rating)
         VALUES (%s, %s::jsonb, %s, %s)
         RETURNING *
         """,
@@ -87,7 +68,7 @@ def add_item():
     created_item["metadata"]["ID"] = created_item["id"]
     environment.database.execute(
         """
-        UPDATE gq_items
+        UPDATE gq.items
         SET metadata = %s::jsonb
         WHERE id = %s
         """,
@@ -110,7 +91,7 @@ def update_item():
     if item_id is None or item_type is None:
         return jsonify({"error": "invalid_payload"}), 400
 
-    owner = environment.database.fetch_one("SELECT owner FROM gq_items WHERE id = %s", params=(item_id,))
+    owner = environment.database.fetch_one("SELECT owner FROM gq.items WHERE id = %s", params=(item_id,))
     if not owner:
         return jsonify({"error": "item_not_found"}), 404
 
@@ -122,7 +103,7 @@ def update_item():
     rating = environment.gq_rater.get_rating(item_type, item)
     updated_item = environment.database.fetch_to_dict(
         """
-        UPDATE gq_items
+        UPDATE gq.items
         SET metadata = %s::jsonb,
             rating   = %s
         WHERE id = %s
@@ -140,7 +121,7 @@ def update_item():
 @gentrys_quest_api_blueprint.post("/gq/remove-item/<int:id>")
 @require_scopes(["account:write"])
 def remove_item(id: int):
-    owner = environment.database.fetch_one("SELECT owner FROM gq_items WHERE id = %s", params=(id,))
+    owner = environment.database.fetch_one("SELECT owner FROM gq.items WHERE id = %s", params=(id,))
     if not owner:
         return jsonify({"error": "item_not_found"}), 404
 
@@ -152,7 +133,7 @@ def remove_item(id: int):
     environment.database.execute(
         """
         DELETE
-        FROM gq_items
+        FROM gq.items
         WHERE id = %s
         """,
         params=(id,)
@@ -172,7 +153,7 @@ def get_ranking(id: int):
 def visit():
     return environment.database.fetch_to_dict(
         """
-        INSERT INTO gq_visitations (user_id,
+        INSERT INTO gq.visitations (user_id,
                                     location)
         VALUES (%s, %s)
         RETURNING *
@@ -189,7 +170,7 @@ def visit():
 def depart(id: str):
     environment.database.fetch_to_dict(
         """
-        UPDATE gq_visitations
+        UPDATE gq.visitations
         SET departed = NOW()
         WHERE id = %s
         """,
@@ -252,12 +233,12 @@ def get_statistics():
 
     score_overview = environment.database.fetch_to_dict(
         """
-        SELECT COUNT(DISTINCT "user")::bigint  AS total_players,
+        SELECT COUNT(DISTINCT user_id)::bigint  AS total_players,
                COUNT(*)::bigint                AS total_plays,
                COALESCE(SUM(score), 0)::bigint AS total_score,
                AVG(score)::float               AS average_score
-        FROM gq_scores
-        WHERE (%s IS NULL OR leaderboard = %s)
+        FROM gq.scores
+        WHERE (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(leaderboard_id, leaderboard_id)
     ) or {}
@@ -266,8 +247,8 @@ def get_statistics():
         """
         SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
-        FROM gq_statistics
-        WHERE (%s IS NULL OR leaderboard = %s)
+        FROM gq.statistics
+        WHERE (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(leaderboard_id, leaderboard_id)
     ) or {}
@@ -277,8 +258,8 @@ def get_statistics():
         SELECT "type",
                COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
-        FROM gq_statistics
-        WHERE (%s IS NULL OR leaderboard = %s)
+        FROM gq.statistics
+        WHERE (%s IS NULL OR leaderboard_id = %s)
         GROUP BY "type"
         ORDER BY "type"
         """,
@@ -287,12 +268,12 @@ def get_statistics():
 
     user_score_overview = environment.database.fetch_to_dict(
         """
-        SELECT COUNT(*)::bigint                 AS total_plays,
+        SELECT COUNT(*)::bigint                AS total_plays,
                COALESCE(SUM(score), 0)::bigint AS total_score,
                AVG(score)::float               AS average_score
-        FROM gq_scores
-        WHERE "user" = %s
-          AND (%s IS NULL OR leaderboard = %s)
+        FROM gq.scores
+        WHERE user_id = %s
+          AND (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(target_user_id, leaderboard_id, leaderboard_id)
     ) or {}
@@ -301,9 +282,9 @@ def get_statistics():
         """
         SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
-        FROM gq_statistics
-        WHERE "user" = %s
-          AND (%s IS NULL OR leaderboard = %s)
+        FROM gq.statistics
+        WHERE user_id = %s
+          AND (%s IS NULL OR leaderboard_id = %s)
         """,
         params=(target_user_id, leaderboard_id, leaderboard_id)
     ) or {}
@@ -313,9 +294,9 @@ def get_statistics():
         SELECT "type",
                COALESCE(SUM(amount), 0)::bigint AS total_amount,
                AVG(amount)::float               AS average_amount
-        FROM gq_statistics
-        WHERE "user" = %s
-          AND (%s IS NULL OR leaderboard = %s)
+        FROM gq.statistics
+        WHERE user_id = %s
+          AND (%s IS NULL OR leaderboard_id = %s)
         GROUP BY "type"
         ORDER BY "type"
         """,
@@ -324,11 +305,11 @@ def get_statistics():
 
     last_run_row = environment.database.fetch_to_dict(
         """
-        SELECT visitation, score
-        FROM gq_scores
-        WHERE "user" = %s
-          AND (%s IS NULL OR leaderboard = %s)
-          AND visitation IS NOT NULL
+        SELECT visitation_id, score
+        FROM gq.scores
+        WHERE user_id = %s
+          AND (%s IS NULL OR leaderboard_id = %s)
+          AND visitation_id IS NOT NULL
         ORDER BY id DESC
         LIMIT 1
         """,
@@ -343,10 +324,10 @@ def get_statistics():
             """
             SELECT COALESCE(SUM(amount), 0)::bigint AS total_amount,
                    AVG(amount)::float               AS average_amount
-            FROM gq_statistics
-            WHERE "user" = %s
-              AND visitation = %s
-              AND (%s IS NULL OR leaderboard = %s)
+            FROM gq.statistics
+            WHERE user_id = %s
+              AND visitation_id = %s
+              AND (%s IS NULL OR leaderboard_id = %s)
             """,
             params=(target_user_id, visitation, leaderboard_id, leaderboard_id)
         ) or {}
@@ -356,10 +337,10 @@ def get_statistics():
             SELECT "type",
                    COALESCE(SUM(amount), 0)::bigint AS total_amount,
                    AVG(amount)::float               AS average_amount
-            FROM gq_statistics
-            WHERE "user" = %s
-              AND visitation = %s
-              AND (%s IS NULL OR leaderboard = %s)
+            FROM gq.statistics
+            WHERE user_id = %s
+              AND visitation_id = %s
+              AND (%s IS NULL OR leaderboard_id = %s)
             GROUP BY "type"
             ORDER BY "type"
             """,

@@ -47,24 +47,24 @@ class Account:
         result = database.fetch_to_dict(
             f"""
             SELECT 
-                id,
-                username,
-                password,
-                email,
-                about,
-                status,
-                created,
-                is_supporter,
-                last_support,
-                supporter_lasts,
-                is_admin,
+                u.id,
+                u.username,
+                u.password,
+                u.email,
+                u.about,
+                u.status,
+                u.created,
+                u.is_supporter,
+                u.last_support,
+                u.supporter_lasts,
+                u.is_admin,
                 EXISTS (
                     SELECT 1
-                    FROM gq_data
-                    WHERE gq_data.id = accounts.id
+                    FROM gq.profiles
+                    WHERE gq.profiles.account_id = u.id
                 ) AS has_gq
-            FROM accounts 
-            WHERE {from_query_string}
+            FROM account.users u
+            WHERE u.{from_query_string}
             """,
             params=(identifier,)
         )
@@ -80,14 +80,14 @@ class Account:
             self.email = result["email"]
             self.has_gqc = False
             self.has_gq = result["has_gq"] != 0
-            self.links = database.fetch_all_to_dict("SELECT * FROM auth_identities WHERE user_id = %s",
+            self.links = database.fetch_all_to_dict("SELECT * FROM auth.identities WHERE user_id = %s",
                                                     params=(self.id,)) or []
             self.about = result["about"]
             self.status = result["status"]
             self.created = result["created"]
             self.last_support = result["last_support"]
             self.supporter_lasts = result["supporter_lasts"]
-            self.tags = database.fetch_all_to_dict("SELECT * FROM account_tags WHERE account = %s",
+            self.tags = database.fetch_all_to_dict("SELECT * FROM account.tags WHERE account_id = %s",
                                                    params=(self.id,)) or []
             self.exists = True
             self.is_admin = result["is_admin"]
@@ -95,7 +95,7 @@ class Account:
             load_task.start_subtask("initialize data", "check supporter status")
             if result["supporter_lasts"]:
                 if datetime.now(tz=timezone.utc) > result["supporter_lasts"]:
-                    database.execute(f"UPDATE accounts SET is_supporter = FALSE WHERE {from_query_string}",
+                    database.execute(f"UPDATE account.users SET is_supporter = FALSE WHERE {from_query_string}",
                                      params=(identifier,))
                     self.supporter = False
                 else:
@@ -108,11 +108,11 @@ class Account:
             self.osu_matches = database.fetch_all_to_dict(
                 """
                 SELECT id,
-                       name, open, pinned, ended, started, opener, (
-                    SELECT count (*) FROM osu_match_users where match = osu_matches.id
+                       name, open, pinned, ended, started, opener_id, (
+                    SELECT count (*) FROM osu.match_users where match_id = osu.matches.id
                     ) as users
-                FROM osu_matches
-                WHERE opener = %s
+                FROM osu.matches
+                WHERE opener_id = %s
                 """, params=(self.id,))
             load_task.done_subtask("initialize data", "fetch osu matches")
 
@@ -149,11 +149,11 @@ class Account:
                 """
                 SELECT id,
                        score,
-                       (SELECT gq_leaderboards.name
-                        from gq_leaderboards
-                        where gq_leaderboards.id = gq_scores.leaderboard) as name
-                FROM gq_scores
-                WHERE "user" = %s
+                       (SELECT gq.leaderboards.name
+                        from gq.leaderboards
+                        where gq.leaderboards.id = gq.scores.leaderboard_id) as name
+                FROM gq.scores
+                WHERE user_id = %s
                 """,
                 params=(self.id,)
             ) or []
@@ -173,8 +173,8 @@ class Account:
                 """
                 SELECT "type",
                        COALESCE(SUM(amount), 0) AS total
-                FROM gq_statistics
-                WHERE "user" = %s
+                FROM gq.statistics
+                WHERE user_id = %s
                 GROUP BY "type"
                 """,
                 params=(self.id,)
@@ -185,7 +185,7 @@ class Account:
                 "stats": stats,
                 "metrics": environment.database.fetch_all_to_dict(
                     """SELECT *
-                       FROM gq_metrics
+                       FROM gq.metrics
                        WHERE user_id = %s
                        ORDER BY recorded_at desc""",
                     params=(self.id,)),
@@ -196,8 +196,8 @@ class Account:
                 "ranking": get_ranking(self.id),
                 "items": environment.database.fetch_all_to_dict(
                     """SELECT *
-                       FROM gq_items
-                       WHERE owner = %s""",
+                       FROM gq.items
+                       WHERE owner_id = %s""",
                     params=(self.id,))
             }
 
@@ -216,21 +216,21 @@ class Account:
 
     @staticmethod
     def from_session(session):
-        id = database.fetch_one("SELECT \"user\" FROM sessions WHERE id = %s", params=(session,))
+        id = database.fetch_one("SELECT user_id FROM account.sessions WHERE id = %s", params=(session,))
         if id:
             return Account(id[0])
         return None
 
     @staticmethod
     def id_from_session(session):
-        id = database.fetch_one("SELECT \"user\" FROM sessions WHERE id = %s", params=(session,))
+        id = database.fetch_one("SELECT user_id FROM account.sessions WHERE id = %s", params=(session,))
         if id:
             return id[0]
         return None
 
     @staticmethod
     def create_session(id: int):
-        session_id = database.fetch_one("INSERT INTO sessions (\"user\") VALUES (%s) RETURNING id", params=(id,))
+        session_id = database.fetch_one("INSERT INTO account.sessions (user_id) VALUES (%s) RETURNING id", params=(id,))
         return session_id[0]
 
     @staticmethod
@@ -238,19 +238,19 @@ class Account:
         if session_id is None:
             return
 
-        database.execute("DELETE FROM sessions WHERE id = %s", params=(session_id,))
+        database.execute("DELETE FROM account.sessions WHERE id = %s", params=(session_id,))
 
     @staticmethod
     def search(query: str):
         return database.fetch_all_to_dict(
-            f"SELECT id, username FROM accounts WHERE username ILIKE %s OR about ILIKE %s LIMIT 5;",
+            f"SELECT id, username FROM account.users WHERE username ILIKE %s OR about ILIKE %s LIMIT 5;",
             params=(f"%{query}%", f"%{query}%"))
 
     # <editor-fold desc="Modifiers">
     @staticmethod
     def create(username: str, password: str, email: str, about: str) -> "Account":
         query = """
-                INSERT INTO accounts (username, password, email, about)
+                INSERT INTO account.users (username, password, email, about)
                 VALUES (%s, %s, %s, %s) RETURNING id
                 """
 
@@ -262,11 +262,7 @@ class Account:
         )
 
         id = database.fetch_one(query, params)[0]
-        database.execute("INSERT INTO gq_data (id) VALUES (%s)", params=(id,))
-        database.execute(
-            "INSERT INTO gq_rankings (id) VALUES (%s) ON CONFLICT (id) DO NOTHING",
-            params=(id,),
-        )
+        database.execute("INSERT INTO gq.profiles (account_id) VALUES (%s)", params=(id,))
         return Account(id)
 
     @staticmethod
@@ -276,17 +272,16 @@ class Account:
         database.execute(
             """
             DELETE
-            FROM pending_accounts
+            FROM account.pending
             WHERE expires < %s;
             """,
             params=(now,)
         )
         raw_token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-        password = Account.get_password_hash(str(password))
         pending_id = database.fetch_one(
             """
-            INSERT INTO pending_accounts (username, password, email, about, token)
+            INSERT INTO account.pending (username, password, email, about, token)
             VALUES (%s, %s, %s, %s, %s) RETURNING id
             """,
             params=(username, password, email, about, token_hash)
@@ -325,7 +320,7 @@ class Account:
 
     @staticmethod
     def set_status(id: int, status: str):
-        database.execute("UPDATE accounts SET status = %s where id = %s", params=(status, id))
+        database.execute("UPDATE account.users SET status = %s where id = %s", params=(status, id))
 
     @staticmethod
     def change_username(id: int, new_username: str):
@@ -333,7 +328,7 @@ class Account:
         Change username
         """
 
-        database.execute(f"update accounts set username = %s where id = %s;", params=(new_username, id))
+        database.execute(f"update account.users set username = %s where id = %s;", params=(new_username, id))
 
     @staticmethod
     def change_about(id: int, new_about: str):
@@ -341,7 +336,7 @@ class Account:
         Change about
         """
 
-        database.execute(f"update accounts set about = %s where id = %s;", params=(new_about, id))
+        database.execute(f"update account.users set about = %s where id = %s;", params=(new_about, id))
 
     @staticmethod
     def make_supporter(id: int, weeks: int = 1):
@@ -352,7 +347,7 @@ class Account:
         """
         database.execute(
             """
-            UPDATE accounts
+            UPDATE account.users
             SET is_supporter    = TRUE,
                 last_support    = NOW(),
                 supporter_lasts = GREATEST(COALESCE(supporter_lasts, NOW()), NOW()) + (INTERVAL '1 week' * %s)
@@ -365,7 +360,7 @@ class Account:
     def claim_supporter(supporter_id, id: int):
         weeks = database.fetch_one(
             """
-            UPDATE supports
+            UPDATE account.supports
             SET \"user\" = %s
             WHERE id = %s RETURNING weeks
             """,
@@ -378,7 +373,7 @@ class Account:
     def insert_supporter(id: int, weeks: int = 1):
         database.execute(
             """
-            INSERT INTO supports (\"user\", weeks)
+            INSERT INTO account.supports (\"user\", weeks)
             VALUES (%s, %s)
             """,
             params=(id, weeks)
@@ -403,7 +398,7 @@ class Account:
         :return: true or false, depending on if the username exists in the database
         """
 
-        result = database.fetch_all(f"select username from accounts where username = %s;", params=(name,))
+        result = database.fetch_all(f"select username from account.users where username = %s;", params=(name,))
         return len(result) > 0
 
     @staticmethod
@@ -413,7 +408,7 @@ class Account:
         :return: true or false, depending on if the email exists in the database
         """
 
-        result = database.fetch_all(f"select email from accounts where email = %s;", params=(email,))
+        result = database.fetch_all(f"select email from account.users where email = %s;", params=(email,))
         return len(result) > 0
 
     # </editor-fold>
@@ -425,7 +420,7 @@ class Account:
         if data:
             database.execute(
                 """
-                INSERT INTO auth_identities (user_id, provider, provider_subject)
+                INSERT INTO auth.identities (user_id, provider, provider_subject)
                 VALUES (%s, %s, %s)
                 """,
                 params=(self.id, "osu", osu_id)
@@ -437,7 +432,7 @@ class Account:
     def get_osu_data(self):
         link = self.get_link("osu")
         if link:
-            data = database.fetch_to_dict("SELECT * FROM osu_users WHERE id = %s;", params=(link["provider_subject"],))
+            data = database.fetch_to_dict("SELECT * FROM osu.users WHERE id = %s;", params=(link["provider_subject"],))
             if data:
                 return data
 
