@@ -155,7 +155,7 @@ def remove_osu_user_from_match():
 @osu_api_blueprint.post('/osu/change-nickname')
 def change_nickname():
     user = request.json["user"]
-    match_id = request.json["match_id"]
+    match_id = request.json["match"]
     nickname = request.json["nickname"]
     if nickname == "":
         nickname = None
