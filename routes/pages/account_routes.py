@@ -18,8 +18,12 @@ def account():
 
 
 @account_blueprint.route("/<id>")
-def user(id: int | str): return render_template("account/user-profile.html",
+def user(id: int | str):
+    viewer_id = Account.id_from_session(request.cookies.get("session"))
+    viewer = Account(viewer_id) if viewer_id is not None else None
+    return render_template("account/user-profile.html",
                                                 account=Account(id),
+                                                is_admin=bool(viewer and viewer.exists and viewer.is_admin),
                                                 rater=environment.gq_rater,
                                                 gq_level_colors=environment.gq_level_colors,
                                                 osu_redirect_uri=f"{environment.domain}/oauth/osu",

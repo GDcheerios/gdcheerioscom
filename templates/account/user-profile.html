@@ -3,7 +3,7 @@
     {% block head %}
     <title>{{ account.username }}'s profile</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="/static/accounts-style.css">
+    <link rel="stylesheet" href="/static/accounts-style.css?v=profile-tags-4">
     <meta name="description"
           content="
           {% for tag in account.tags %}
@@ -22,7 +22,38 @@
 <!--            <img style="display: block;" src="{{ account.pfp }}">-->
             <div>
                 <h1 class="username">{{account.username}}</h1>
-                <div id="tags"></div>
+                <div id="tags" class="profile-tags">
+                    {% if is_admin %}
+                        <button id="add-tag-toggle" class="tag tag-add" type="button">+ Add tag</button>
+                    {% endif %}
+                </div>
+                {% if is_admin %}
+                    <form id="add-tag-form" class="add-tag-form" action="/api/account/{{ account.id }}/tags"
+                          method="POST" hidden>
+                        <div class="add-tag-container">
+                            <div class="add-tag-fields">
+                                <input type="text" name="name" maxlength="50" placeholder="TAG"
+                                       aria-label="Tag name" required>
+                                <input type="text" name="tag_type" maxlength="30" placeholder="TAG TYPE"
+                                       aria-label="Tag type" list="tag-type-options" pattern="[A-Za-z0-9_-]+"
+                                       autocomplete="off" required>
+                                <datalist id="tag-type-options">
+                                    <option value="gd">GD</option>
+                                    <option value="dev">Developer</option>
+                                    <option value="unique">Unique</option>
+                                    <option value="rare">Rare</option>
+                                    <option value="supporter">Supporter</option>
+                                    <option value="event">Event</option>
+                                    <option value="osu">osu!</option>
+                                </datalist>
+                            </div>
+                            <div class="add-tag-actions">
+                                <button class="add-tag-submit" type="submit">Confirm</button>
+                                <button class="add-tag-cancel" id="add-tag-cancel" type="button">Cancel</button>
+                            </div>
+                        </div>
+                    </form>
+                {% endif %}
             </div>
         </div>
         <div style="display: flex; flex-direction: column;">
@@ -67,6 +98,19 @@
     <script>
         const tags = {{ account.tags | safe }};
         const tagsContainer = document.getElementById('tags');
+        const addTagToggle = document.getElementById('add-tag-toggle');
+        const isAdmin = {{ is_admin | tojson }};
+        const tagTypeOptions = document.getElementById('tag-type-options');
+        if (tagTypeOptions) {
+            const listedTypes = new Set([...tagTypeOptions.options].map(option => option.value));
+            tags.forEach(tag => {
+                if (!tag.type || listedTypes.has(tag.type)) return;
+                const option = document.createElement('option');
+                option.value = tag.type;
+                tagTypeOptions.appendChild(option);
+                listedTypes.add(tag.type);
+            });
+        }
         const typePriority = {
             "gd": 1,
             "dev": 2,
@@ -110,21 +154,69 @@
         });
 
 
-        function addTag(tag) {
+        function addTag(tag, canDelete = false) {
             const tagElement = document.createElement('span');
             tagElement.classList.add('tag');
-            if (tag.type) {
-                tagElement.classList.add(`tag-${tag.type}`);
+            const normalizedType = String(tag.type || '').trim().toLowerCase();
+            if (normalizedType) {
+                tagElement.classList.add(`tag-${normalizedType}`);
             }
-            tagElement.textContent = tag.title;
-            tagsContainer.appendChild(tagElement);
+            tagElement.append(document.createTextNode(tag.title));
+            if (isAdmin && canDelete && Number.isInteger(tag.id)) {
+                const deleteButton = document.createElement('button');
+                deleteButton.classList.add('tag-delete-button');
+                deleteButton.type = 'button';
+                deleteButton.title = `Delete ${tag.title}`;
+                deleteButton.setAttribute('aria-label', `Delete ${tag.title} tag`);
+                deleteButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="white"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true" focusable="false">
+                        <path d="M3 6h18"/>
+                        <path d="M8 6V4h8v2"/>
+                        <path d="M19 6l-1 14H6L5 6"/>
+                        <path d="M10 10v6M14 10v6"/>
+                    </svg>`;
+                deleteButton.addEventListener('click', async () => {
+                    if (!window.confirm(`Delete the “${tag.title}” tag?`)) return;
+
+                    deleteButton.disabled = true;
+                    const response = await fetch(
+                        `/api/account/{{ account.id }}/tags/${tag.id}/delete`,
+                        {method: 'POST'}
+                    );
+                    if (response.ok) {
+                        window.location.reload();
+                        return;
+                    }
+                    deleteButton.disabled = false;
+                    window.alert('Unable to delete this tag.');
+                });
+                tagElement.appendChild(deleteButton);
+            }
+            tagsContainer.insertBefore(tagElement, addTagToggle);
         }
 
         if (userStatusTag.type === "restricted") addTag(userStatusTag);
         if ({{ account.supporter | tojson }}) addTag(supporterTag);
         sortedTags.forEach((tag) => {
-            addTag(tag);
+            addTag(tag, true);
         });
+
+        const addTagForm = document.getElementById('add-tag-form');
+        const addTagCancel = document.getElementById('add-tag-cancel');
+        if (addTagToggle && addTagForm) {
+            addTagToggle.addEventListener('click', () => {
+                addTagForm.hidden = false;
+                addTagToggle.hidden = true;
+                addTagForm.elements.name.focus();
+            });
+            addTagCancel.addEventListener('click', () => {
+                addTagForm.hidden = true;
+                addTagToggle.hidden = false;
+                addTagForm.reset();
+            });
+        }
     </script>
 </div>
 {% set is_profile_owner = account.id_from_session(request.cookies.get("session")) == account.id %}
