@@ -229,6 +229,52 @@ def change_about():
     return redirect(f'/user/{account.id}')
 
 
+@account_api_blueprint.post("/account/<int:account_id>/tags")
+def add_profile_tag(account_id: int):
+    admin_id = Account.id_from_session(request.cookies.get("session"))
+    if admin_id is None:
+        return {"error": "Authentication required."}, 401
+
+    admin = Account(admin_id)
+    if not admin.exists or not admin.is_admin:
+        return {"error": "Administrator access is required."}, 403
+
+    account = Account(account_id)
+    if not account.exists:
+        return {"error": "Account not found."}, 404
+
+    title = str(request.form.get("name", "")).strip()
+    tag_type = str(request.form.get("tag_type", "")).strip().lower()
+    if not title or not tag_type:
+        return {"error": "Tag name and type are required."}, 400
+    if len(title) > 50 or len(tag_type) > 30:
+        return {"error": "Tag name or type is too long."}, 400
+    if not tag_type.replace("-", "").replace("_", "").isalnum():
+        return {"error": "Tag type may only contain letters, numbers, hyphens, and underscores."}, 400
+
+    account.add_tag(title, tag_type)
+    return redirect(f"/account/{account.id}")
+
+
+@account_api_blueprint.post("/account/<int:account_id>/tags/<int:tag_id>/delete")
+def delete_profile_tag(account_id: int, tag_id: int):
+    admin_id = Account.id_from_session(request.cookies.get("session"))
+    if admin_id is None:
+        return {"error": "Authentication required."}, 401
+
+    admin = Account(admin_id)
+    if not admin.exists or not admin.is_admin:
+        return {"error": "Administrator access is required."}, 403
+
+    account = Account(account_id)
+    if not account.exists:
+        return {"error": "Account not found."}, 404
+    if not account.delete_tag(tag_id):
+        return {"error": "Tag not found."}, 404
+
+    return redirect(f"/account/{account.id}")
+
+
 @account_api_blueprint.post("/account/timecard")
 def update_timecard():
     user_id = Account.id_from_session(request.cookies.get("session"))

@@ -457,6 +457,33 @@ class Account:
     def has_tag(self, tag_type: str) -> bool:
         return any(tag.get("type") == tag_type for tag in self.tags)
 
+    def add_tag(self, title: str, tag_type: str) -> dict:
+        """Add a profile tag and return the created row."""
+        tag = database.fetch_to_dict(
+            """
+            INSERT INTO account.tags (account_id, title, type)
+            VALUES (%s, %s, %s)
+            RETURNING *
+            """,
+            params=(self.id, title, tag_type)
+        )
+        self.tags.append(tag)
+        return tag
+
+    def delete_tag(self, tag_id: int) -> bool:
+        """Delete one of this account's profile tags."""
+        deleted = database.fetch_one(
+            """
+            DELETE FROM account.tags
+            WHERE id = %s AND account_id = %s
+            RETURNING id
+            """,
+            params=(tag_id, self.id)
+        )
+        if deleted:
+            self.tags = [tag for tag in self.tags if tag.get("id") != tag_id]
+        return bool(deleted)
+
     def get_timecard(self, start=None, end=None) -> list:
         """
         Retrieves the timecard for the account.
