@@ -157,8 +157,13 @@ _dev_info = Database.fetch_one("""
                    WHERE nspname = 'dev'
                    LIMIT 1;
                    """)
-
-
+dev_timecard_exists = Database.fetch_one(
+    """
+    SELECT
+        to_regclass('dev.timecard') IS NOT NULL
+    AS exists
+    """
+)[0]
 tracker.done("Checking Database Environment")
 
 tracker.complete()
