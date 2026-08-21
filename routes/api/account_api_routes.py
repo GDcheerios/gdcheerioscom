@@ -229,6 +229,50 @@ def change_about():
     return redirect(f'/user/{account.id}')
 
 
+@account_api_blueprint.post("/account/timecard")
+def update_timecard():
+    user_id = Account.id_from_session(request.cookies.get("session"))
+    if user_id is None:
+        return {"error": "Authentication required."}, 401
+
+    account = Account(user_id)
+    if not account.has_tag("dev"):
+        return {"error": "A developer tag is required."}, 403
+    if not environment.dev_timecard_exists:
+        return {"error": "Timecards are unavailable."}, 503
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+
+    if action == "start":
+        project = str(data.get("project", "")).strip()
+        if not project:
+            return {"error": "A project name is required."}, 400
+        if len(project) > 100:
+            return {"error": "Project names must be 100 characters or fewer."}, 400
+
+        active_shift = next(
+            (shift for shift in account.get_timecard() if shift["ended_at"] is None),
+            None
+        )
+        if active_shift:
+            return {"error": "End the active shift before starting another."}, 409
+
+        return {"shift": account.start_shift(project)}, 201
+
+    if action == "end":
+        shift_id = data.get("shift_id")
+        if not isinstance(shift_id, int):
+            return {"error": "A valid shift ID is required."}, 400
+
+        shift = account.end_shift(shift_id)
+        if not shift:
+            return {"error": "Active shift not found."}, 404
+        return {"shift": shift}
+
+    return {"error": "Action must be 'start' or 'end'."}, 400
+
+
 @account_api_blueprint.get("/account/check/username")
 def check_username():
     username = request.args.get("username")

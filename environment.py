@@ -143,4 +143,27 @@ weekly_cost = 100  # cents
 tracker.done("Payment Setup")
 # endregion
 
+tracker.start("Checking Database Environment")
+_dev_schema_exists = Database.fetch_one("""
+                   SELECT EXISTS (
+                        SELECT *
+                        FROM pg_catalog.pg_namespace
+                        WHERE nspname = 'dev'
+                   );
+                   """)[0]
+_dev_info = Database.fetch_one("""
+                   SELECT *
+                   FROM pg_catalog.pg_namespace
+                   WHERE nspname = 'dev'
+                   LIMIT 1;
+                   """)
+dev_timecard_exists = Database.fetch_one(
+    """
+    SELECT
+        to_regclass('dev.timecard') IS NOT NULL
+    AS exists
+    """
+)[0]
+tracker.done("Checking Database Environment")
+
 tracker.complete()
