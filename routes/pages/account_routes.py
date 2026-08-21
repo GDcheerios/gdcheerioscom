@@ -23,7 +23,8 @@ def user(id: int | str): return render_template("account/user-profile.html",
                                                 rater=environment.gq_rater,
                                                 gq_level_colors=environment.gq_level_colors,
                                                 osu_redirect_uri=f"{environment.domain}/oauth/osu",
-                                                osu_client_id=environment.osu_client_id
+                                                osu_client_id=environment.osu_client_id,
+                                                timecard_enabled=environment.dev_timecard_exists
                                                 )
 
 

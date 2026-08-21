@@ -454,6 +454,73 @@ class Account:
 
         return None
 
+    def has_tag(self, tag_type: str) -> bool:
+        return any(tag.get("type") == tag_type for tag in self.tags)
+
+    def get_timecard(self, start=None, end=None) -> list:
+        """
+        Retrieves the timecard for the account.
+
+        :param start: Start date
+        :param end: End date
+        :return: Timecard data
+        """
+        if not environment.dev_timecard_exists:
+            return []
+
+        conditions = ["user_id = %s"]
+        params = [self.id]
+        if start is not None:
+            conditions.append("started_at >= %s")
+            params.append(start)
+        if end is not None:
+            conditions.append("started_at <= %s")
+            params.append(end)
+
+        return database.fetch_all_to_dict(
+            f"""
+            SELECT id, project_name, started_at, ended_at
+            FROM dev.timecard
+            WHERE {' AND '.join(conditions)}
+            ORDER BY started_at DESC
+            """,
+            params=tuple(params)
+        ) or []
+
+    def start_shift(self, project: str):
+        """
+        Starts the timecard for the account.
+
+        :return: None
+        """
+        return database.fetch_to_dict(
+            """
+            INSERT INTO dev.timecard (project_name, user_id, started_at)
+            VALUES (%s, %s, NOW())
+            RETURNING id, project_name, started_at, ended_at
+            """,
+            params=(project, self.id)
+        )
+
+    def end_shift(self, shift_id):
+        """
+        Ends a shift for the account.
+
+        :param shift_id: The shift ID.
+        :return: The ended shift, or None if it was not active.
+        """
+        return database.fetch_to_dict(
+            """
+            UPDATE dev.timecard
+            SET ended_at = NOW()
+            WHERE id = %s
+              AND user_id = %s
+              AND ended_at IS NULL
+            RETURNING id, project_name, started_at, ended_at
+            """,
+            params=(shift_id, self.id)
+        )
+
     def jsonify(self) -> dict:
         return {
             "id": self.id,

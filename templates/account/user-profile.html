@@ -127,6 +127,91 @@
         });
     </script>
 </div>
+{% set is_profile_owner = account.id_from_session(request.cookies.get("session")) == account.id %}
+{% set is_developer = account.has_tag("dev") %}
+{% if is_developer and is_profile_owner and timecard_enabled %}
+    {% set timecard = account.get_timecard() %}
+    <div class="block" id="timecard">
+        <h1>Developer Timecard</h1>
+        <p id="timecard-status" style="opacity: 0.8;"></p>
+        <form id="timecard-form" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input id="timecard-project" type="text" maxlength="100" placeholder="Project name"
+                   style="padding:8px; border:1px solid #2b2b2b; border-radius:4px; background:#111; color:#fff;">
+            <button id="timecard-action" type="submit"
+                    style="padding:8px 16px; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+                Start Shift
+            </button>
+        </form>
+        <div id="timecard-history" style="margin-top:14px;"></div>
+    </div>
+    <script>
+        (() => {
+            let shifts = {{ timecard | tojson }};
+            const form = document.getElementById('timecard-form');
+            const projectInput = document.getElementById('timecard-project');
+            const actionButton = document.getElementById('timecard-action');
+            const status = document.getElementById('timecard-status');
+            const history = document.getElementById('timecard-history');
+
+            const activeShift = () => shifts.find(shift => !shift.ended_at);
+            const formatDate = value => value ? new Date(value).toLocaleString() : 'In progress';
+
+            function render() {
+                const active = activeShift();
+                projectInput.hidden = Boolean(active);
+                projectInput.required = !active;
+                actionButton.textContent = active ? 'End Shift' : 'Start Shift';
+                status.textContent = active
+                    ? `Working on ${active.project_name} since ${formatDate(active.started_at)}`
+                    : 'No shift is currently active.';
+
+                history.replaceChildren(...shifts.slice(0, 10).map(shift => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid #2b2b2b;';
+                    const project = document.createElement('strong');
+                    project.textContent = shift.project_name;
+                    const dates = document.createElement('span');
+                    dates.textContent = `${formatDate(shift.started_at)} – ${formatDate(shift.ended_at)}`;
+                    row.append(project, dates);
+                    return row;
+                }));
+            }
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                const active = activeShift();
+                actionButton.disabled = true;
+                status.textContent = active ? 'Ending shift…' : 'Starting shift…';
+
+                try {
+                    const response = await fetch('/api/account/timecard', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(active
+                            ? {action: 'end', shift_id: active.id}
+                            : {action: 'start', project: projectInput.value.trim()})
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Unable to update timecard.');
+
+                    if (active) {
+                        shifts = shifts.map(shift => shift.id === result.shift.id ? result.shift : shift);
+                    } else {
+                        shifts.unshift(result.shift);
+                        projectInput.value = '';
+                    }
+                    render();
+                } catch (error) {
+                    status.textContent = error.message;
+                } finally {
+                    actionButton.disabled = false;
+                }
+            });
+
+            render();
+        })();
+    </script>
+{% endif %}
 {% if account.gq_data.ranking %}
     <div id="gq-data" class="block gq-card">
         <h1>Gentrys Quest</h1>
@@ -459,7 +544,6 @@
                         <canvas id="gqChartCanvas" height="320" style="width:100%; height:100%;"></canvas>
                     </div>
                 </div>
-                <!-- Load Chart.js once -->
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 <script>
                     const metrics = {{ account.gq_data["metrics"] | tojson | safe }} || [];
