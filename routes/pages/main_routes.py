@@ -1,3 +1,4 @@
+import requests
 from flask import Blueprint, render_template, redirect, request
 
 import environment
@@ -9,11 +10,25 @@ main_blueprint = Blueprint("main_blueprint", __name__)
 
 # region Routes
 @main_blueprint.route("/")
-def index(): return render_template("index.html")
+def index():
+    try:
+        latest = environment.storage.get_latest_changelog(output_format="html")
+    except requests.RequestException:
+        latest = None
+    return render_template("index.html", changelog=latest)
 
 
 @main_blueprint.route("/about")
 def about(): return render_template("about.html")
+
+
+@main_blueprint.route("/changelog")
+def changelog():
+    try:
+        latest = environment.storage.get_latest_changelog(output_format="html")
+    except requests.RequestException:
+        return render_template("changelog.html", changelog=None, unavailable=True), 503
+    return render_template("changelog.html", changelog=latest, unavailable=False)
 
 
 @main_blueprint.route("/search")

@@ -41,7 +41,7 @@ from routes.pages.osu_routes import osu_blueprint
 
 # apis and objects
 from api.key_api import verify_api_key_header
-from objects import Account
+from objects.Account import Account
 
 logger_provider = LoggerProvider()
 _logs.set_logger_provider(logger_provider)

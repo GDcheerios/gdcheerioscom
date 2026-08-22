@@ -124,7 +124,7 @@ def osu_callback():
 
     info = fetch_osu_data(user_info["id"])
 
-    from objects import Account  # import here to avoid circular imports
+    from objects.Account import Account  # import here to avoid circular imports
 
     user = Account.id_from_session(request.cookies.get('session'))
     if user:

@@ -5,7 +5,7 @@ from flask import Blueprint, g, jsonify, request
 import environment
 from api.gentrys_quest import leaderboard_api, user_api
 from api.key_api import require_scopes
-from objects import Account
+from objects.Account import Account
 
 gentrys_quest_api_blueprint = Blueprint("gentrys_quest_api_blueprint", __name__)
 

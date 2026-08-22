@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, make_response, request, redirect
 
 import environment
 from environment import gq_level_colors
-from objects import Account
+from objects.Account import Account
 
 account_blueprint = Blueprint("account_blueprint", __name__)
 

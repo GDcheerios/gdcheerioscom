@@ -6,6 +6,7 @@ from GPSystem import GPSystem
 from PSQLConnector.connector import PSQLConnection as Database
 from dotenv import load_dotenv
 
+from objects.Storage import Storage
 from utils.logger import setup_logger, TaskTracker
 
 env_logger = setup_logger("environment")
@@ -125,7 +126,7 @@ tracker.done("Connecting to Database")
 # region Cleaning Up Database
 tracker.start("Cleaning Up Database")
 now = dt.datetime.now(tz=dt.timezone.utc)
-Database.execute(
+database.execute(
     """
     DELETE
     FROM api.keys
@@ -135,6 +136,16 @@ Database.execute(
     params=(now,)
 )
 tracker.done("Cleaning Up Database")
+# endregion
+
+# region Storage
+tracker.start("Storage Setup")
+storage = Storage(
+    hostname=os.environ.get("STORAGE_HOSTNAME", "http://gdcheeriosstorage:8000"),
+    username=os.environ.get("STORAGE_USERNAME", "user"),
+    password=os.environ.get("STORAGE_PASSWORD", "1234")
+)
+tracker.done("Storage Setup")
 # endregion
 
 # region Payment Setup

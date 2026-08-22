@@ -1,5 +1,5 @@
 from environment import database
-from objects import Account
+from objects.Account import Account
 
 
 def get_top_players(start: int = 0, amount: int = 50):

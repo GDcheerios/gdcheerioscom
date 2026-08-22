@@ -8,7 +8,7 @@ from datetime import date, datetime
 
 import environment
 from api import osu_api
-from objects import Account
+from objects.Account import Account
 from utils.logger import setup_logger
 
 osu_api_blueprint = Blueprint('osu_api_blueprint', __name__)

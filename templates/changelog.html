@@ -1,0 +1,47 @@
+{% extends "template.html" %}
+
+{% block head %}
+<title>Changelog - GDcheerios.com</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .changelog-page { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .changelog-header { margin-bottom: 1.5rem; }
+  .changelog-header h1 { margin-bottom: .4rem; }
+  .changelog-meta { color: #bbb; }
+  .changelog-content {
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .04);
+  }
+  .changelog-content h2 { margin-top: 1.5rem; }
+  .changelog-content h2:first-child { margin-top: 0; }
+  .changelog-content li { margin: .45rem 0; }
+  .changelog-content a { color: #9bd3ff; }
+  .changelog-empty { color: #bbb; text-align: center; padding: 3rem 1rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="changelog-page">
+  <header class="changelog-header">
+    <h1>Latest changelog</h1>
+    {% if changelog %}
+      <div class="changelog-meta">
+        Version {{ changelog.version }}{% if changelog.date %} · {{ changelog.date }}{% endif %}
+      </div>
+    {% endif %}
+  </header>
+
+  <article class="changelog-content">
+    {% if changelog %}
+      {# The storage service sanitizes this HTML before returning it. #}
+      {{ changelog.html | safe }}
+    {% elif unavailable %}
+      <div class="changelog-empty">The changelog service is temporarily unavailable.</div>
+    {% else %}
+      <div class="changelog-empty">No changelog has been published yet.</div>
+    {% endif %}
+  </article>
+</main>
+{% endblock %}

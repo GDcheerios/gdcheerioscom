@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request
 
 import environment
 from api.osu_api import get_matches
-from objects import Account
+from objects.Account import Account
 
 osu_blueprint = Blueprint('osu_blueprint', __name__)
 

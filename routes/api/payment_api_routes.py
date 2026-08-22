@@ -1,7 +1,7 @@
 import stripe
 from flask import Blueprint, redirect, url_for, session, request, jsonify
 import environment
-from objects import Account
+from objects.Account import Account
 from utils.logger import setup_logger
 
 payments_api_blueprint = Blueprint('payment api', __name__)

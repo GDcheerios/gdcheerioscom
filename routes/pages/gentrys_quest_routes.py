@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, request
 
 import environment
 from api.gentrys_quest.leaderboard_api import get_top_players, get_leaderboard
-from objects import Account
+from objects.Account import Account
 
 gentrys_quest_blueprint = Blueprint("gentrys_quest_blueprint", __name__)
 

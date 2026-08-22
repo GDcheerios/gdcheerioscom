@@ -4,7 +4,7 @@ import environment
 from api.key_api import *
 import base64, json, hmac, hashlib, time, logging  # debug helpers
 
-from objects import Account
+from objects.Account import Account
 
 key_blueprint = Blueprint('key', __name__)
 ALLOWED_SCOPES = {
