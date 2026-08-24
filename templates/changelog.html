@@ -4,44 +4,192 @@
 <title>Changelog - GDcheerios.com</title>
 <link rel="stylesheet" href="/static/style.css">
 <style>
-  .changelog-page { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
-  .changelog-header { margin-bottom: 1.5rem; }
+  .changelog-page {
+    --changelog-accent: limegreen;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  .changelog-header, .changelog-project { margin-bottom: 1rem; }
   .changelog-header h1 { margin-bottom: .4rem; }
   .changelog-meta { color: #bbb; }
   .changelog-content {
     padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, .1);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-elev-1);
+    box-shadow: var(--shadow-1);
   }
   .changelog-content h2 { margin-top: 1.5rem; }
   .changelog-content h2:first-child { margin-top: 0; }
   .changelog-content li { margin: .45rem 0; }
-  .changelog-content a { color: #9bd3ff; }
+  .changelog-content a { color: var(--changelog-accent); }
   .changelog-empty { color: #bbb; text-align: center; padding: 3rem 1rem; }
+  .version-nav {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    margin: 1rem 0 1.5rem;
+  }
+  .version-nav button {
+    padding: .65rem .9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--chip-bg);
+    color: inherit;
+    cursor: pointer;
+  }
+  .version-nav button:hover:not(:disabled) {
+    border-color: var(--changelog-accent);
+    color: var(--changelog-accent);
+  }
+  .version-nav button:disabled { cursor: not-allowed; opacity: .35; }
+  .version-display { text-align: center; }
+  .version-display strong, .version-display span { display: block; }
+  .version-display span { margin-top: .2rem; color: #bbb; font-size: .9rem; }
+  .changelog-entry[hidden] { display: none; }
+  .project-tabs {
+    display: flex;
+    gap: .75rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    padding-bottom: .35rem;
+  }
+  .project-tab {
+    flex: 0 0 auto;
+    padding: .7rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--chip-bg);
+    color: inherit;
+    cursor: pointer;
+  }
+  .project-tab:hover, .project-tab.active {
+    border-color: var(--changelog-accent);
+    color: var(--changelog-accent);
+  }
+  .project-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .project-heading h2 { margin: 0; }
+  .project-label {
+    color: var(--changelog-accent);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .changelog-project[hidden] { display: none; }
 </style>
 {% endblock %}
 
 {% block body %}
 <main class="changelog-page">
   <header class="changelog-header">
-    <h1>Latest changelog</h1>
-    {% if changelog %}
-      <div class="changelog-meta">
-        Version {{ changelog.version }}{% if changelog.date %} · {{ changelog.date }}{% endif %}
-      </div>
-    {% endif %}
+    <h1>Changelogs</h1>
   </header>
 
-  <article class="changelog-content">
-    {% if changelog %}
-      {# The storage service sanitizes this HTML before returning it. #}
-      {{ changelog.html | safe }}
-    {% elif unavailable %}
-      <div class="changelog-empty">The changelog service is temporarily unavailable.</div>
-    {% else %}
-      <div class="changelog-empty">No changelog has been published yet.</div>
-    {% endif %}
-  </article>
+  {% if projects %}
+    <nav class="project-tabs" aria-label="Changelog projects">
+      {% for project in projects %}
+          <button
+                  class="project-tab{% if loop.first %} active{% endif %}"
+                  type="button"
+                  data-project-tab="project-{{ loop.index }}"
+                  aria-controls="project-{{ loop.index }}"
+                  aria-selected="{{ 'true' if loop.first else 'false' }}"
+          >{{ project.entries[0].project or project.slug }} ({{ project.entries[0].version }})
+          </button>
+      {% endfor %}
+    </nav>
+
+    {% for project in projects %}
+      <section
+        id="project-{{ loop.index }}"
+        class="changelog-content changelog-project"
+        {% if not loop.first %}hidden{% endif %}
+      >
+        <header class="project-heading">
+          <div>
+            <div class="project-label">Release history</div>
+            <h2>{{ project.entries[0].project or project.slug }}</h2>
+          </div>
+        </header>
+        <div class="version-nav">
+          <button type="button" data-version-newer aria-label="View newer changelog">← Newer</button>
+          <div class="version-display" aria-live="polite">
+            <strong data-version-label></strong>
+            <span data-version-date></span>
+          </div>
+          <button type="button" data-version-older aria-label="View older changelog">Older →</button>
+        </div>
+        {% for changelog in project.entries %}
+          <article
+            class="changelog-entry"
+            data-version="{{ changelog.version }}"
+            data-date="{{ changelog.date or '' }}"
+            {% if not loop.first %}hidden{% endif %}
+          >
+            {{ changelog.html | safe }}
+          </article>
+        {% endfor %}
+      </section>
+    {% endfor %}
+  {% else %}
+    <article class="changelog-content">
+      {% if unavailable %}
+        <div class="changelog-empty">The changelog service is temporarily unavailable.</div>
+      {% else %}
+        <div class="changelog-empty">No changelog has been published yet.</div>
+      {% endif %}
+    </article>
+  {% endif %}
 </main>
+
+<script>
+  document.querySelectorAll('[data-project-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-project-tab]').forEach((button) => {
+        const selected = button === tab;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-selected', String(selected));
+      });
+      document.querySelectorAll('.changelog-project').forEach((project) => {
+        project.hidden = project.id !== tab.dataset.projectTab;
+      });
+    });
+  });
+
+  document.querySelectorAll('.changelog-project').forEach((project) => {
+    const entries = Array.from(project.querySelectorAll('.changelog-entry'));
+    const newerButton = project.querySelector('[data-version-newer]');
+    const olderButton = project.querySelector('[data-version-older]');
+    const versionLabel = project.querySelector('[data-version-label]');
+    const versionDate = project.querySelector('[data-version-date]');
+    let currentIndex = 0;
+
+    const showVersion = (index) => {
+      currentIndex = index;
+      entries.forEach((entry, entryIndex) => {
+        entry.hidden = entryIndex !== currentIndex;
+      });
+
+      const current = entries[currentIndex];
+      versionLabel.textContent = `Version ${current.dataset.version}`;
+      versionDate.textContent = current.dataset.date || 'Date unavailable';
+      newerButton.disabled = currentIndex === 0;
+      olderButton.disabled = currentIndex === entries.length - 1;
+    };
+
+    newerButton.addEventListener('click', () => showVersion(currentIndex - 1));
+    olderButton.addEventListener('click', () => showVersion(currentIndex + 1));
+    showVersion(0);
+  });
+</script>
 {% endblock %}

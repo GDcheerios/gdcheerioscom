@@ -12,7 +12,10 @@ main_blueprint = Blueprint("main_blueprint", __name__)
 @main_blueprint.route("/")
 def index():
     try:
-        latest = environment.storage.get_latest_changelog(output_format="html")
+        latest = environment.storage.get_latest_changelog(
+            project="gdcheerioscom",
+            output_format="html",
+        )
     except requests.RequestException:
         latest = None
     return render_template("index.html", changelog=latest)
@@ -25,10 +28,10 @@ def about(): return render_template("about.html")
 @main_blueprint.route("/changelog")
 def changelog():
     try:
-        latest = environment.storage.get_latest_changelog(output_format="html")
+        projects = environment.storage.get_changelogs(output_format="html")
     except requests.RequestException:
-        return render_template("changelog.html", changelog=None, unavailable=True), 503
-    return render_template("changelog.html", changelog=latest, unavailable=False)
+        return render_template("changelog.html", projects=[], unavailable=True), 503
+    return render_template("changelog.html", projects=projects, unavailable=False)
 
 
 @main_blueprint.route("/search")
