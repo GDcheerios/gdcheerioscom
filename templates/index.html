@@ -4,6 +4,80 @@
     <title>Home</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="/static/gentrys-quest-style.css">
+    <style>
+        .release-card {
+            --release-accent: limegreen;
+            padding: 0;
+            background: var(--bg-elev-1);
+            border-color: var(--border);
+        }
+        .release-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.4rem 1.5rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .release-eyebrow {
+            margin: 0 0 .35rem;
+            color: var(--release-accent);
+            font-size: .76rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+        .release-title { margin: 0; font-size: clamp(1.45rem, 4vw, 2rem); }
+        .release-date { margin: .35rem 0 0; color: var(--muted); }
+        .release-version {
+            flex: 0 0 auto;
+            padding: .5rem .8rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--chip-bg);
+            color: var(--release-accent);
+            font-weight: 700;
+        }
+        .release-notes {
+            padding: 1.25rem 1.5rem;
+            line-height: 1.7;
+        }
+        .release-notes > :first-child { margin-top: 0; }
+        .release-notes > :last-child { margin-bottom: 0; }
+        .release-notes h1, .release-notes h2, .release-notes h3 {
+            margin-top: 1.2rem;
+            font-size: 1.05rem;
+        }
+        .release-notes ul { padding-left: 1.25rem; }
+        .release-notes li { margin: .45rem 0; }
+        .release-footer {
+            display: flex;
+            justify-content: flex-end;
+            padding: 0 1.5rem 1.4rem;
+        }
+        .release-link {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .7rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--chip-bg);
+            color: var(--text);
+            font-weight: 700;
+            text-decoration: none;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .release-link:hover {
+            border-color: var(--release-accent);
+            color: var(--release-accent);
+            transform: translateY(-1px);
+        }
+        @media (max-width: 560px) {
+            .release-header { align-items: flex-start; }
+            .release-version { font-size: .85rem; }
+        }
+    </style>
     <script
             async
             src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5675992934458479"
@@ -48,16 +122,26 @@
         </div>
     </section>
 
-    <section class="block" id="changelog" aria-labelledby="changelog">
-        <div class="center">
-            <h3>Changelog</h3>
-            {{ changelog|safe }}
-        </div>
-    </section>
-
-        <section class="center muted" style="margin-top:8px">
-            <small>© {{ current_year or 2025 }} GDcheerios. All rights reserved.</small>
+    {% if changelog %}
+        <section class="block release-card" id="latest-changelog" aria-labelledby="latest-release-title">
+            <header class="release-header">
+                <div>
+                    <p class="release-eyebrow">Latest release</p>
+                    <h2 class="release-title" id="latest-release-title">What's new</h2>
+                    {% if changelog.date %}<p class="release-date">Released {{ changelog.date }}</p>{% endif %}
+                </div>
+                <span class="release-version">v{{ changelog.version }}</span>
+            </header>
+            <div class="release-notes">{{ changelog.html | safe }}</div>
+            <footer class="release-footer">
+                <a class="release-link" href="/changelog">View release history <span aria-hidden="true">→</span></a>
+            </footer>
         </section>
+    {% endif %}
+
+    <section class="center muted" style="margin-top:8px">
+        <small>© {{ current_year or 2025 }} GDcheerios. All rights reserved.</small>
+    </section>
 
 </div>
 {% endblock %}
