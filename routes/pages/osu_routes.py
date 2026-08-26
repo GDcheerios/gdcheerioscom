@@ -22,27 +22,26 @@ def osu_match(id):
     match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
     players = environment.database.fetch_all_to_dict(
         """
-        SELECT
-            omu.match_id,
-            omu.user_id,
-            omu.starting_score,
-            omu.starting_playcount,
-            omu.ending_score,
-            omu.ending_playcount,
-            omu.team,
-            omu.nickname,
-            ou.id         AS id,
-            ou.username   AS username,
-            ou.score      AS score,
-            ou.playcount  AS playcount,
-            ou.accuracy   AS accuracy,
-            ou.performance AS performance,
-            ou.rank       AS rank,
-            ou.avatar     AS avatar,
-            ou.background AS background,
-            ou.last_refresh AS last_refresh
+        SELECT omu.match_id,
+               omu.user_id,
+               omu.starting_score,
+               omu.starting_playcount,
+               omu.ending_score,
+               omu.ending_playcount,
+               omu.team,
+               omu.nickname,
+               ou.id           AS id,
+               ou.username     AS username,
+               ou.total_score  AS score,
+               ou.playcount    AS playcount,
+               ou.accuracy     AS accuracy,
+               ou.pp           AS pp,
+               ou.global_rank  AS global_rank,
+               ou.avatar       AS avatar,
+               ou.background   AS background,
+               ou.last_refresh AS last_refresh
         FROM osu.match_users omu
-        LEFT JOIN osu.users ou ON omu.user_id = ou.id
+                 LEFT JOIN osu.users ou ON omu.user_id = ou.id
         WHERE omu.match_id = %s
         """,
         params=(id,)
