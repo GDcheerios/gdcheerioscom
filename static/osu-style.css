@@ -78,6 +78,7 @@
     border: 2px solid rgba(100, 150, 220, 0.8);
     border-radius: 12px;
     padding: 10px 12px;
+    overflow: hidden;
 }
 
 .player {
@@ -90,6 +91,15 @@
     margin-bottom: 6px;
     margin-left: auto;
     margin-right: auto;
+    opacity: 1;
+    position: relative;
+    transition: opacity 0.3s ease, top 0.3s ease;
+}
+
+.player-hidden {
+    position: relative;
+    transition: opacity 0.3s ease, top 0.3s ease;
+    opacity: 0;
 }
 
 .placement {
