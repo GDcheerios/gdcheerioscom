@@ -73,156 +73,48 @@
     opacity: 0.9;
 }
 
-/* --- existing player styles --- */
-
-.player-listing {
-    position: relative;
-    overflow: hidden;
+.osu-box{
+    background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65));
+    border: 2px solid rgba(100, 150, 220, 0.8);
     border-radius: 12px;
-    border: 4px solid #ffffff;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 10px 12px;
 }
 
 .player {
-    position: relative;
-    overflow: hidden;
+    height: 32px;
+    width: 95%;
     border-radius: 12px;
-    border: 4px solid #ffffff;
-    padding: 10px;
-    margin-bottom: 10px;
-    width: 100%;
-    margin-left: 0;
-}
-
-/* Row containing rank text + player card */
-.player-row {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    margin-bottom: 10px;
-}
-
-/* Simple white rank indicator on the left */
-.player-rank {
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 1.1rem;
-    text-align: right;
-    width: 2.5ch;
-}
-
-.player-bg {
-    position: absolute;
-    inset: 0;
-    background-size: cover;
-    background-position: center;
-    filter: blur(8px);
-    transform: scale(1.05);
-    z-index: 0;
-}
-
-.player-content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    justify-content: space-between;
-    width: 100%;
-}
-
-/* LEFT: everything except score */
-.player-main {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* RIGHT: only score, very emphasized */
-.player-score {
+    flex-direction: row;
+    align-items: start;
+    margin-bottom: 6px;
     margin-left: auto;
-    text-align: right;
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(0, 0, 0, 1);
+    margin-right: auto;
 }
 
-.player-score-value {
-    font-size: 2.4rem;
-    font-weight: 900;
-    letter-spacing: 0.03em;
+.placement {
+    margin-left: 8px;
 }
 
-.player-score-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    opacity: 0.8;
+.avatar{
+    width: 32px;
+    height: 32px;
+    border-radius: 12px;
+    margin-left: 8px;
 }
 
-/* NEW: small “important” stats next to the score */
-.player-score-stats {
-    margin-top: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    opacity: 0.9;
+.username {
+    margin-left: 8px;
+    font-size: 1.17em;
+    font-weight: bold;
+    margin-top: auto;
+    margin-bottom: auto;
+
 }
 
-.player-score-stat {
-    line-height: 1.05;
-    white-space: nowrap;
-}
-
-.player-score-stat-label {
-    opacity: 0.85;
-}
-
-.player-score-stat-value {
-    font-variant-numeric: tabular-nums;
-}
-
-/* Small refresh button on player card */
-.player-refresh-button {
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    border-radius: 8px;
-    border: 2px solid #ffffffaa;
-    background: rgba(0, 0, 0, 0.6);
-    color: #ffffff;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-.player-refresh-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-
-/* Text block next to avatar */
-.player-text {
-    color: #ffffff;
-    text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
-}
-
-.player-text-name {
-    font-size: 1.2rem;
-    font-weight: 700;
-}
-
-.player-text-meta {
-    font-size: 0.9rem;
-    opacity: 0.9;
-}
-
-.player-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
-    object-fit: cover;
-    border: 2px solid #000000;
+.objective {
+    margin-left: auto;
+    margin-right: 6px;
 }
 
 .create {

@@ -20,32 +20,6 @@ def osu():
 @osu_blueprint.route("/match/<id>")
 def osu_match(id):
     match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
-    players = environment.database.fetch_all_to_dict(
-        """
-        SELECT omu.match_id,
-               omu.user_id,
-               omu.starting_score,
-               omu.starting_playcount,
-               omu.ending_score,
-               omu.ending_playcount,
-               omu.team,
-               omu.nickname,
-               ou.id           AS id,
-               ou.username     AS username,
-               ou.total_score  AS score,
-               ou.playcount    AS playcount,
-               ou.accuracy     AS accuracy,
-               ou.pp           AS pp,
-               ou.global_rank  AS global_rank,
-               ou.avatar       AS avatar,
-               ou.background   AS background,
-               ou.last_refresh AS last_refresh
-        FROM osu.match_users omu
-                 LEFT JOIN osu.users ou ON omu.user_id = ou.id
-        WHERE omu.match_id = %s
-        """,
-        params=(id,)
-    )
     current_osu_id = None
     request_id = Account.id_from_session(request.cookies.get('session'))
     is_creator = str(request_id) == str(match["opener_id"])
@@ -60,13 +34,9 @@ def osu_match(id):
     return render_template(
         'osu/match.html',
         match=match,
-        players=players,
         current_osu_id=current_osu_id,
         is_creator=is_creator,
         is_admin=is_admin,
+        match_id=id,
         websocket_url=environment.frontend_websocket_url,
     )
-
-
-@osu_blueprint.route("/loading/<reason>/<id>")
-def osu_loading(reason, id): return render_template("osu/loading.html", reason=reason, id=id, msg="")

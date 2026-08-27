@@ -107,8 +107,7 @@ class Account:
             load_task.start_subtask("initialize data", "fetch osu matches")
             self.osu_matches = database.fetch_all_to_dict(
                 """
-                SELECT id,
-                       name, open, pinned, ended, started, opener_id, (
+                SELECT id, name, open, pinned, ended, started_at, opener_id, ended_at, (
                     SELECT count (*) FROM osu.match_users where match_id = osu.matches.id
                     ) as users
                 FROM osu.matches

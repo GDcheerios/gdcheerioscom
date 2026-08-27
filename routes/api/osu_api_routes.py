@@ -27,75 +27,6 @@ def _json_safe(value):
     return value
 
 
-def _notify_osu_user_refreshed(user_data, match_id=None):
-    websocket_url = getattr(environment, "backend_websocket_url", None)
-    if not websocket_url:
-        logger.debug("websocket_url is not configured; skipping refresh notification")
-        return
-
-    try:
-        from websockets.sync.client import connect
-    except Exception:
-        logger.exception("websockets client library is not available")
-        return
-
-    match_ids = []
-    try:
-        if match_id is not None:
-            match_ids = [int(match_id)]
-        elif user_data and user_data.get("id") is not None:
-            rows = environment.database.fetch_all(
-                """
-                SELECT DISTINCT match_id
-                FROM osu.match_users
-                WHERE user_id = %s
-                """,
-                params=(user_data["id"],)
-            )
-            match_ids = [int(row[0]) for row in rows]
-    except Exception:
-        logger.exception("failed to compute match_ids for refreshed osu user")
-
-    payload = {
-        "type": "osu_user_refreshed",
-        "match_id": int(match_id) if match_id is not None else None,
-        "match_ids": match_ids,
-        "user": _json_safe(user_data),
-    }
-
-    if match_id is not None and user_data and user_data.get("id") is not None:
-        try:
-            match_user = environment.database.fetch_to_dict(
-                """
-                SELECT
-                    match_id,
-                    user_id,
-                    starting_score,
-                    starting_playcount,
-                    ending_score,
-                    ending_playcount,
-                    team,
-                    nickname
-                FROM osu.match_users
-                WHERE match_id = %s
-                  AND user_id = %s
-                """,
-                params=(int(match_id), int(user_data["id"]))
-            )
-            if match_user:
-                payload["match_user"] = _json_safe(match_user)
-        except Exception:
-            logger.exception("failed to include match_user payload for refresh notification")
-
-    try:
-        with connect(websocket_url) as ws:
-            ws.send(json.dumps(payload))
-            response = ws.recv()
-            logger.info("osu refresh notification acknowledged: %s", response)
-    except Exception:
-        logger.exception("failed to send osu refresh notification")
-
-
 # region User API
 
 @osu_api_blueprint.get('/osu/fetch-user/<id>')
@@ -112,7 +43,6 @@ def fetch_osu_user(id):
     if not data:
         return {"error": "user not found"}
 
-    _notify_osu_user_refreshed(data, match_id=match_id)
     return _json_safe(data)
 
 
@@ -207,6 +137,7 @@ def create_match():
                 team_name = None
 
         player_data = osu_api.fetch_osu_data(player)
+        print(player_data)
         logger.info("create_match match_id=%s", match_id)
         environment.database.execute(
             "INSERT INTO osu.match_users (match_id, user_id, starting_score, starting_playcount, team) values (%s, %s, %s, %s, %s)",

@@ -65,7 +65,7 @@ def get_user_info(user_identifier):
     if (
             not user_check
             or user_check["last_refresh"]
-            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=2)
+            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=1)
     ):
         logger.info("getting osu user %s", user_identifier)
         user_req = requests.get(
@@ -131,8 +131,6 @@ def extract_info(data):
     :return: json of important user info
     """
 
-    print(data)
-
     try:
         try:
             if data['error'] is None:
@@ -173,7 +171,6 @@ def extract_info(data):
                 """,
                 params=(data['user']['id'], data['score']['id'])
             )
-            print(exists)
 
             if exists['user']:
                 db.execute(
@@ -264,7 +261,7 @@ def extract_info(data):
                     )
                 )
 
-            return data['user']
+            return extracted_info
         else:
             logger.warning("user info not found")
             return None
@@ -286,8 +283,9 @@ def get_matches():
                open,
                pinned,
                ended,
-               started,
+               started_at,
                opener_id,
+               ended_at,
                (select username
                 from account.users
                 where id = opener_id)            as creator,
@@ -305,9 +303,9 @@ def get_matches():
         else:
             current_matches.append(match)
 
-    old_matches.sort(key=lambda x: x["started"], reverse=True)
+    old_matches.sort(key=lambda x: x["started_at"], reverse=True)
     old_matches.sort(key=lambda x: x["pinned"], reverse=True)
-    current_matches.sort(key=lambda x: x["started"], reverse=True)
+    current_matches.sort(key=lambda x: x["started_at"], reverse=True)
     current_matches.sort(key=lambda x: x["pinned"], reverse=True)
     return {
         "current": current_matches,
