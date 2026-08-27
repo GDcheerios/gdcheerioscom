@@ -38,7 +38,8 @@ def fetch_osu_user(id):
         except (TypeError, ValueError):
             match_id = None
 
-    data = osu_api.fetch_osu_data(id)
+    skip_api = request.args.get("skip_api", "false").lower() == "true"
+    data = osu_api.fetch_osu_data(id, skip_api=skip_api)
 
     if not data:
         return {"error": "user not found"}

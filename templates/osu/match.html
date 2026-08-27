@@ -14,12 +14,11 @@
                 <h4>Highlight</h4>
             </div>
             <div style="display: flex; flex-direction: row; justify-content: space-evenly; height: 50%; width: 80%; margin: auto;">
-                <div class="osu-box" style="width: 30%;">
-                    <div id="players-list" style="height: 60%;">
+                <div class="osu-box" style="width: 50%;">
+                    <div id="players-list" style="height: 75%;">
                     </div>
-                    <div id="you-container" style="height: 40%; display: none;">
+                    <div id="you-container" style="height: 25%; display: none;">
                         <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent 0%, rgba(100, 150, 220, 0.8) 50%, transparent 100%); margin: 10px 0;"></div>
-                        <h1 style="text-align: center;">You</h1>
                         <div id="your-card"></div>
                         <div id="controls" style="display: flex;">
                             <button id="refresh-button"
@@ -67,7 +66,12 @@
             }
 
             updateData(playerData) {
-                console.log(playerData);
+                console.log(playerData)
+                if (!playerData || playerData.id == null) {
+                    console.error("Invalid player data:", playerData);
+                    return false;
+                }
+
                 this.id = playerData.id;
                 this.username = playerData.username;
                 this.placement = 0;
@@ -87,12 +91,21 @@
                 this.grade_s = playerData.grade_s;
                 this.grade_sh = playerData.grade_sh;
                 this.grade_a = playerData.grade_a;
+
+                return true;
             }
 
-            async refresh(){
-                console.log("Refreshing player card for id:", this.id);
-                const userData = await getUser(this.id);
-                this.updateData(userData);
+            async refresh(pullFromOsu = false) {
+                console.log("Refreshing player card for id:", this.id, pullFromOsu);
+
+                const userData = await getUser(this.id, pullFromOsu);
+
+                if (!userData || userData.id == null) {
+                    console.error("Could not refresh player:", this.id, userData);
+                    return false;
+                }
+
+                return this.updateData(userData);
             }
 
             set startingStats(stats) {
@@ -101,6 +114,10 @@
 
             set endingStats(stats) {
                 this.ending_stats = stats;
+            }
+
+            renderPlacement() {
+                this.placementEl.textContent = `${this.placement}`;
             }
 
             render() {
@@ -114,7 +131,11 @@
                 this.element.appendChild(this.placementEl);
                 this.element.appendChild(this.avatarEl);
                 this.element.appendChild(this.usernameEl);
-                this.element.style.background = `linear-gradient(to right, rgba(25, 25, 25, 1) 0%, rgba(25, 25, 25, 1) 25%, rgba(25, 25, 25, 0.75) 50%, rgba(25, 25, 25, 0.5) 75%, rgba(30, 30, 30, 0.5) 100%), url('${this.background_url}')`;
+                const gradient = 'linear-gradient(to right, rgba(25, 25, 25, 1) 0%, rgba(25, 25, 25, 1) 25%, rgba(25, 25, 25, 0.75) 50%, rgba(25, 25, 25, 0.5) 75%, rgba(30, 30, 30, 0.5) 100%)';
+                const hasBackground = this.background_url && this.background_url !== 'undefined';
+                this.element.style.background = hasBackground
+                    ? `${gradient}, url('${this.background_url}')`
+                    : gradient;
                 this.element.style.backgroundSize = 'cover';
                 this.element.style.backgroundPosition = 'center';
                 this.objectiveEl.textContent = formatNumber(this[matchPrimary]);
@@ -129,6 +150,13 @@
         const playersList = document.getElementById('players-list');
         const teamsDiv = document.getElementById('teams');
         const recentPlaysDiv = document.getElementById('recent-plays');
+        const youCardElement = document.getElementById('your-card');
+        const youCard = new PlayerCard(ID);
+
+        function youInTheMatch() {
+            return players.has(youCard.id);
+        }
+
 
         function formatNumber(num) {
             if (num === null || num === undefined) return '0';
@@ -148,9 +176,53 @@
             return num.toString();
         }
 
+        function sort() {
+            const sortedPlayers = Array.from(players.values()).sort((a, b) => b[matchPrimary] - a[matchPrimary]);
+
+            sortedPlayers.forEach((player, index) => {
+                player.placement = index + 1;
+                player.renderPlacement();
+            });
+
+            const fragment = document.createDocumentFragment();
+            sortedPlayers.forEach(player => {
+                if (player.element.parentNode === playersList) {
+                    playersList.removeChild(player.element);
+                }
+                fragment.appendChild(player.element);
+                youCard.placement = players.get(youCard.id).placement;
+                youCard.renderPlacement();
+                player.element.classList.toggle(
+                    'player-hidden',
+                    (youInTheMatch()) ? player.placement > 8 : player.placement > 11
+                );
+            });
+            playersList.appendChild(fragment);
+        }
+
         addPlayer(11339405);
+        addPlayer(38791701);
+        addPlayer(37434005);
+        addPlayer(11147702);
         addPlayer(2);
+        addPlayer(9374344);
+        addPlayer(18346314);
+        addPlayer(8379270);
+        addPlayer(11798717);
+        addPlayer(14937109);
+        addPlayer(16030914);
+        addPlayer(19609172);
+        addPlayer(28893698);
+        addPlayer(14161199);
+        addPlayer(19903063);
+        addPlayer(32982105);
+        addPlayer(23082754);
+        addPlayer(14616066);
+        addPlayer(33841139);
+        addPlayer(32789401);
+        addPlayer(20322801);
         addPlayer(11022601);
+        addPlayer(9726980);
 
         // api
         function buildApiUrl(path) {
@@ -170,28 +242,33 @@
         }
 
 
-        async function getUser(id) {
-            console.log("retrieving user", id);
-            return fetch(`${buildApiUrl('/api/osu/fetch-user')}/${id}`)
-                .then(response => response.json())
-                .catch(error => console.error('Error fetching user:', error));
+        async function getUser(id, pullFromOsu = true) {
+            const url = `${buildApiUrl('/api/osu/fetch-user')}/${id}?skip_api=${!pullFromOsu}`;
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch user ${id}: ${response.status}`);
+            }
+
+            return response.json();
         }
 
-        async function addPlayer(id) {
+        async function addPlayer(id, refresh = false) {
             const player = new PlayerCard(id);
-            await player.refresh();
+            await player.refresh(refresh);
             players.set(player.id, player);
             const playerElement = player.render();
             playersList.appendChild(playerElement);
             if (player.id === ID) {
                 const youContainer = document.getElementById('you-container');
                 const yourCardContainer = document.getElementById('your-card');
-                const youPlayer = new PlayerCard(id);
-                await youPlayer.refresh();
-                const youElement = youPlayer.render();
+                await youCard.refresh();
+                const youElement = youCard.render();
                 youContainer.style.display = 'block';
                 yourCardContainer.appendChild(youElement);
             }
+            sort();
         }
 
         // ws
@@ -263,12 +340,9 @@
             console.log('Refreshing all players');
             for (const [id, player] of players) {
                 await player.refresh();
-                const oldElement = player.element;
-                const newElement = player.render();
-                if (oldElement.parentNode) {
-                    oldElement.parentNode.replaceChild(newElement, oldElement);
-                }
+                player.objectiveEl.textContent = formatNumber(player[matchPrimary]);
             }
+            sort();
         });
 
     </script>

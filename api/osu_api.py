@@ -44,7 +44,7 @@ def check_access():
     return token
 
 
-def get_user_info(user_identifier):
+def get_user_info(user_identifier, skip_api=False):
     """
     Retrieve osu api user info.
 
@@ -67,40 +67,41 @@ def get_user_info(user_identifier):
             or user_check["last_refresh"]
             <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=1)
     ):
-        logger.info("getting osu user %s", user_identifier)
-        user_req = requests.get(
-            f"https://osu.ppy.sh/api/v2/users/{user_identifier}/osu",
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {check_access()}",
-            },
-        ).json()
-        recent_score_req = requests.get(
-            f"https://osu.ppy.sh/api/v2/users/{user_req['id']}/scores/recent",
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {check_access()}",
-                "x-api-version": "20220705"
-            },
-            params={
-                "mode": "osu",
-                "limit": 1,
-                "include_fails": "1"
-            }
-        ).json()
+        if not skip_api:
+            logger.info("getting osu user %s", user_identifier)
+            user_req = requests.get(
+                f"https://osu.ppy.sh/api/v2/users/{user_identifier}/osu",
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {check_access()}",
+                },
+            ).json()
+            recent_score_req = requests.get(
+                f"https://osu.ppy.sh/api/v2/users/{user_req['id']}/scores/recent",
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {check_access()}",
+                    "x-api-version": "20220705"
+                },
+                params={
+                    "mode": "osu",
+                    "limit": 1,
+                    "include_fails": "1"
+                }
+            ).json()
 
-        if len(recent_score_req) == 0:
+            if len(recent_score_req) == 0:
+                return {
+                    'user': user_req,
+                    'score': None
+                }
+
             return {
                 'user': user_req,
-                'score': None
+                'score': recent_score_req[0]
             }
-
-        return {
-            'user': user_req,
-            'score': recent_score_req[0]
-        }
 
     if user_check:
         score_check = environment.database.fetch_to_dict(
@@ -196,23 +197,23 @@ def extract_info(data):
                     WHERE id = %s
                     """,
                     params=(
-                        extracted_info['username'],
-                        extracted_info['total_score'],
-                        extracted_info['ranked_score'],
-                        extracted_info['total_hits'],
-                        extracted_info['playcount'],
-                        extracted_info['accuracy'],
-                        extracted_info['pp'],
-                        extracted_info['global_rank'],
-                        extracted_info['country_rank'],
-                        extracted_info['grade_ss'],
-                        extracted_info['grade_ssh'],
-                        extracted_info['grade_s'],
-                        extracted_info['grade_sh'],
-                        extracted_info['grade_a'],
-                        extracted_info['avatar'],
-                        extracted_info['background'],
-                        extracted_info['id']
+                        extracted_info.get('username') or '',
+                        extracted_info.get('total_score') or 0,
+                        extracted_info.get('ranked_score') or 0,
+                        extracted_info.get('total_hits') or 0,
+                        extracted_info.get('playcount') or 0,
+                        extracted_info.get('accuracy') or 0,
+                        extracted_info.get('pp') or 0,
+                        extracted_info.get('global_rank') or 0,
+                        extracted_info.get('country_rank') or 0,
+                        extracted_info.get('grade_ss') or 0,
+                        extracted_info.get('grade_ssh') or 0,
+                        extracted_info.get('grade_s') or 0,
+                        extracted_info.get('grade_sh') or 0,
+                        extracted_info.get('grade_a') or 0,
+                        extracted_info.get('avatar') or '',
+                        extracted_info.get('background') or '',
+                        extracted_info.get('id')
                     )
                 )
             else:
@@ -224,23 +225,23 @@ def extract_info(data):
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                     """,
                     params=(
-                        extracted_info['id'],
-                        extracted_info['username'],
-                        extracted_info['total_score'],
-                        extracted_info['ranked_score'],
-                        extracted_info['total_hits'],
-                        extracted_info['playcount'],
-                        extracted_info['accuracy'],
-                        extracted_info['pp'],
-                        extracted_info['global_rank'],
-                        extracted_info['country_rank'],
-                        extracted_info['grade_ss'],
-                        extracted_info['grade_ssh'],
-                        extracted_info['grade_s'],
-                        extracted_info['grade_sh'],
-                        extracted_info['grade_a'],
-                        extracted_info['avatar'],
-                        extracted_info['background'],
+                        extracted_info.get('id'),
+                        extracted_info.get('username') or '',
+                        extracted_info.get('total_score') or 0,
+                        extracted_info.get('ranked_score') or 0,
+                        extracted_info.get('total_hits') or 0,
+                        extracted_info.get('playcount') or 0,
+                        extracted_info.get('accuracy') or 0,
+                        extracted_info.get('pp') or 0,
+                        extracted_info.get('global_rank') or 0,
+                        extracted_info.get('country_rank') or 0,
+                        extracted_info.get('grade_ss') or 0,
+                        extracted_info.get('grade_ssh') or 0,
+                        extracted_info.get('grade_s') or 0,
+                        extracted_info.get('grade_sh') or 0,
+                        extracted_info.get('grade_a') or 0,
+                        extracted_info.get('avatar') or '',
+                        extracted_info.get('background') or '',
                     )
                 )
 
@@ -269,8 +270,8 @@ def extract_info(data):
         return data['user']
 
 
-def fetch_osu_data(user_id):
-    return extract_info(get_user_info(user_id))
+def fetch_osu_data(user_id, skip_api=False):
+    return extract_info(get_user_info(user_id, skip_api=skip_api))
 
 
 # <editor-fold desc="osu score farm">

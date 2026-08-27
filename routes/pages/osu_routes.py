@@ -17,11 +17,18 @@ def osu():
     return render_template("osu/index.html", matches=get_matches(), account=account)
 
 
-@osu_blueprint.route("/match/<id>")
+@osu_blueprint.route("/match/<int:id>")
 def osu_match(id):
-    match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
+    match = environment.database.fetch_to_dict(
+        "SELECT * FROM osu.matches WHERE id = %s",
+        params=(id,)
+    )
+
+    if not match:
+        return "Match not found", 404
+
     current_osu_id = None
-    request_id = Account.id_from_session(request.cookies.get('session'))
+    request_id = Account.id_from_session(request.cookies.get("session"))
     is_creator = str(request_id) == str(match["opener_id"])
     is_admin = False
     if request_id:
