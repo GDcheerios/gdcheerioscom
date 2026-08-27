@@ -4,1696 +4,273 @@
         <title>{{ match.name }} Score Farm</title>
         <link rel="stylesheet" href="/static/style.css">
         <link rel="stylesheet" href="/static/osu-style.css">
-        <style>
-            @keyframes fadeSlideIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(-10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .player {
-                opacity: 1;
-                transform: translateY(0);
-                transition: transform 0.35s ease, opacity 0.35s ease;
-            }
-            .player.player-enter {
-                opacity: 0;
-                transform: translateY(-10px);
-                animation: fadeSlideIn 0.4s ease-out forwards;
-            }
-
-            /* --- NEW: score bump + row move animations --- */
-            @keyframes scoreBumpUp {
-                0%   { transform: scale(1);   filter: none; }
-                35%  { transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(60, 255, 160, 0.55)); }
-                100% { transform: scale(1);   filter: none; }
-            }
-            @keyframes scoreBumpDown {
-                0%   { transform: scale(1);   filter: none; }
-                35%  { transform: scale(0.98); filter: drop-shadow(0 0 10px rgba(255, 90, 90, 0.45)); }
-                100% { transform: scale(1);   filter: none; }
-            }
-            .player-score-value.score-up {
-                animation: scoreBumpUp 520ms ease-out;
-            }
-            .player-score-value.score-down {
-                animation: scoreBumpDown 520ms ease-out;
-            }
-            .score-delta-badge {
-                position: absolute;
-                right: 0;
-                top: 0;
-                z-index: 5;
-                font-size: 16px;
-                font-weight: 800;
-                letter-spacing: .03em;
-                opacity: 0;
-                pointer-events: none;
-                text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
-            }
-            .score-delta-badge.delta-up {
-                color: #5fffc8;
-                animation: scoreDeltaFloatUp 1500ms ease-out forwards;
-            }
-            .score-delta-badge.delta-down {
-                color: #ff9a9a;
-                animation: scoreDeltaFloatDown 1500ms ease-out forwards;
-            }
-            @keyframes scoreDeltaFloatUp {
-                0% { opacity: 0; transform: translateY(8px) scale(0.96); }
-                14% { opacity: 1; transform: translateY(0) scale(1); }
-                100% { opacity: 0; transform: translateY(-18px) scale(1); }
-            }
-            @keyframes scoreDeltaFloatDown {
-                0% { opacity: 0; transform: translateY(-8px) scale(0.96); }
-                14% { opacity: 1; transform: translateY(0) scale(1); }
-                100% { opacity: 0; transform: translateY(18px) scale(1); }
-            }
-
-            /* Smooth “move up/down” (FLIP) */
-            .player-row {
-                will-change: transform;
-            }
-            .player-row.row-move-up .player {
-                animation: rowMoveUpFlash 520ms ease-out;
-            }
-            .player-row.row-move-down .player {
-                animation: rowMoveDownFlash 520ms ease-out;
-            }
-            .player-row.row-move-up .player-rank {
-                animation: rankLift 520ms ease-out;
-            }
-            .player-row.row-move-down .player-rank {
-                animation: rankDrop 520ms ease-out;
-            }
-
-            @keyframes rowMoveUpFlash {
-                0% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
-                35% { box-shadow: 0 14px 28px rgba(47, 255, 171, 0.18), 0 0 18px rgba(47, 255, 171, 0.22); }
-                100% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
-            }
-            @keyframes rowMoveDownFlash {
-                0% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
-                35% { box-shadow: 0 14px 28px rgba(255, 84, 84, 0.15), 0 0 18px rgba(255, 84, 84, 0.2); }
-                100% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
-            }
-            @keyframes rankLift {
-                0% { transform: scale(1) translateY(0); color: inherit; }
-                35% { transform: scale(1.18) translateY(-2px); color: #57ffc6; }
-                100% { transform: scale(1) translateY(0); color: inherit; }
-            }
-            @keyframes rankDrop {
-                0% { transform: scale(1) translateY(0); color: inherit; }
-                35% { transform: scale(1.1) translateY(2px); color: #ff8c8c; }
-                100% { transform: scale(1) translateY(0); color: inherit; }
-            }
-
-            .player {
-                position: relative;
-                overflow: hidden;
-            }
-            .player::after {
-                content: "";
-                position: absolute;
-                top: -120%;
-                left: -40%;
-                width: 45%;
-                height: 300%;
-                transform: rotate(18deg);
-                background: linear-gradient(
-                    90deg,
-                    rgba(255, 255, 255, 0) 0%,
-                    rgba(255, 255, 255, 0.12) 48%,
-                    rgba(255, 255, 255, 0) 100%
-                );
-                opacity: 0;
-                pointer-events: none;
-            }
-            .player:hover::after {
-                animation: cardSheen 900ms ease-out;
-            }
-            @keyframes cardSheen {
-                0% { left: -45%; opacity: 0; }
-                20% { opacity: 1; }
-                100% { left: 125%; opacity: 0; }
-            }
-
-            .match-actions {
-                display: flex;
-                justify-content: center;
-                gap: 10px;
-                margin: 10px 0 18px 0;
-            }
-            .ws-status-wrap {
-                display: flex;
-                justify-content: center;
-                margin: 0 0 12px 0;
-            }
-            .ws-status {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 6px 10px;
-                border-radius: 999px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                background: rgba(255, 255, 255, 0.06);
-                color: rgba(255, 255, 255, 0.92);
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: .02em;
-            }
-            .ws-status-dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                background: #9aa0a6;
-                box-shadow: 0 0 0 2px rgba(154, 160, 166, 0.18);
-            }
-            .ws-status--connected .ws-status-dot {
-                background: #1db954;
-                box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.22);
-            }
-            .ws-status--connecting .ws-status-dot,
-            .ws-status--reconnecting .ws-status-dot {
-                background: #f7c948;
-                box-shadow: 0 0 0 2px rgba(247, 201, 72, 0.22);
-            }
-            .ws-status--disconnected .ws-status-dot {
-                background: #e55353;
-                box-shadow: 0 0 0 2px rgba(229, 83, 83, 0.22);
-            }
-            .match-button {
-                padding: 10px 14px;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.18);
-                color: white;
-                cursor: pointer;
-                font-weight: 600;
-            }
-
-            .match-button--end {
-                background: rgba(255, 90, 90, 0.18);
-            }
-
-            .match-button--refresh {
-                background: rgba(60, 255, 160, 0.18);
-            }
-
-            .match-add-user-input {
-                padding: 10px 12px;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.18);
-                background: rgba(255, 255, 255, 0.06);
-                color: white;
-                outline: none;
-                min-width: 260px;
-            }
-            .admin-test-panel {
-                margin: 0 auto 14px auto;
-                width: min(980px, calc(100% - 24px));
-                padding: 12px;
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.18);
-                background: rgba(255, 255, 255, 0.05);
-            }
-            .admin-test-title {
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: .03em;
-                margin-bottom: 10px;
-                color: rgba(255, 255, 255, 0.92);
-            }
-            .admin-test-row {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-                align-items: center;
-            }
-            .admin-test-select,
-            .admin-test-input {
-                padding: 8px 10px;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                background: rgba(255, 255, 255, 0.06);
-                color: white;
-                min-width: 160px;
-            }
-            .admin-test-input {
-                min-width: 120px;
-                max-width: 140px;
-            }
-            .admin-test-btn {
-                padding: 8px 10px;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.22);
-                background: rgba(60, 255, 160, 0.14);
-                color: white;
-                cursor: pointer;
-                font-weight: 700;
-                font-size: 12px;
-            }
-
-            .player-level {
-                margin-top: 6px;
-                display: grid;
-                grid-template-columns: auto 1fr auto;
-                align-items: center;
-                gap: 10px;
-            }
-            .player-level-badge {
-                font-size: 12px;
-                font-weight: 800;
-                letter-spacing: .04em;
-                padding: 4px 8px;
-                border-radius: 999px;
-                background: rgba(255, 255, 255, 0.10);
-                border: 1px solid rgba(255, 255, 255, 0.16);
-                color: rgba(255, 255, 255, 0.92);
-                white-space: nowrap;
-            }
-            .player-level-bar-wrap {
-                position: relative;
-                height: 10px;
-                border-radius: 999px;
-                overflow: hidden;
-                background: rgba(0, 0, 0, 0.35);
-                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
-            }
-            .player-level-bar {
-                position: absolute;
-                left: 0;
-                top: 0;
-                height: 100%;
-                width: 0%;
-                background: linear-gradient(90deg, rgba(2, 179, 255, 0.95), rgba(0, 228, 168, 0.95));
-                transition: width 220ms ease;
-            }
-            .player-level-pct {
-                font-size: 12px;
-                font-weight: 700;
-                color: rgba(255, 255, 255, 0.85);
-                min-width: 54px;
-                text-align: right;
-            }
-            .teams-overview {
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 10px;
-                align-content: start;
-            }
-            .teams-overview h2 {
-                margin: 0 0 4px 0;
-                font-size: 18px;
-                letter-spacing: .03em;
-                color: rgba(255, 255, 255, 0.95);
-            }
-            .team-card {
-                border-radius: 14px;
-                padding: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.14);
-                background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-                box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-            }
-            .team-card-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 10px;
-                gap: 8px;
-            }
-            .team-name {
-                font-weight: 800;
-                font-size: 14px;
-                letter-spacing: .02em;
-                color: rgba(255, 255, 255, 0.96);
-            }
-            .team-score {
-                font-weight: 900;
-                font-size: 13px;
-                padding: 4px 8px;
-                border-radius: 999px;
-                background: rgba(60, 255, 160, 0.16);
-                border: 1px solid rgba(60, 255, 160, 0.35);
-                color: rgba(210, 255, 236, 0.98);
-                white-space: nowrap;
-            }
-            .team-player-list {
-                list-style: none;
-                margin: 0;
-                padding: 0;
-                display: grid;
-                gap: 6px;
-            }
-            .team-player-item {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 10px;
-                border-radius: 10px;
-                padding: 6px 8px;
-                background: rgba(0, 0, 0, 0.2);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-            }
-            .team-player-left {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                min-width: 0;
-            }
-            .team-player-rank {
-                width: 20px;
-                height: 20px;
-                border-radius: 999px;
-                font-size: 11px;
-                font-weight: 900;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                color: rgba(255, 255, 255, 0.95);
-                background: rgba(255, 255, 255, 0.16);
-                border: 1px solid rgba(255, 255, 255, 0.22);
-                flex: 0 0 auto;
-            }
-            .team-player-name {
-                font-size: 13px;
-                font-weight: 700;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                color: rgba(255, 255, 255, 0.92);
-            }
-            .team-player-score {
-                font-size: 12px;
-                font-weight: 800;
-                color: rgba(255, 255, 255, 0.78);
-                white-space: nowrap;
-            }
-
-            @media (max-width: 1100px) {
-                .match-layout {
-                    grid-template-columns: 1fr !important;
-                    gap: 14px;
-                }
-                .teams-overview {
-                    order: 2;
-                }
-                .match-players-column {
-                    order: 1;
-                }
-            }
-
-            @media (max-width: 760px) {
-                .match-actions {
-                    flex-wrap: wrap;
-                    gap: 8px;
-                    margin: 8px 10px 14px 10px;
-                }
-                .match-button {
-                    width: 100%;
-                    max-width: 100%;
-                }
-                .match-add-user-input {
-                    min-width: 0;
-                    width: 100%;
-                }
-                .ws-status-wrap {
-                    margin: 0 10px 10px 10px;
-                }
-                .ws-status {
-                    width: 100%;
-                    justify-content: center;
-                }
-                .admin-test-panel {
-                    margin: 0 10px 12px 10px;
-                    width: auto;
-                }
-                .admin-test-select,
-                .admin-test-input,
-                .admin-test-btn {
-                    width: 100%;
-                    max-width: 100%;
-                }
-                .player-level {
-                    grid-template-columns: 1fr;
-                    gap: 6px;
-                }
-                .player-level-pct {
-                    min-width: 0;
-                    text-align: left;
-                }
-                .team-card {
-                    padding: 10px;
-                }
-            }
-
-            @media (max-width: 520px) {
-                h1 {
-                    font-size: 24px;
-                    margin: 12px 8px;
-                }
-                .player-score {
-                    width: 100%;
-                    margin-top: 10px;
-                }
-                .player-score-value {
-                    font-size: 24px;
-                }
-                .team-card-header {
-                    align-items: flex-start;
-                    flex-direction: column;
-                }
-                .team-score {
-                    align-self: flex-start;
-                }
-            }
-        </style>
         {% endblock %}
     </head>
-    <body>
-        {% include 'navbar.html' %}
+    <body style="background-color: #0a0a1a;">
+    {% include 'navbar.html' %}
         {% block body %}
             <h1 style="text-align: center">{{ match.name }}</h1>
-
-            {% if is_creator and not match.ended %}
-                <div class="match-actions">
-                    <button id="end-match-btn" class="match-button match-button--end" onclick="endMatch()" type="button">
-                        End match
-                    </button>
-                    <button id="refresh-match-btn" class="match-button match-button--refresh" onclick="refreshMatch()" type="button">
-                        Refresh match
-                    </button>
-                    <input
-                            id="add-user-input"
-                            class="match-add-user-input"
-                            type="text"
-                            placeholder="Add user (osu username or id)"
-                            autocomplete="off"
-                    />
-                    <button id="add-user-btn" class="match-button match-button--refresh" onclick="addUserToMatch()" type="button">
-                        Add user
-                    </button>
-                </div>
-            {% endif %}
-
-            {% set player_ids = players | map(attribute='id') | map('string') | list %}
-            {% if match.open and not match.ended and current_osu_id and (current_osu_id | string) not in player_ids %}
-            <div class="match-actions">
-                <button id="join-match" class="match-button match-button--refresh" onclick="addUserToMatch({{ current_osu_id }})">
-                    Join match
-                </button>
+            <div id="match-highlight" class="osu-box" style="height: 10%; width: 20%; margin: auto;">
+                <h4>Highlight</h4>
             </div>
-            {% endif %}
-            <div class="ws-status-wrap">
-                <div id="ws-status" class="ws-status ws-status--connecting" aria-live="polite">
-                    <span class="ws-status-dot"></span>
-                    <span id="ws-status-text">Live updates: connecting</span>
-                </div>
-            </div>
-            {% if is_admin %}
-            <div class="admin-test-panel">
-                <div class="admin-test-title">Admin Animation Tests</div>
-                <div class="admin-test-row">
-                    <select id="admin-test-player" class="admin-test-select"></select>
-                    <input id="admin-test-score-delta" class="admin-test-input" type="number" value="1000000" step="1000" />
-                    <input id="admin-test-play-delta" class="admin-test-input" type="number" value="1" step="1" />
-                    <button class="admin-test-btn" type="button" onclick="adminApplyDelta()">Apply Delta</button>
-                    <button class="admin-test-btn" type="button" onclick="adminPassUp()">Force Pass Up</button>
-                    <button class="admin-test-btn" type="button" onclick="adminPassDown()">Force Pass Down</button>
-                    <button class="admin-test-btn" type="button" onclick="adminResetTestData()">Reset Test Data</button>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="match-layout">
-                <div id="match-info" class="match-players-column">
-                    <div id="loading-indicator">
-                        <p>Loading match data...</p>
+            <div style="display: flex; flex-direction: row; justify-content: space-evenly; height: 50%; width: 80%; margin: auto;">
+                <div class="osu-box" style="width: 30%;">
+                    <div id="players-list" style="height: 60%;">
+                    </div>
+                    <div id="you-container" style="height: 40%; display: none;">
+                        <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent 0%, rgba(100, 150, 220, 0.8) 50%, transparent 100%); margin: 10px 0;"></div>
+                        <h1 style="text-align: center;">You</h1>
+                        <div id="your-card"></div>
+                        <div id="controls" style="display: flex;">
+                            <button id="refresh-button"
+                                    style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
+                                Refresh
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div id="teams-overview" class="teams-overview">
+                <div style="display: flex; flex-direction: column; justify-content: space-evenly; width: 30%;">
+                    <div id="teams" class="osu-box" style="height: 35%;">
+                        <h6>Teams</h6>
+                    </div>
+                    <div id="recent-plays" class="osu-box" style="height: 60%;">
+                        <h6>Recent Plays</h6>
+                    </div>
                 </div>
             </div>
-            <script>
-                const players = {{ players | tojson }};
-                const currentOsuId = {{ current_osu_id|tojson }};  // may be null
-                const matchId = {{ match.id | tojson }};
-                const matchEnded = {{ match.ended | tojson }};
-                const isCreator = {{ is_creator | tojson }};
-                const isAdmin = {{ is_admin | tojson }};
-                const configuredWebsocketUrl = {{ websocket_url | tojson }};
-                const originalPlayersSnapshot = JSON.parse(JSON.stringify(players));
-
-                console.log("[match] script loaded", {
-                    matchId,
-                    matchEnded,
-                    currentOsuId,
-                    playersCount: Array.isArray(players) ? players.length : null,
-                });
-
-                function scoreForLevel(n) {
-                    const nn = Number(n);
-                    if (!Number.isFinite(nn) || nn < 1) return 0;
-
-                    if (nn <= 100) {
-                        const poly = (5000 / 3) * (4 * Math.pow(nn, 3) - 3 * Math.pow(nn, 2) - nn);
-                        const exp = 1.25 * Math.pow(1.8, (nn - 60));
-                        return poly + exp;
-                    }
-                    return 26931190827 + 99999999999 * (nn - 100);
-                }
-
-                function levelFromScore(scoreValue) {
-                    const s = Math.max(0, Number(scoreValue) || 0);
-
-                    const maxLevel = 300;
-                    let lo = 1, hi = maxLevel, best = 1;
-
-                    while (lo <= hi) {
-                        const mid = (lo + hi) >> 1;
-                        const t = scoreForLevel(mid);
-                        if (t <= s) {
-                            best = mid;
-                            lo = mid + 1;
-                        } else {
-                            hi = mid - 1;
-                        }
-                    }
-
-                    const level = best;
-                    const prev = scoreForLevel(level);
-                    const next = scoreForLevel(level + 1);
-                    const span = Math.max(1, next - prev);
-                    const pct = Math.max(0, Math.min(1, (s - prev) / span));
-
-                    return { level, prev, next, pct };
-                }
-
-                function setPlayerLevelUI(userId, scoreValue) {
-                    const lvlEl = document.querySelector(
-                        `.player-level-badge[data-level-for="${CSS.escape(String(userId))}"]`
-                    );
-                    const barEl = document.querySelector(
-                        `.player-level-bar[data-levelbar-for="${CSS.escape(String(userId))}"]`
-                    );
-                    const pctEl = document.querySelector(
-                        `.player-level-pct[data-levelpct-for="${CSS.escape(String(userId))}"]`
-                    );
-
-                    const { level, pct } = levelFromScore(scoreValue);
-                    if (lvlEl) lvlEl.textContent = `LV. ${level}`;
-                    if (barEl) barEl.style.width = (pct * 100).toFixed(2) + "%";
-                    if (pctEl) pctEl.textContent = (pct * 100).toFixed(1) + "%";
-                }
-
-                async function endMatch() {
-                    if (matchEnded) return;
-
-                    const ok = confirm("End this match now? This will lock in ending scores/playcounts.");
-                    if (!ok) return;
-
-                    const btn = document.getElementById("end-match-btn");
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.textContent = "Ending...";
-                    }
-
-                    try {
-                        const res = await fetch(`/api/osu/end-match/${encodeURIComponent(String(matchId))}`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                        });
-
-                        if (!res.ok) {
-                            let msg = "Failed to end match.";
-                            try {
-                                const data = await res.json();
-                                if (data && data.error) msg = data.error;
-                            } catch (_) {}
-                            throw new Error(msg);
-                        }
-
-                        window.location.reload();
-                    } catch (e) {
-                        alert(e?.message || "Failed to end match.");
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.textContent = "End match";
-                        }
-                    }
-                }
-
-                async function refreshMatch() {
-                    try {
-                        res = await fetch(`/api/osu/refresh-match/${encodeURIComponent(String(matchId))}`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                        });
-                    } catch (e) {
-                        alert("Failed to refresh match data.");
-                    }
-                }
-
-                async function addUserToMatch(id = null) {
-                    const inputEl = document.getElementById("add-user-input");
-
-                    const value = (id == null)
-                        ? (inputEl ? inputEl.value.trim() : "")
-                        : String(id).trim();
-
-                    if (!value) return;
-
-                    try {
-                        const res = await fetch("/api/osu/add-user", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                user: value,
-                                match: matchId
-                            })
-                        });
-
-                        const data = await res.json().catch(() => ({}));
-
-                        if (!res.ok || data?.error) {
-                            throw new Error(data?.error || "Failed to add user.");
-                        }
-
-                        window.location.reload();
-                    } catch (e) {
-                        alert(e?.message || "Failed to add user.");
-                    }
-                }
-
-                async function removeUserFromMatch(userId) {
-                    try {
-                        const res = await fetch("/api/osu/remove-user", {
-                            method: "POST",
-                            headers: {"Content-Type": "application/json"},
-                            body: JSON.stringify({
-                                user: userId,
-                                match: matchId
-                            })
-                        });
-                        if (!res.ok) {
-                            let msg = "Failed to remove user.";
-                            try {
-                                const data = await res.json();
-                                if (data && data.error) msg = data.error;
-                            } catch (_) {
-                            }
-                            throw new Error(msg);
-                        }
-                        window.location.reload();
-                    } catch (e) {
-                        alert(e?.message || "Failed to remove user.");
-                    }
-                }
-
-                async function changeNickname(userId, nickname) {
-                    try {
-                        const res = await fetch("/api/osu/change-nickname", {
-                            method: "POST",
-                            headers: {"Content-Type": "application/json"},
-                            body: JSON.stringify({
-                                user: userId,
-                                match: matchId,
-                                nickname: nickname
-                            })
-                        });
-
-                        if (!res.ok) {
-                            let msg = "Failed to change nickname.";
-                            try {
-                                const data = await res.json();
-                                if (data && data.error) msg = data.error;
-                            } catch (_) {
-                            }
-                            throw new Error(msg);
-                        }
-                        window.location.reload();
-                    } catch (e) {
-                        alert("Failed to change nickname.");
-                    }
-                }
-
-                function applyMatchRelativeScores(playersArr) {
-                    console.log("[match] applyMatchRelativeScores() start");
-                    for (const player of playersArr) {
-                        const startScoreRaw = Number(player.starting_score);
-                        const startPlayRaw = Number(player.starting_playcount);
-                        const hasEndingScore = player.ending_score != null;
-                        const hasEndingPlaycount = player.ending_playcount != null;
-                        const endScoreRaw = Number(player.ending_score);
-                        const endPlayRaw = Number(player.ending_playcount);
-                        const currentScoreRaw = Number(player.score);
-                        const currentPlayRaw = Number(player.playcount);
-
-                        const startingScore = Number.isFinite(startScoreRaw) ? startScoreRaw : (Number.isFinite(currentScoreRaw) ? currentScoreRaw : 0);
-                        const startingPlaycount = Number.isFinite(startPlayRaw) ? startPlayRaw : (Number.isFinite(currentPlayRaw) ? currentPlayRaw : 0);
-                        const endingScore = (hasEndingScore && Number.isFinite(endScoreRaw)) ? endScoreRaw : null;
-                        const endingPlaycount = (hasEndingPlaycount && Number.isFinite(endPlayRaw)) ? endPlayRaw : null;
-
-                        player.starting_score = startingScore;
-                        player.starting_playcount = startingPlaycount;
-                        player.ending_score = endingScore;
-                        player.ending_playcount = endingPlaycount;
-
-                        if (matchEnded && endingScore != null && endingPlaycount != null) {
-                            player.score = endingScore - startingScore;
-                            player.playcount = endingPlaycount - startingPlaycount;
-                        } else {
-                            player.score = (Number.isFinite(currentScoreRaw) ? currentScoreRaw : startingScore) - startingScore;
-                            player.playcount = (Number.isFinite(currentPlayRaw) ? currentPlayRaw : startingPlaycount) - startingPlaycount;
-                        }
-                    }
-                    console.log("[match] applyMatchRelativeScores() done");
-                }
-
-                function computeRelativeFromAbsolute(player, absoluteScore, absolutePlaycount) {
-                    const startScoreRaw = Number(player.starting_score);
-                    const startPlayRaw = Number(player.starting_playcount);
-                    const hasEndingScore = player.ending_score != null;
-                    const hasEndingPlaycount = player.ending_playcount != null;
-                    const endScoreRaw = Number(player.ending_score);
-                    const endPlayRaw = Number(player.ending_playcount);
-
-                    const startingScore = Number.isFinite(startScoreRaw) ? startScoreRaw : (Number.isFinite(absoluteScore) ? absoluteScore : 0);
-                    const startingPlaycount = Number.isFinite(startPlayRaw) ? startPlayRaw : (Number.isFinite(absolutePlaycount) ? absolutePlaycount : 0);
-                    const endingScore = (hasEndingScore && Number.isFinite(endScoreRaw)) ? endScoreRaw : null;
-                    const endingPlaycount = (hasEndingPlaycount && Number.isFinite(endPlayRaw)) ? endPlayRaw : null;
-
-                    player.starting_score = startingScore;
-                    player.starting_playcount = startingPlaycount;
-                    player.ending_score = endingScore;
-                    player.ending_playcount = endingPlaycount;
-
-                    if (matchEnded && endingScore != null && endingPlaycount != null) {
-                        return {
-                            score: endingScore - startingScore,
-                            playcount: endingPlaycount - startingPlaycount,
-                            startingScore,
-                            startingPlaycount,
-                            endingScore,
-                            endingPlaycount,
-                        };
-                    }
-
-                    return {
-                        score: (Number.isFinite(absoluteScore) ? absoluteScore : startingScore) - startingScore,
-                        playcount: (Number.isFinite(absolutePlaycount) ? absolutePlaycount : startingPlaycount) - startingPlaycount,
-                        startingScore,
-                        startingPlaycount,
-                        endingScore,
-                        endingPlaycount,
-                    };
-                }
-
-                applyMatchRelativeScores(players);
-
-                // --- helpers for animations ---
-                function easeOutCubic(t) {
-                    return 1 - Math.pow(1 - t, 3);
-                }
-
-                function animateNumber(el, from, to, durationMs = 650) {
-                    if (!el) {
-                        console.warn("[anim] animateNumber called with null el");
-                        return;
-                    }
-                    const start = performance.now();
-                    const safeFrom = Number.isFinite(from) ? from : 0;
-                    const safeTo = Number.isFinite(to) ? to : 0;
-
-                    console.log("[anim] animateNumber", {
-                        target: el.dataset,
-                        from: safeFrom,
-                        to: safeTo,
-                        durationMs
-                    });
-
-                    function tick(now) {
-                        const t = Math.min(1, (now - start) / durationMs);
-                        const v = Math.round(safeFrom + (safeTo - safeFrom) * easeOutCubic(t));
-                        el.textContent = v.toLocaleString();
-
-                        if (t < 1) requestAnimationFrame(tick);
-                    }
-                    requestAnimationFrame(tick);
-                }
-
-                function getAnimationDuration(from, to) {
-                    const delta = Math.abs(Number(to || 0) - Number(from || 0));
-                    if (delta <= 0) return 750;
-                    if (delta < 50000) return 1200;
-                    if (delta < 500000) return 1650;
-                    if (delta < 5000000) return 2200;
-                    if (delta < 50000000) return 2800;
-                    return 3400;
-                }
-
-                function showScoreDelta(scoreEl, from, to) {
-                    if (!scoreEl) return;
-                    const delta = Math.round(Number(to || 0) - Number(from || 0));
-                    if (!delta) return;
-
-                    const host = scoreEl.parentElement;
-                    if (!host) return;
-                    host.style.position = "relative";
-
-                    const existing = host.querySelector(".score-delta-badge");
-                    if (existing) existing.remove();
-
-                    const badge = document.createElement("div");
-                    badge.className = `score-delta-badge ${delta > 0 ? "delta-up" : "delta-down"}`;
-                    badge.textContent = `${delta > 0 ? "+" : ""}${delta.toLocaleString()}`;
-                    host.appendChild(badge);
-
-                    setTimeout(() => {
-                        badge.remove();
-                    }, 1600);
-                }
-
-                function bumpScore(el, direction) {
-                    if (!el) return;
-                    el.classList.remove("score-up", "score-down");
-                    void el.offsetWidth;
-                    el.classList.add(direction > 0 ? "score-up" : "score-down");
-                    const clear = () => {
-                        el.classList.remove("score-up", "score-down");
-                    };
-                    el.addEventListener("animationend", clear, { once: true });
-                    setTimeout(clear, 700);
-                }
-
-                function captureRowPositions() {
-                    const map = new Map();
-                    document.querySelectorAll("#match-info .player-row[data-player-id]").forEach(row => {
-                        map.set(row.dataset.playerId, row.getBoundingClientRect());
-                    });
-                    console.log("[render] captured row positions:", map.size);
-                    return map;
-                }
-
-                function animateRowReorder(prevRects) {
-                    let moved = 0;
-                    document.querySelectorAll("#match-info .player-row[data-player-id]").forEach(row => {
-                        const id = row.dataset.playerId;
-                        const prev = prevRects.get(id);
-                        if (!prev) return;
-
-                        const next = row.getBoundingClientRect();
-                        const dy = prev.top - next.top;
-                        if (Math.abs(dy) < 1) return;
-                        moved++;
-                        row.classList.remove("row-move-up", "row-move-down");
-                        void row.offsetWidth;
-                        row.classList.add(dy > 0 ? "row-move-up" : "row-move-down");
-
-                        row.style.transition = "none";
-                        row.style.transform = `translateY(${dy}px)`;
-                        requestAnimationFrame(() => {
-                            row.style.transition = "transform 420ms cubic-bezier(0.2, 0.9, 0.2, 1)";
-                            row.style.transform = "translateY(0)";
-                            setTimeout(() => {
-                                row.style.transition = "";
-                                row.style.transform = "";
-                                row.classList.remove("row-move-up", "row-move-down");
-                            }, 460);
-                        });
-                    });
-                    console.log("[render] animateRowReorder moved rows:", moved);
-                }
-
-                async function refreshPlayer(player, buttonEl) {
-                    buttonEl.disabled = true;
-                    buttonEl.textContent = "Refreshing...";
-
-                    try {
-                        const response = await fetch(
-                            `/api/osu/fetch-user/${encodeURIComponent(player.id)}?match_id=${encodeURIComponent(String(matchId))}`,
-                            { method: "GET" }
-                        );
-                        if (!response.ok) {
-                            throw new Error("Failed to refresh");
-                        }
-                        // UI is updated by the websocket event only to avoid double-refresh.
-                        await response.json().catch(() => ({}));
-
-                        buttonEl.disabled = false;
-                        buttonEl.textContent = "Refresh";
-                    } catch (e) {
-                        console.error(e);
-                        buttonEl.disabled = false;
-                        buttonEl.textContent = "Refresh";
-                        alert("Failed to refresh player data.");
-                    }
-                }
-
-                function createPlayerRow(player, index, animateIn = true) {
-                    const row = document.createElement('div');
-                    row.className = 'player-row';
-                    row.dataset.playerId = String(player.id);
-
-                    const rankText = document.createElement('div');
-                    rankText.className = 'player-rank';
-                    rankText.textContent = index + 1;
-
-                    const card = document.createElement('div');
-                    card.className = 'player';
-                    if (animateIn) {
-                        card.classList.add('player-enter');
-                        card.style.animationDelay = `${index * 0.1}s`;
-                        card.addEventListener('animationend', () => {
-                            card.classList.remove('player-enter');
-                            card.style.animationDelay = '';
-                        }, { once: true });
-                    } else {
-                        card.style.animation = "none";
-                        card.style.opacity = "1";
-                        card.style.transform = "translateY(0)";
-                    }
-
-                    const bg = document.createElement('div');
-                    bg.className = 'player-bg';
-                    if (player.background) {
-                        bg.style.backgroundImage = `url('${player.background}')`;
-                    }
-                    card.appendChild(bg);
-
-                    const content = document.createElement('div');
-                    content.className = 'player-content';
-
-                    const main = document.createElement('div');
-                    main.className = 'player-main';
-
-                    const avatar = document.createElement('img');
-                    avatar.className = 'player-avatar';
-                    avatar.src = player.avatar;
-                    avatar.alt = player.username || 'Player avatar';
-                    main.appendChild(avatar);
-
-                    const textBlock = document.createElement('div');
-                    textBlock.className = 'player-text';
-
-                    const nameEl = document.createElement('div');
-                    nameEl.className = 'player-text-name';
-                    if (player.nickname != null) {
-                      nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.nickname} <span style="font-size: 50%;">(${player.username})</span></a>`;
-                    } else {
-                      nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.username}</a>`;
-                    }
-                    textBlock.appendChild(nameEl);
-
-                    const metaEl = document.createElement('div');
-                    metaEl.className = 'player-text-meta';
-                    const accValue = player.accuracy != null ? `${player.accuracy}%` : 'N/A';
-                    const rankValue = player.rank != null ? `#${player.rank}` : 'Unranked';
-                    metaEl.textContent = `ACC: ${accValue} • Rank: ${rankValue}`;
-                    textBlock.appendChild(metaEl);
-
-                    const levelWrap = document.createElement('div');
-                    levelWrap.className = 'player-level';
-
-                    const levelBadge = document.createElement('div');
-                    levelBadge.className = 'player-level-badge';
-                    levelBadge.dataset.levelFor = String(player.id);
-                    levelBadge.textContent = 'LV. 1';
-
-                    const barWrap = document.createElement('div');
-                    barWrap.className = 'player-level-bar-wrap';
-
-                    const bar = document.createElement('div');
-                    bar.className = 'player-level-bar';
-                    bar.dataset.levelbarFor = String(player.id);
-                    barWrap.appendChild(bar);
-
-                    const pct = document.createElement('div');
-                    pct.className = 'player-level-pct';
-                    pct.dataset.levelpctFor = String(player.id);
-                    pct.textContent = '0.0%';
-
-                    levelWrap.appendChild(levelBadge);
-                    levelWrap.appendChild(barWrap);
-                    levelWrap.appendChild(pct);
-
-                    textBlock.appendChild(levelWrap);
-
-                    main.appendChild(textBlock);
-
-                    const scoreWrapper = document.createElement('div');
-                    scoreWrapper.className = 'player-score';
-
-                    const scoreValueEl = document.createElement('div');
-                    scoreValueEl.className = 'player-score-value';
-                    scoreValueEl.dataset.scoreFor = String(player.id);
-
-                    const score = player.score != null ? player.score : 0;
-                    scoreValueEl.textContent = Number(score).toLocaleString();
-                    scoreWrapper.appendChild(scoreValueEl);
-
-                    const scoreLabelEl = document.createElement('div');
-                    scoreLabelEl.className = 'player-score-label';
-                    scoreLabelEl.textContent = 'SCORE';
-                    scoreWrapper.appendChild(scoreLabelEl);
-
-                    const statsEl = document.createElement('div');
-                    statsEl.className = 'player-score-stats';
-
-                    const pc = Number(player.playcount || 0);
-                    const safeScore = Number(player.score || 0);
-                    const avg = pc > 0 ? Math.round(safeScore / pc) : 0;
-
-                    // Plays: <span>[number]</span>
-                    const playcountEl = document.createElement('div');
-                    playcountEl.className = 'player-score-stat';
-
-                    const playcountLabel = document.createElement('span');
-                    playcountLabel.className = 'player-score-stat-label';
-                    playcountLabel.textContent = 'Plays: ';
-
-                    const playcountValue = document.createElement('span');
-                    playcountValue.className = 'player-score-stat-value';
-                    playcountValue.dataset.playcountFor = String(player.id);
-                    playcountValue.textContent = pc.toLocaleString();
-
-                    playcountEl.appendChild(playcountLabel);
-                    playcountEl.appendChild(playcountValue);
-                    statsEl.appendChild(playcountEl);
-
-                    // Avg: <span>[number]</span>
-                    const avgEl = document.createElement('div');
-                    avgEl.className = 'player-score-stat';
-
-                    const avgLabel = document.createElement('span');
-                    avgLabel.className = 'player-score-stat-label';
-                    avgLabel.textContent = 'Avg: ';
-
-                    const avgValue = document.createElement('span');
-                    avgValue.className = 'player-score-stat-value';
-                    avgValue.dataset.avgFor = String(player.id);
-                    avgValue.textContent = avg.toLocaleString();
-
-                    avgEl.appendChild(avgLabel);
-                    avgEl.appendChild(avgValue);
-                    statsEl.appendChild(avgEl);
-
-                    scoreWrapper.appendChild(statsEl);
-
-
-                    if ((String(player.id) === String(currentOsuId) || isCreator) && !matchEnded) {
-                        const refreshBtn = document.createElement('button');
-                        refreshBtn.className = 'player-refresh-button';
-                        refreshBtn.textContent = 'Refresh';
-                        refreshBtn.onclick = () => refreshPlayer(player, refreshBtn);
-                        scoreWrapper.appendChild(refreshBtn);
-                    }
-
-                    if (isCreator && !matchEnded) {
-                        const removeBtn = document.createElement('button');
-                        removeBtn.className = 'player-refresh-button';
-                        removeBtn.textContent = 'Remove';
-                        removeBtn.onclick = () => {
-                            if (confirm(`Remove ${player.username} from this match?`)) {
-                                removeUserFromMatch(player.id);
-                            }
-                        };
-                        scoreWrapper.appendChild(removeBtn);
-                    }
-
-                    if (isCreator && !matchEnded) {
-                        const nicknameBtn = document.createElement('button');
-                        nicknameBtn.className = 'player-refresh-button';
-                        nicknameBtn.textContent = 'Change Nickname';
-                        nicknameBtn.onclick = () => {
-                            const newNickname = prompt(`Enter new nickname for ${player.username}:`);
-                            if (newNickname !== null) {
-                                changeNickname(player.id, newNickname.trim());
-                            }
-                        };
-                        scoreWrapper.appendChild(nicknameBtn);
-                    }
-
-
-                    content.appendChild(main);
-                    content.appendChild(scoreWrapper);
-                    card.appendChild(content);
-
-                    row.appendChild(rankText);
-                    row.appendChild(card);
-
-                    return row;
-                }
-
-                function buildTeams(playersArr) {
-                    const teams = new Map();
-
-                    for (const p of playersArr) {
-                        const teamName = p.team || 'No Team';
-                        if (!teams.has(teamName)) {
-                            teams.set(teamName, { name: teamName, players: [], totalScore: 0 });
-                        }
-                        const team = teams.get(teamName);
-                        team.players.push(p);
-                        team.totalScore += p.score || 0;
-                    }
-
-                    return Array.from(teams.values()).sort(
-                        (a, b) => b.totalScore - a.totalScore
-                    );
-                }
-
-                function renderTeamsOverview(teams) {
-                    const container = document.getElementById('teams-overview');
-                    container.innerHTML = '';
-
-                    const heading = document.createElement('h2');
-                    heading.textContent = 'Teams Overview';
-                    container.appendChild(heading);
-
-                    teams.forEach(team => {
-                        const card = document.createElement('div');
-                        card.className = 'team-card';
-
-                        const header = document.createElement('div');
-                        header.className = 'team-card-header';
-
-                        const nameEl = document.createElement('div');
-                        nameEl.className = 'team-name';
-                        nameEl.textContent = team.name;
-                        header.appendChild(nameEl);
-
-                        const scoreEl = document.createElement('div');
-                        scoreEl.className = 'team-score';
-                        scoreEl.textContent = Number(team.totalScore).toLocaleString();
-                        header.appendChild(scoreEl);
-
-                        card.appendChild(header);
-
-                        const list = document.createElement('ul');
-                        list.className = 'team-player-list';
-
-                        team.players
-                            .slice()
-                            .sort((a, b) => b.score - a.score)
-                            .forEach((p, i) => {
-                                const li = document.createElement('li');
-                                li.className = 'team-player-item';
-
-                                const left = document.createElement('div');
-                                left.className = 'team-player-left';
-
-                                const rank = document.createElement('span');
-                                rank.className = 'team-player-rank';
-                                rank.textContent = String(i + 1);
-                                left.appendChild(rank);
-
-                                const name = document.createElement('span');
-                                name.className = 'team-player-name';
-                                name.textContent = p.username || `User ${p.id}`;
-                                left.appendChild(name);
-
-                                const score = document.createElement('span');
-                                score.className = 'team-player-score';
-                                score.textContent = Number(p.score || 0).toLocaleString();
-
-                                li.appendChild(left);
-                                li.appendChild(score);
-                                list.appendChild(li);
-                            });
-
-                        card.appendChild(list);
-                        container.appendChild(card);
-                    });
-                }
-
-                function renderAll(options = {}) {
-                    const { animateIn = true } = options;
-                    console.log("[render] renderAll() start");
-                    const matchInfo = document.getElementById('match-info');
-                    matchInfo.innerHTML = "";
-
-                    const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
-                    sortedPlayers.forEach((player, index) => {
-                        const row = createPlayerRow(player, index, animateIn);
-                        matchInfo.appendChild(row);
-                        setPlayerLevelUI(player.id, Number(player.score || 0));
-                    });
-
-                    const teams = buildTeams(sortedPlayers);
-                    renderTeamsOverview(teams);
-                    console.log("[render] renderAll() done", {
-                        renderedPlayers: sortedPlayers.length,
-                        teams: teams.length
-                    });
-
-                    if (isAdmin) refreshAdminTestOptions();
-                }
-
-                function updatePlayerRowStatic(player) {
-                    const row = document.querySelector(
-                        `#match-info .player-row[data-player-id="${CSS.escape(String(player.id))}"]`
-                    );
-                    if (!row) return;
-
-                    const bg = row.querySelector(".player-bg");
-                    if (bg) {
-                        bg.style.backgroundImage = player.background ? `url('${player.background}')` : "";
-                    }
-
-                    const avatar = row.querySelector(".player-avatar");
-                    if (avatar) {
-                        avatar.src = player.avatar || "";
-                        avatar.alt = player.username || "Player avatar";
-                    }
-
-                    const nameEl = row.querySelector(".player-text-name");
-                    if (nameEl) {
-                        if (player.nickname != null) {
-                            nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.nickname} <span style="font-size: 50%;">(${player.username})</span></a>`;
-                        } else {
-                            nameEl.innerHTML = `<a href="https://osu.ppy.sh/users/${player.id}" target="_blank">${player.username}</a>`;
-                        }
-                    }
-
-                    const metaEl = row.querySelector(".player-text-meta");
-                    if (metaEl) {
-                        const accValue = player.accuracy != null ? `${player.accuracy}%` : "N/A";
-                        const rankValue = player.rank != null ? `#${player.rank}` : "Unranked";
-                        metaEl.textContent = `ACC: ${accValue} • Rank: ${rankValue}`;
-                    }
-                }
-
-                function reorderExistingRowsByScore() {
-                    const matchInfo = document.getElementById("match-info");
-                    const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
-
-                    sortedPlayers.forEach((player, index) => {
-                        const row = matchInfo.querySelector(
-                            `.player-row[data-player-id="${CSS.escape(String(player.id))}"]`
-                        );
-                        if (!row) return;
-
-                        const rankEl = row.querySelector(".player-rank");
-                        if (rankEl) rankEl.textContent = index + 1;
-                        matchInfo.appendChild(row);
-                    });
-
-                    const teams = buildTeams(sortedPlayers);
-                    renderTeamsOverview(teams);
-                }
-
-                // changeMap: Map(userId -> { scoreFrom, scoreTo, playFrom, playTo, avgFrom, avgTo })
-                function renderAllAnimated(changeMap) {
-                    console.log("[render] renderAllAnimated() called", {
-                        hasChangeMap: Boolean(changeMap),
-                        changeKeys: changeMap ? Array.from(changeMap.keys()) : []
-                    });
-
-                    const prevRects = captureRowPositions();
-                    reorderExistingRowsByScore();
-                    animateRowReorder(prevRects);
-
-                    document.querySelectorAll(".player-score-value.score-up, .player-score-value.score-down")
-                        .forEach((node) => node.classList.remove("score-up", "score-down"));
-
-                    if (!changeMap) return;
-
-                    for (const [userId, c] of changeMap.entries()) {
-                        const player = players.find(p => String(p.id) === String(userId));
-                        if (player) updatePlayerRowStatic(player);
-
-                        const scoreEl = document.querySelector(
-                            `.player-score-value[data-score-for="${CSS.escape(String(userId))}"]`
-                        );
-                        const playEl = document.querySelector(
-                            `.player-score-stat-value[data-playcount-for="${CSS.escape(String(userId))}"]`
-                        );
-                        const avgEl = document.querySelector(
-                            `.player-score-stat-value[data-avg-for="${CSS.escape(String(userId))}"]`
-                        );
-
-                        console.log("[render] elements found?", {
-                            userId,
-                            scoreEl: Boolean(scoreEl),
-                            playEl: Boolean(playEl),
-                            avgEl: Boolean(avgEl)
-                        });
-
-                        if (scoreEl) {
-                            const diff = Number(c.scoreTo) - Number(c.scoreFrom);
-                            if (diff !== 0) bumpScore(scoreEl, diff);
-                            animateNumber(scoreEl, c.scoreFrom, c.scoreTo, getAnimationDuration(c.scoreFrom, c.scoreTo));
-                            showScoreDelta(scoreEl, c.scoreFrom, c.scoreTo);
-                        }
-                        if (playEl) animateNumber(playEl, c.playFrom, c.playTo, getAnimationDuration(c.playFrom, c.playTo));
-                        if (avgEl) animateNumber(avgEl, c.avgFrom, c.avgTo, 900);
-
-                        setPlayerLevelUI(userId, c.scoreTo);
-                    }
-                }
-
-                function buildMatchWebsocketUrl() {
-                    if (configuredWebsocketUrl && String(configuredWebsocketUrl).trim() !== "") {
-                        return String(configuredWebsocketUrl).trim();
-                    }
-
-                    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-                    return `${wsProtocol}//${window.location.hostname}:8765`;
-                }
-
-                function applyIncomingUserRefresh(payload) {
-                    console.log("[ws] incoming payload", payload);
-                    const refreshed = payload?.user || {};
-                    const refreshedMatchUser = payload?.match_user || null;
-                    const refreshedId = refreshed?.id;
-                    if (refreshedId == null) {
-                        console.warn("[ws] refreshed payload missing user.id", payload);
-                        return;
-                    }
-
-                    const matchIds = Array.isArray(payload?.match_ids)
-                        ? payload.match_ids.map(v => String(v))
-                        : [];
-                    if (matchIds.length > 0 && !matchIds.includes(String(matchId))) {
-                        console.log("[ws] ignored refresh for different match", { matchIds, matchId });
-                        return;
-                    }
-
-                    const player = players.find(
-                        p => String(p.id) === String(refreshedId) || String(p.user) === String(refreshedId)
-                    );
-                    if (!player) {
-                        console.warn("[ws] no matching player found for refreshed id", refreshedId);
-                        return;
-                    }
-
-                    const newScoreAbs = Number(refreshed?.score);
-                    const newPlayAbs = Number(refreshed?.playcount);
-                    if (!Number.isFinite(newScoreAbs) || !Number.isFinite(newPlayAbs)) {
-                        return;
-                    }
-
-                    if (refreshedMatchUser) {
-                        if (refreshedMatchUser.starting_score !== undefined) player.starting_score = refreshedMatchUser.starting_score;
-                        if (refreshedMatchUser.starting_playcount !== undefined) player.starting_playcount = refreshedMatchUser.starting_playcount;
-                        if (refreshedMatchUser.ending_score !== undefined) player.ending_score = refreshedMatchUser.ending_score;
-                        if (refreshedMatchUser.ending_playcount !== undefined) player.ending_playcount = refreshedMatchUser.ending_playcount;
-                        if (refreshedMatchUser.team !== undefined) player.team = refreshedMatchUser.team;
-                        if (refreshedMatchUser.nickname !== undefined) player.nickname = refreshedMatchUser.nickname;
-                    }
-
-                    const oldScoreRel = Number(player.score || 0);
-                    const oldPlayRel = Number(player.playcount || 0);
-                    const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
-
-                    const relative = computeRelativeFromAbsolute(player, newScoreAbs, newPlayAbs);
-                    const newScoreRel = relative.score;
-                    const newPlayRel = relative.playcount;
-                    const newAvg = newPlayRel > 0 ? Math.round(newScoreRel / newPlayRel) : 0;
-
-                    Object.assign(player, refreshed, {
-                        score: newScoreRel,
-                        playcount: newPlayRel,
-                    });
-
-                    const changeMap = new Map();
-                    changeMap.set(String(player.id), {
-                        scoreFrom: oldScoreRel,
-                        scoreTo: newScoreRel,
-                        playFrom: oldPlayRel,
-                        playTo: newPlayRel,
-                        avgFrom: oldAvg,
-                        avgTo: newAvg,
-                    });
-                    renderAllAnimated(changeMap);
-                }
-
-                function connectMatchWebsocket() {
-                    const url = buildMatchWebsocketUrl();
-                    let socket = null;
-                    let reconnectTimer = null;
-                    let intentionallyClosed = false;
-                    let connectionAttempt = 0;
-
-                    const wsStatusEl = document.getElementById("ws-status");
-                    const wsStatusTextEl = document.getElementById("ws-status-text");
-
-                    const setWsStatus = (state, text) => {
-                        console.log("[ws] status change", { state, text });
-                        if (!wsStatusEl || !wsStatusTextEl) return;
-                        wsStatusEl.classList.remove(
-                            "ws-status--connected",
-                            "ws-status--connecting",
-                            "ws-status--reconnecting",
-                            "ws-status--disconnected"
-                        );
-                        wsStatusEl.classList.add(`ws-status--${state}`);
-                        wsStatusTextEl.textContent = `Live updates: ${text}`;
-                    };
-
-                    const cleanupReconnect = () => {
-                        if (reconnectTimer) {
-                            console.log("[ws] clearing reconnect timer");
-                            clearTimeout(reconnectTimer);
-                            reconnectTimer = null;
-                        }
-                    };
-
-                    const openSocket = () => {
-                        cleanupReconnect();
-                        connectionAttempt += 1;
-                        console.log("[ws] opening socket", {
-                            url,
-                            matchId,
-                            attempt: connectionAttempt
-                        });
-                        setWsStatus("connecting", "connecting");
-                        try {
-                            socket = new WebSocket(url);
-                        } catch (err) {
-                            console.error("[ws] failed to create WebSocket", {
-                                url,
-                                matchId,
-                                attempt: connectionAttempt,
-                                error: err
-                            });
-                            setWsStatus("reconnecting", "reconnecting");
-                            console.log("[ws] scheduling reconnect", { delayMs: 2000 });
-                            reconnectTimer = setTimeout(openSocket, 2000);
-                            return;
-                        }
-
-                        socket.onopen = (event) => {
-                            console.log("[ws] socket open", {
-                                url,
-                                matchId,
-                                attempt: connectionAttempt,
-                                readyState: socket.readyState,
-                                event
-                            });
-                            setWsStatus("connected", "connected");
-                            const subscribeMessage = {
-                                type: "subscribe_match",
-                                match_id: matchId
-                            };
-                            console.log("[ws] sending subscribe", subscribeMessage);
-                            socket.send(JSON.stringify(subscribeMessage));
-                        };
-
-                        socket.onmessage = (event) => {
-                            console.log("[ws] message received", {
-                                bytes: typeof event.data === "string" ? event.data.length : null,
-                                raw: event.data
-                            });
-                            try {
-                                const payload = JSON.parse(event.data);
-                                console.log("[ws] message parsed", payload);
-                                if (payload?.type === "osu_user_refreshed") {
-                                    applyIncomingUserRefresh(payload);
-                                } else {
-                                    console.log("[ws] message ignored", {
-                                        reason: "unsupported_type",
-                                        type: payload?.type,
-                                        payload
-                                    });
-                                }
-                            } catch (err) {
-                                console.error("[ws] failed to parse message", {
-                                    raw: event.data,
-                                    error: err
-                                });
-                            }
-                        };
-
-                        socket.onclose = (event) => {
-                            console.warn("[ws] socket closed", {
-                                code: event.code,
-                                reason: event.reason,
-                                wasClean: event.wasClean,
-                                intentionallyClosed,
-                                attempt: connectionAttempt
-                            });
-                            if (intentionallyClosed) {
-                                setWsStatus("disconnected", "disconnected");
-                                return;
-                            }
-                            setWsStatus("reconnecting", "reconnecting");
-                            console.log("[ws] scheduling reconnect", { delayMs: 2000 });
-                            reconnectTimer = setTimeout(openSocket, 2000);
-                        };
-
-                        socket.onerror = (event) => {
-                            console.error("[ws] socket error", {
-                                event,
-                                readyState: socket ? socket.readyState : null,
-                                attempt: connectionAttempt
-                            });
-                            setWsStatus("reconnecting", "reconnecting");
-                            try { socket.close(); } catch (_) {}
-                        };
-                    };
-
-                    openSocket();
-
-                    window.addEventListener("beforeunload", () => {
-                        console.log("[ws] beforeunload closing socket", {
-                            hasSocket: Boolean(socket),
-                            readyState: socket ? socket.readyState : null
-                        });
-                        intentionallyClosed = true;
-                        cleanupReconnect();
-                        if (socket && socket.readyState === WebSocket.OPEN) {
-                            socket.close(1000, "page_unload");
-                        }
-                    });
-                }
-
-                function getSelectedAdminPlayer() {
-                    const select = document.getElementById("admin-test-player");
-                    if (!select) return null;
-                    const selectedId = select.value;
-                    if (!selectedId) return null;
-                    return players.find(p => String(p.id) === String(selectedId));
-                }
-
-                function refreshAdminTestOptions() {
-                    const select = document.getElementById("admin-test-player");
-                    if (!select) return;
-
-                    const oldValue = select.value;
-                    select.innerHTML = "";
-
-                    const sorted = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
-                    for (const p of sorted) {
-                        const opt = document.createElement("option");
-                        opt.value = String(p.id);
-                        opt.textContent = `${p.username || p.id} (score: ${Number(p.score || 0).toLocaleString()})`;
-                        select.appendChild(opt);
-                    }
-
-                    if (oldValue && sorted.some(p => String(p.id) === oldValue)) {
-                        select.value = oldValue;
-                    } else if (sorted.length > 0) {
-                        select.value = String(sorted[0].id);
-                    }
-                }
-
-                function applyAdminLocalChange(player, newScoreRel, newPlayRel) {
-                    if (!player) return;
-
-                    const oldScoreRel = Number(player.score || 0);
-                    const oldPlayRel = Number(player.playcount || 0);
-                    const oldAvg = oldPlayRel > 0 ? Math.round(oldScoreRel / oldPlayRel) : 0;
-                    const nextScore = Number.isFinite(newScoreRel) ? newScoreRel : oldScoreRel;
-                    const nextPlay = Number.isFinite(newPlayRel) ? newPlayRel : oldPlayRel;
-                    const nextAvg = nextPlay > 0 ? Math.round(nextScore / nextPlay) : 0;
-
-                    player.score = nextScore;
-                    player.playcount = nextPlay;
-
-                    const changeMap = new Map();
-                    changeMap.set(String(player.id), {
-                        scoreFrom: oldScoreRel,
-                        scoreTo: nextScore,
-                        playFrom: oldPlayRel,
-                        playTo: nextPlay,
-                        avgFrom: oldAvg,
-                        avgTo: nextAvg,
-                    });
-                    renderAllAnimated(changeMap);
-                }
-
-                function adminApplyDelta() {
-                    if (!isAdmin) return;
-                    const player = getSelectedAdminPlayer();
-                    if (!player) return;
-
-                    const scoreDelta = Number(document.getElementById("admin-test-score-delta")?.value || 0);
-                    const playDelta = Number(document.getElementById("admin-test-play-delta")?.value || 0);
-                    applyAdminLocalChange(
-                        player,
-                        Number(player.score || 0) + (Number.isFinite(scoreDelta) ? scoreDelta : 0),
-                        Number(player.playcount || 0) + (Number.isFinite(playDelta) ? playDelta : 0)
-                    );
-                }
-
-                function adminPassUp() {
-                    if (!isAdmin) return;
-                    const player = getSelectedAdminPlayer();
-                    if (!player) return;
-
-                    const sorted = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
-                    const idx = sorted.findIndex(p => String(p.id) === String(player.id));
-                    if (idx <= 0) return;
-
-                    const above = sorted[idx - 1];
-                    const target = Number(above.score || 0) + 1;
-                    applyAdminLocalChange(player, target, Number(player.playcount || 0));
-                }
-
-                function adminPassDown() {
-                    if (!isAdmin) return;
-                    const player = getSelectedAdminPlayer();
-                    if (!player) return;
-
-                    const sorted = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
-                    const idx = sorted.findIndex(p => String(p.id) === String(player.id));
-                    if (idx < 0 || idx >= sorted.length - 1) return;
-
-                    const below = sorted[idx + 1];
-                    const target = Number(below.score || 0) - 1;
-                    applyAdminLocalChange(player, target, Number(player.playcount || 0));
-                }
-
-                function adminResetTestData() {
-                    if (!isAdmin) return;
-
-                    for (const player of players) {
-                        const original = originalPlayersSnapshot.find(p => String(p.id) === String(player.id));
-                        if (!original) continue;
-                        Object.assign(player, JSON.parse(JSON.stringify(original)));
-                    }
-
-                    applyMatchRelativeScores(players);
-                    renderAll({ animateIn: false });
-                }
-
-                document.addEventListener('DOMContentLoaded', () => {
-                    console.log("[match] DOMContentLoaded");
-
-                    const loading = document.getElementById('loading-indicator');
-                    if (loading) loading.remove();
-
-                    renderAll();
-                    connectMatchWebsocket();
-                    if (isAdmin) refreshAdminTestOptions();
-                });
-            </script>
+            <div id="stats">
+                <h1>Please invest in gdcheerios supporter for this.</h1>
+            </div>
         {% endblock %}
+    <script>
+        const matchId = {{ match_id|int }};
+        const matchPrimary = "pp";
+        const matchSecondary = "playcount";
+        const matchReconstruct = false; // determines if reconstructing pp from ground up
+        const ID = {{ current_osu_id }};
+        const players = new Map();
+
+        class PlayerCard {
+            constructor(id) {
+                console.log("Creating player card for id:", id);
+                this.element = document.createElement('div');
+                this.element.classList.add('player');
+                this.usernameEl = document.createElement('a');
+                this.usernameEl.classList.add('username');
+                this.placementEl = document.createElement('h3');
+                this.placementEl.classList.add('placement');
+                this.avatarEl = document.createElement('img');
+                this.avatarEl.classList.add('avatar');
+                this.objectiveEl = document.createElement('h3');
+                this.objectiveEl.classList.add('objective');
+                this.id = id;
+            }
+
+            updateData(playerData) {
+                console.log(playerData);
+                this.id = playerData.id;
+                this.username = playerData.username;
+                this.placement = 0;
+                this.total_score = playerData.total_score;
+                this.ranked_score = playerData.ranked_score;
+                this.playcount = playerData.playcount;
+                this.total_hits = playerData.total_hits;
+                this.accuracy = playerData.accuracy;
+                this.global_rank = playerData.global_rank;
+                this.country_rank = playerData.country_rank;
+                this.pp = playerData.pp;
+                this.last_refresh = playerData.last_refresh;
+                this.avatar_url = playerData.avatar;
+                this.background_url = playerData.background;
+                this.grade_ss = playerData.grade_ss;
+                this.grade_ssh = playerData.grade_ssh;
+                this.grade_s = playerData.grade_s;
+                this.grade_sh = playerData.grade_sh;
+                this.grade_a = playerData.grade_a;
+            }
+
+            async refresh(){
+                console.log("Refreshing player card for id:", this.id);
+                const userData = await getUser(this.id);
+                this.updateData(userData);
+            }
+
+            set startingStats(stats) {
+                this.starting_stats = stats;
+            }
+
+            set endingStats(stats) {
+                this.ending_stats = stats;
+            }
+
+            render() {
+                this.placementEl.textContent = `${this.placement}`;
+                this.usernameEl.textContent = this.username || '';
+                this.usernameEl.href = `https://osu.ppy.sh/users/${this.id}`;
+                this.usernameEl.target = "_blank";
+                if (this.avatar_url) {
+                    this.avatarEl.src = this.avatar_url;
+                }
+                this.element.appendChild(this.placementEl);
+                this.element.appendChild(this.avatarEl);
+                this.element.appendChild(this.usernameEl);
+                this.element.style.background = `linear-gradient(to right, rgba(25, 25, 25, 1) 0%, rgba(25, 25, 25, 1) 25%, rgba(25, 25, 25, 0.75) 50%, rgba(25, 25, 25, 0.5) 75%, rgba(30, 30, 30, 0.5) 100%), url('${this.background_url}')`;
+                this.element.style.backgroundSize = 'cover';
+                this.element.style.backgroundPosition = 'center';
+                this.objectiveEl.textContent = formatNumber(this[matchPrimary]);
+                this.element.appendChild(this.objectiveEl);
+
+                console.log("the element", this.element);
+                return this.element;
+            }
+        }
+
+        // visual
+        const playersList = document.getElementById('players-list');
+        const teamsDiv = document.getElementById('teams');
+        const recentPlaysDiv = document.getElementById('recent-plays');
+
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '0';
+
+            const absNum = Math.abs(num);
+
+            if (absNum >= 1e12) {
+                return (num / 1e12).toFixed(2) + ' T';
+            } else if (absNum >= 1e9) {
+                return (num / 1e9).toFixed(2) + ' B';
+            } else if (absNum >= 1e6) {
+                return (num / 1e6).toFixed(2) + ' M';
+            } else if (absNum >= 1e3) {
+                return (num / 1e3).toFixed(2) + ' K';
+            }
+
+            return num.toString();
+        }
+
+        addPlayer(11339405);
+        addPlayer(2);
+        addPlayer(11022601);
+
+        // api
+        function buildApiUrl(path) {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+
+            let baseUrl = `${protocol}//${hostname}`;
+
+            if (port && port !== '80' && port !== '443') {
+                baseUrl += `:${port}`;
+            }
+
+            const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+            return `${baseUrl}${normalizedPath}`;
+        }
+
+
+        async function getUser(id) {
+            console.log("retrieving user", id);
+            return fetch(`${buildApiUrl('/api/osu/fetch-user')}/${id}`)
+                .then(response => response.json())
+                .catch(error => console.error('Error fetching user:', error));
+        }
+
+        async function addPlayer(id) {
+            const player = new PlayerCard(id);
+            await player.refresh();
+            players.set(player.id, player);
+            const playerElement = player.render();
+            playersList.appendChild(playerElement);
+            if (player.id === ID) {
+                const youContainer = document.getElementById('you-container');
+                const yourCardContainer = document.getElementById('your-card');
+                const youPlayer = new PlayerCard(id);
+                await youPlayer.refresh();
+                const youElement = youPlayer.render();
+                youContainer.style.display = 'block';
+                yourCardContainer.appendChild(youElement);
+            }
+        }
+
+        // ws
+        const configuredWebsocketUrl = {{ websocket_url|tojson }};
+
+        function buildMatchWebsocketUrl() {
+            if (configuredWebsocketUrl && String(configuredWebsocketUrl).trim() !== "") {
+                return String(configuredWebsocketUrl).trim();
+            }
+
+            const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            return `${wsProtocol}//${window.location.hostname}:8765`;
+        }
+
+        let ws = null;
+        let reconnectTimeout = null;
+        let closing = false;
+
+        function connectWebSocket() {
+            const wsUrl = buildMatchWebsocketUrl();
+            console.log('Connecting to WebSocket:', wsUrl);
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function(event) {
+                console.log('WebSocket connected');
+                ws.send(JSON.stringify({
+                    type: 'subscribe_match',
+                    match_id: matchId
+                }));
+            };
+
+            ws.onmessage = function(event) {
+                console.log('WebSocket message received:', event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                } catch (e) {
+                    console.error('Failed to parse WebSocket message:', e);
+                }
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = function(event) {
+                console.log('WebSocket disconnected');
+                if (!closing) {
+                    reconnectTimeout = setTimeout(connectWebSocket, 3000);
+                }
+            };
+        }
+
+        connectWebSocket();
+
+        window.addEventListener('beforeunload', function() {
+            closing = true;
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
+            }
+            if (ws) {
+                ws.close();
+            }
+        });
+
+        // button logic
+        document.getElementById('refresh-button').addEventListener('click', async function () {
+            console.log('Refreshing all players');
+            for (const [id, player] of players) {
+                await player.refresh();
+                const oldElement = player.element;
+                const newElement = player.render();
+                if (oldElement.parentNode) {
+                    oldElement.parentNode.replaceChild(newElement, oldElement);
+                }
+            }
+        });
+
+    </script>
     </body>
 </html>
