@@ -130,7 +130,7 @@ def fetch_osu_user_matches():
         values 
             (%s, %s, %s, %s)
         """,
-        params=(match_id, user['id'], user['score'], user['playcount'])
+        params=(match_id, user['id'], user['total_score'], user['playcount'])
     )
     return {"success": True}
 
@@ -210,7 +210,7 @@ def create_match():
         logger.info("create_match match_id=%s", match_id)
         environment.database.execute(
             "INSERT INTO osu.match_users (match_id, user_id, starting_score, starting_playcount, team) values (%s, %s, %s, %s, %s)",
-            params=(match_id, player_data["id"], player_data["score"], player_data["playcount"], team_name))
+            params=(match_id, player_data["id"], player_data["total_score"], player_data["playcount"], team_name))
 
     return {
         "id": match_id
@@ -248,7 +248,7 @@ def end_match(id):
             WHERE user_id = %s
               AND match_id = %s;
             """,
-            params=(user["score"], user["playcount"], user["id"], id)
+            params=(user["total_score"], user["playcount"], user["id"], id)
         )
 
     return {"success": True}
