@@ -32,14 +32,9 @@ def _json_safe(value):
 @osu_api_blueprint.get('/osu/fetch-user/<id>')
 def fetch_osu_user(id):
     match_id = request.args.get("match")
-    if match_id is not None:
-        try:
-            match_id = int(match_id)
-        except (TypeError, ValueError):
-            match_id = None
-
     skip_api = request.args.get("skip_api", "false").lower() == "true"
     data = osu_api.fetch_osu_data(id, skip_api=skip_api)
+
 
     if not data:
         return {"error": "user not found"}
@@ -48,7 +43,7 @@ def fetch_osu_user(id):
 
 
 @osu_api_blueprint.post('/osu/add-user')
-def fetch_osu_user_matches():
+def add_osu_user():
     user = request.json["user"]
     match_id = request.json["match"]
 
@@ -67,7 +62,7 @@ def fetch_osu_user_matches():
 
 
 @osu_api_blueprint.post('/osu/remove-user')
-def remove_osu_user_from_match():
+def remove_osu_user():
     user = request.json["user"]
     match_id = request.json["match"]
 
@@ -137,27 +132,16 @@ def create_match():
             if not in_team:
                 team_name = None
 
-        player_data = osu_api.fetch_osu_data(player)
+        player_data = osu_api.fetch_osu_data(player, True)
         print(player_data)
         logger.info("create_match match_id=%s", match_id)
         environment.database.execute(
-            "INSERT INTO osu.match_users (match_id, user_id, starting_score, starting_playcount, team) values (%s, %s, %s, %s, %s)",
-            params=(match_id, player_data["id"], player_data["total_score"], player_data["playcount"], team_name))
+            "INSERT INTO osu.match_users (match_id, user_id, starting_stats, team) values (%s, %s, %s, %s)",
+            params=(match_id, player_data["user"]["id"], player_data["user"], team_name))
 
     return {
         "id": match_id
     }
-
-
-@osu_api_blueprint.post('/osu/refresh-match_id/<id>')
-def refresh_all_in_match(id: int):
-    users = environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s", params=(id,))
-    for user in users:
-        data = osu_api.fetch_osu_data(user[0])
-        if data:
-            _notify_osu_user_refreshed(data, match_id=id)
-
-    return {"success": True}
 
 
 @osu_api_blueprint.post('/osu/end-match/<id>')
