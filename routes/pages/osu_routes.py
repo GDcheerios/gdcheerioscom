@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request
 
 import environment
-from api.osu_api import get_matches
+from api.osu_api import get_matches, fetch_osu_data
 from objects.Account import Account
 
 osu_blueprint = Blueprint('osu_blueprint', __name__)
@@ -23,6 +23,7 @@ def osu_match(id):
         "SELECT * FROM osu.matches WHERE id = %s",
         params=(id,)
     )
+    players = []
 
     if not match:
         return "Match not found", 404

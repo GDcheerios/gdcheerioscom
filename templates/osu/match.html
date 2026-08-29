@@ -43,7 +43,7 @@
         {% endblock %}
     <script>
         const matchId = {{ match_id|int }};
-        const matchPrimary = "pp";
+        const matchPrimary = "ranked_score";
         const matchSecondary = "playcount";
         const matchReconstruct = false; // determines if reconstructing pp from ground up
         const ID = {{ current_osu_id }};
@@ -66,7 +66,6 @@
             }
 
             updateData(playerData) {
-                console.log(playerData)
                 if (!playerData || playerData.id == null) {
                     console.error("Invalid player data:", playerData);
                     return false;
@@ -95,17 +94,19 @@
                 return true;
             }
 
-            async refresh(pullFromOsu = false) {
-                console.log("Refreshing player card for id:", this.id, pullFromOsu);
-
+            async refresh(pullFromOsu = false, sendSocket = false) {
                 const userData = await getUser(this.id, pullFromOsu);
 
-                if (!userData || userData.id == null) {
+                if (!userData || !userData.user || userData.user.id == null) {
                     console.error("Could not refresh player:", this.id, userData);
                     return false;
                 }
 
-                return this.updateData(userData);
+                if (sendSocket) {
+                    publishRefresh(userData.user);
+                }
+
+                return this.updateData(userData.user);
             }
 
             set startingStats(stats) {
@@ -121,6 +122,7 @@
             }
 
             render() {
+                this.element.replaceChildren();
                 this.placementEl.textContent = `${this.placement}`;
                 this.usernameEl.textContent = this.username || '';
                 this.usernameEl.href = `https://osu.ppy.sh/users/${this.id}`;
@@ -140,8 +142,6 @@
                 this.element.style.backgroundPosition = 'center';
                 this.objectiveEl.textContent = formatNumber(this[matchPrimary]);
                 this.element.appendChild(this.objectiveEl);
-
-                console.log("the element", this.element);
                 return this.element;
             }
         }
@@ -190,8 +190,11 @@
                     playersList.removeChild(player.element);
                 }
                 fragment.appendChild(player.element);
-                youCard.placement = players.get(youCard.id).placement;
-                youCard.renderPlacement();
+                const currentPlayer = players.get(youCard.id);
+                if (currentPlayer) {
+                    youCard.placement = currentPlayer.placement;
+                    youCard.renderPlacement();
+                }
                 player.element.classList.toggle(
                     'player-hidden',
                     (youInTheMatch()) ? player.placement > 8 : player.placement > 11
@@ -199,30 +202,6 @@
             });
             playersList.appendChild(fragment);
         }
-
-        addPlayer(11339405);
-        addPlayer(38791701);
-        addPlayer(37434005);
-        addPlayer(11147702);
-        addPlayer(2);
-        addPlayer(9374344);
-        addPlayer(18346314);
-        addPlayer(8379270);
-        addPlayer(11798717);
-        addPlayer(14937109);
-        addPlayer(16030914);
-        addPlayer(19609172);
-        addPlayer(28893698);
-        addPlayer(14161199);
-        addPlayer(19903063);
-        addPlayer(32982105);
-        addPlayer(23082754);
-        addPlayer(14616066);
-        addPlayer(33841139);
-        addPlayer(32789401);
-        addPlayer(20322801);
-        addPlayer(11022601);
-        addPlayer(9726980);
 
         // api
         function buildApiUrl(path) {
@@ -243,7 +222,7 @@
 
 
         async function getUser(id, pullFromOsu = true) {
-            const url = `${buildApiUrl('/api/osu/fetch-user')}/${id}?skip_api=${!pullFromOsu}`;
+            const url = `${buildApiUrl('/api/osu/fetch-user')}/${id}?skip_api=${!pullFromOsu}?match=${matchId}`;
 
             const response = await fetch(url);
 
@@ -305,6 +284,23 @@
                 console.log('WebSocket message received:', event.data);
                 try {
                     const data = JSON.parse(event.data);
+
+                    if (data.type === 'refreshed' && data.match_id === matchId && data.user) {
+                        const player = players.get(Number(data.user.id));
+                        if (!player) {
+                            console.warn('Received refresh for player not on this page:', data.user.id);
+                            return;
+                        }
+
+                        player.updateData(data.user);
+                        player.render();
+                        if (player.id === ID) {
+                            youCard.updateData(data.user);
+                            youCard.render();
+                        }
+                        sort();
+                    }
+
                 } catch (e) {
                     console.error('Failed to parse WebSocket message:', e);
                 }
@@ -322,6 +318,20 @@
             };
         }
 
+        function publishRefresh(user) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.warn('WebSocket is not connected; refresh was not shared');
+                return false;
+            }
+
+            ws.send(JSON.stringify({
+                type: 'refresh',
+                match_id: matchId,
+                user: user
+            }));
+            return true;
+        }
+
         connectWebSocket();
 
         window.addEventListener('beforeunload', function() {
@@ -331,17 +341,20 @@
                 reconnectTimeout = null;
             }
             if (ws) {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'unsubscribe_match',
+                        match_id: matchId
+                    }));
+                }
                 ws.close();
             }
         });
 
         // button logic
         document.getElementById('refresh-button').addEventListener('click', async function () {
-            console.log('Refreshing all players');
-            for (const [id, player] of players) {
-                await player.refresh();
-                player.objectiveEl.textContent = formatNumber(player[matchPrimary]);
-            }
+            const player = await players.get(youCard.id);
+            await player.refresh(true, true);
             sort();
         });
 

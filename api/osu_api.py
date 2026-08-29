@@ -44,6 +44,111 @@ def check_access():
     return token
 
 
+def compare_to_match(user, match_id: int) -> dict:
+    if not match_id:
+        return user
+
+    match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(match_id,))
+
+    user_match_stats = environment.database.fetch_to_dict(
+        """
+        SELECT starting_stats, ending_stats
+        FROM osu.match_users
+        WHERE user_id = %s
+          AND match_id = %s
+        """,
+        params=(user["id"], match_id)
+    )
+
+    reconstructed_pp = environment.database.fetch_one(
+        """
+        WITH scores AS (
+            SELECT
+                pp,
+                ROW_NUMBER() OVER(ORDER BY pp DESC) AS rank
+            FROM osu.scores
+            WHERE user_id = %s
+              AND submitted_at >= %s
+              AND submitted_at <= COALESCE(%s::timestamp, NOW())
+        ),
+             calc_pp AS (
+                 SELECT COALESCE(SUM(pp * POWER(0.95, rank - 1)), 0) AS total_pp
+                 FROM scores
+             )
+        UPDATE osu.match_users
+        SET reconstructed_pp = calc_pp.total_pp
+        FROM calc_pp
+        WHERE user_id = %s
+          AND match_id = %s
+        RETURNING reconstructed_pp
+        """,
+        params=(
+            user["id"],
+            match["started_at"],
+            match["ended_at"],
+            user["id"],
+            match["id"]
+        )
+    )
+    if not user_match_stats:
+        return user
+
+    reference_stats = user_match_stats["ending_stats"] if user_match_stats["ending_stats"] is not None else \
+        user_match_stats["starting_stats"]
+
+    if not reference_stats:
+        return user
+
+    placement = environment.database.fetch_one(
+        """
+        WITH ranked_users AS (
+            select mu.user_id,
+            DENSE_RANK() OVER (
+                ORDER BY
+                (to_jsonb(u)->>'%s')::bigint - (mu.starting_stats->>'%s')::bigint DESC,
+                (to_jsonb(u)->>'%s')::bigint - (mu.starting_stats->>'%s')::bigint DESC
+            ) AS placement
+            FROM osu.match_users mu
+            JOIN osu.users u ON mu.user_id = u.id
+        ),
+        updated_users AS (
+            UPDATE osu.match_users AS mu
+            SET placement = ru.placement
+            FROM ranked_users ru
+            WHERE mu.user_id = ru.user_id
+            RETURNING mu.user_id, ru.placement
+        )
+        SELECT updated_users.placement
+        WHERE updated_users.user_id = %s
+        """,
+        params=(match["primary"], match["primary"], match["secondary"], match["secondary"], user["id"])
+    )
+
+    user = {
+        "id": user["id"],
+        "username": user["username"],
+        "total_score": user["total_score"] - reference_stats.get("total_score", 0),
+        "ranked_score": user["ranked_score"] - reference_stats.get("ranked_score", 0),
+        "total_hits": user["total_hits"] - reference_stats.get("total_hits", 0),
+        "playcount": user["playcount"] - reference_stats.get("playcount", 0),
+        "accuracy": user["accuracy"] - reference_stats.get("accuracy", 0),
+        "pp": user["pp"] - reference_stats.get("pp", 0),
+        "global_rank": user["global_rank"] - reference_stats.get("global_rank", 0),
+        "country_rank": user["country_rank"] - reference_stats.get("country_rank", 0),
+        "grade_ss": user["grade_ss"] - reference_stats.get("grade_ss", 0),
+        "grade_ssh": user["grade_ssh"] - reference_stats.get("grade_ssh", 0),
+        "grade_s": user["grade_s"] - reference_stats.get("grade_s", 0),
+        "grade_sh": user["grade_sh"] - reference_stats.get("grade_sh", 0),
+        "grade_a": user["grade_a"] - reference_stats.get("grade_a", 0),
+        "avatar": user["avatar"],
+        "reconstructed_pp": reconstructed_pp,
+        "placement": placement if placement is not None else 0,
+        "background": user["background"]
+    }
+
+    return user
+
+
 def get_user_info(user_identifier, skip_api=False):
     """
     Retrieve osu api user info.
@@ -65,7 +170,7 @@ def get_user_info(user_identifier, skip_api=False):
     if (
             not user_check
             or user_check["last_refresh"]
-            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=1)
+            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=0)
     ):
         if not skip_api:
             logger.info("getting osu user %s", user_identifier)
@@ -167,7 +272,7 @@ def extract_info(data):
 
             exists = db.fetch_to_dict(
                 """
-                SELECT EXISTS(SELECT 1 FROM osu.users WHERE id = %s)          as "user",
+                SELECT EXISTS(SELECT 1 FROM osu.users WHERE id = %s)  as "user",
                        EXISTS(SELECT 1 FROM osu.scores WHERE id = %s) as score
                 """,
                 params=(data['user']['id'], data['score']['id'])
@@ -262,16 +367,38 @@ def extract_info(data):
                     )
                 )
 
-            return extracted_info
+            score = None
+            if data['score']['id'] != 0:
+                score = {
+                    'score': data['score']['classic_total_score'],
+                    'pp': data['score']['pp'],
+                    'beatmap_id': data['score']['beatmap']['id'],
+                    'id': data['score']['id'],
+                    'accuracy': data['score']['accuracy'],
+                    'rank': data['score']['rank']
+                }
+
+            info = {
+                'user': extracted_info,
+                'score': score
+            }
+
+            return info
         else:
             logger.warning("user info not found")
             return None
     except KeyError as e:
-        return data['user']
+        logger.error("KeyError in extract_info: %s", e)
+        logger.error(traceback.format_exc())
+
+        return data
 
 
-def fetch_osu_data(user_id, skip_api=False):
-    return extract_info(get_user_info(user_id, skip_api=skip_api))
+def fetch_osu_data(user_id, skip_api=False, match_id=None):
+    result = extract_info(get_user_info(user_id, skip_api=skip_api))
+    result["user"] = compare_to_match(result["user"], match_id)
+
+    return result
 
 
 # <editor-fold desc="osu score farm">
