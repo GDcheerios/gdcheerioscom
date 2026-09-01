@@ -65,14 +65,17 @@ def compare_to_match(user, match_id: int) -> dict:
         WITH scores AS (
             SELECT
                 pp,
-                ROW_NUMBER() OVER(ORDER BY pp DESC) AS rank
+                rank,
+                ROW_NUMBER() OVER(ORDER BY pp DESC) AS rank_index
             FROM osu.scores
             WHERE user_id = %s
               AND submitted_at >= %s
               AND submitted_at <= COALESCE(%s::timestamp, NOW())
+              AND rank != 'F'
+            LIMIT 100
         ),
              calc_pp AS (
-                 SELECT COALESCE(SUM(pp * POWER(0.95, rank - 1)), 0) AS total_pp
+                 SELECT COALESCE(SUM(pp * POWER(0.95, rank_index - 1)), 0) AS total_pp
                  FROM scores
              )
         UPDATE osu.match_users
@@ -105,8 +108,8 @@ def compare_to_match(user, match_id: int) -> dict:
             select mu.user_id,
             DENSE_RANK() OVER (
                 ORDER BY
-                (to_jsonb(u)->>'%s')::bigint - (mu.starting_stats->>'%s')::bigint DESC,
-                (to_jsonb(u)->>'%s')::bigint - (mu.starting_stats->>'%s')::bigint DESC
+                (to_jsonb(u)->>%s)::bigint - (mu.starting_stats->>%s)::bigint DESC,
+                (to_jsonb(u)->>%s)::bigint - (mu.starting_stats->>%s)::bigint DESC
             ) AS placement
             FROM osu.match_users mu
             JOIN osu.users u ON mu.user_id = u.id
@@ -118,10 +121,11 @@ def compare_to_match(user, match_id: int) -> dict:
             WHERE mu.user_id = ru.user_id
             RETURNING mu.user_id, ru.placement
         )
-        SELECT updated_users.placement
-        WHERE updated_users.user_id = %s
+        SELECT uu.placement
+        FROM updated_users uu
+        WHERE uu.user_id = %s
         """,
-        params=(match["primary"], match["primary"], match["secondary"], match["secondary"], user["id"])
+        params=(match["primary_objective"], match["primary_objective"], match["secondary_objective"], match["secondary_objective"], user["id"])
     )
 
     user = {
@@ -131,7 +135,7 @@ def compare_to_match(user, match_id: int) -> dict:
         "ranked_score": user["ranked_score"] - reference_stats.get("ranked_score", 0),
         "total_hits": user["total_hits"] - reference_stats.get("total_hits", 0),
         "playcount": user["playcount"] - reference_stats.get("playcount", 0),
-        "accuracy": user["accuracy"] - reference_stats.get("accuracy", 0),
+        "accuracy": float(user["accuracy"]) - float(reference_stats.get("accuracy", 0)),
         "pp": user["pp"] - reference_stats.get("pp", 0),
         "global_rank": user["global_rank"] - reference_stats.get("global_rank", 0),
         "country_rank": user["country_rank"] - reference_stats.get("country_rank", 0),
@@ -183,7 +187,7 @@ def get_user_info(user_identifier, skip_api=False):
                 },
             ).json()
             recent_score_req = requests.get(
-                f"https://osu.ppy.sh/api/v2/users/{user_req['id']}/scores/recent",
+                f"https://osu.ppy.sh/api/v2/users/{user_identifier}/scores/recent",
                 headers={
                     "Accept": "application/json",
                     "Content-Type": "application/json",
@@ -203,10 +207,16 @@ def get_user_info(user_identifier, skip_api=False):
                     'score': None
                 }
 
-            return {
-                'user': user_req,
-                'score': recent_score_req[0]
-            }
+            try:
+                return {
+                    'user': user_req,
+                    'score': recent_score_req[0]
+                }
+            except KeyError:
+                return {
+                    'user': user_req,
+                    'score': None
+                }
 
     if user_check:
         score_check = environment.database.fetch_to_dict(
@@ -353,8 +363,8 @@ def extract_info(data):
             if not exists["score"] and data['score']['id'] != 0:
                 db.execute(
                     """
-                    INSERT INTO osu.scores (id, beatmap_id, user_id, submitted_at, accuracy, rank, pp, score)
-                    VALUES (%s, %s, %s, now(), %s, %s, %s, %s)
+                    INSERT INTO osu.scores (id, beatmap_id, user_id, submitted_at, accuracy, rank, pp, score, cover, title, artist)
+                    VALUES (%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s)
                     """,
                     params=(
                         data['score']['id'],
@@ -364,6 +374,9 @@ def extract_info(data):
                         data['score']['rank'],
                         data['score']['pp'],
                         data['score']['classic_total_score'],
+                        data['score']['beatmapset']['covers']['cover'],
+                        data['score']['beatmapset']['title'],
+                        data['score']['beatmapset']['artist']
                     )
                 )
 
@@ -375,7 +388,10 @@ def extract_info(data):
                     'beatmap_id': data['score']['beatmap']['id'],
                     'id': data['score']['id'],
                     'accuracy': data['score']['accuracy'],
-                    'rank': data['score']['rank']
+                    'rank': data['score']['rank'],
+                    'cover': data['score']['beatmapset']['covers']['cover'],
+                    'title': data['score']['beatmapset']['title'],
+                    'artist': data['score']['beatmapset']['artist']
                 }
 
             info = {
@@ -388,8 +404,6 @@ def extract_info(data):
             logger.warning("user info not found")
             return None
     except KeyError as e:
-        logger.error("KeyError in extract_info: %s", e)
-        logger.error(traceback.format_exc())
 
         return data
 

@@ -4,18 +4,201 @@
         <title>{{ match.name }} Score Farm</title>
         <link rel="stylesheet" href="/static/style.css">
         <link rel="stylesheet" href="/static/osu-style.css">
+            <style>
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes slideDown {
+                    from {
+                        transform: translateY(-100%);
+                    }
+                    to {
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes fadeOut {
+                    from {
+                        opacity: 1;
+                    }
+                    to {
+                        opacity: 0;
+                    }
+                }
+
+                @keyframes statChange {
+                    0% {
+                        opacity: 0.65;
+                        transform: scale(1);
+                    }
+                    35% {
+                        opacity: 1;
+                        transform: scale(1.12);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+
+                .objective.stat-change {
+                    animation: statChange 0.65s ease-out;
+                    transform-origin: center;
+                }
+
+                .objective.stat-increase {
+                    color: #72e6a0;
+                    text-shadow: 0 0 10px rgba(114, 230, 160, 0.75);
+                }
+
+                .objective.stat-decrease {
+                    color: #ff8f9e;
+                    text-shadow: 0 0 10px rgba(255, 143, 158, 0.7);
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .objective.stat-change {
+                        animation: none;
+                    }
+                }
+
+                @keyframes ladderUp {
+                    0%, 100% { box-shadow: 0 0 0 rgba(114, 230, 160, 0); }
+                    35% { box-shadow: 0 0 18px rgba(114, 230, 160, 0.8); }
+                }
+
+                @keyframes ladderDown {
+                    0%, 100% { box-shadow: 0 0 0 rgba(255, 143, 158, 0); }
+                    35% { box-shadow: 0 0 18px rgba(255, 143, 158, 0.8); }
+                }
+
+                .ladder-movement {
+                    display: inline-block;
+                    margin-left: 5px;
+                    font-size: 0.8em;
+                    font-weight: bold;
+                    animation: ladderIndicator 0.65s ease-out;
+                }
+
+                .ladder-up {
+                    animation: ladderUp 0.65s ease-out;
+                }
+
+                .ladder-down {
+                    animation: ladderDown 0.65s ease-out;
+                }
+
+                .ladder-movement.ladder-up {
+                    color: #72e6a0;
+                }
+
+                .ladder-movement.ladder-down {
+                    color: #ff8f9e;
+                }
+
+                .ladder-movement.ladder-up,
+                .ladder-movement.ladder-down {
+                    animation: ladderIndicator 0.65s ease-out;
+                }
+
+                .player.placement-first,
+                .player.placement-second,
+                .player.placement-third {
+                    border-width: 2px;
+                }
+
+                .player.placement-first {
+                    border-color: rgba(255, 215, 90, 0.95);
+                    box-shadow: 0 0 16px rgba(255, 207, 64, 0.42), inset 0 0 18px rgba(255, 207, 64, 0.08);
+                }
+
+                .player.placement-second {
+                    border-color: rgba(210, 225, 240, 0.9);
+                    box-shadow: 0 0 13px rgba(190, 215, 240, 0.32), inset 0 0 15px rgba(190, 215, 240, 0.07);
+                }
+
+                .player.placement-third {
+                    border-color: rgba(224, 151, 91, 0.9);
+                    box-shadow: 0 0 12px rgba(224, 151, 91, 0.3), inset 0 0 14px rgba(224, 151, 91, 0.06);
+                }
+
+                .player.placement-first::after,
+                .player.placement-second::after,
+                .player.placement-third::after {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    pointer-events: none;
+                    border-radius: inherit;
+                    z-index: 0;
+                }
+
+                .player.placement-first::after {
+                    background: linear-gradient(105deg, rgba(255, 221, 112, 0.28), rgba(255, 186, 35, 0.08) 45%, transparent 76%);
+                }
+
+                .player.placement-second::after {
+                    background: linear-gradient(105deg, rgba(226, 239, 255, 0.25), rgba(171, 198, 226, 0.08) 45%, transparent 76%);
+                }
+
+                .player.placement-third::after {
+                    background: linear-gradient(105deg, rgba(242, 170, 105, 0.24), rgba(190, 103, 45, 0.08) 45%, transparent 76%);
+                }
+
+                @keyframes ladderIndicator {
+                    from { opacity: 0; transform: translateY(4px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .ladder-movement,
+                    .ladder-up,
+                    .ladder-down {
+                        animation: none;
+                    }
+                }
+                .players-list-frame {
+                    position: relative;
+                    height: 75%;
+                    overflow: hidden;
+                }
+
+                .players-list-fade {
+                    display: none;
+                    position: absolute;
+                    z-index: 3;
+                    right: 0;
+                    bottom: 0;
+                    left: 0;
+                    height: 52px;
+                    pointer-events: none;
+                    background: transparent;
+                }
+
+                #players-list {
+                    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 52px), transparent 100%);
+                    mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 52px), transparent 100%);
+                }
+            </style>
         {% endblock %}
     </head>
     <body style="background-color: #0a0a1a;">
     {% include 'navbar.html' %}
         {% block body %}
             <h1 style="text-align: center">{{ match.name }}</h1>
-            <div id="match-highlight" class="osu-box" style="height: 10%; width: 20%; margin: auto;">
-                <h4>Highlight</h4>
-            </div>
-            <div style="display: flex; flex-direction: row; justify-content: space-evenly; height: 50%; width: 80%; margin: auto;">
-                <div class="osu-box" style="width: 50%;">
-                    <div id="players-list" style="height: 75%;">
+            <div style="display: flex; flex-direction: row; justify-content: space-evenly; height: 80%; width: 100%; margin: auto;">
+                <div class="osu-box" style="width: 35%;">
+                    <div class="players-list-frame">
+                        <div id="players-list" style="height: 100%;"></div>
+                        <div id="players-list-fade" class="players-list-fade" aria-hidden="true"></div>
                     </div>
                     <div id="you-container" style="height: 25%; display: none;">
                         <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent 0%, rgba(100, 150, 220, 0.8) 50%, transparent 100%); margin: 10px 0;"></div>
@@ -28,36 +211,34 @@
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; flex-direction: column; justify-content: space-evenly; width: 30%;">
-                    <div id="teams" class="osu-box" style="height: 35%;">
-                        <h6>Teams</h6>
-                    </div>
-                    <div id="recent-plays" class="osu-box" style="height: 60%;">
-                        <h6>Recent Plays</h6>
+                <div style="display: flex; flex-direction: column; justify-content: space-between; width: 40%;">
+{#                    <div id="teams" class="osu-box" style="height: 45%;">#}
+{#                        <h1 style="text-align: center; margin: 0">Teams</h1>#}
+{#                    </div>#}
+                    <div id="recent-scores" class="osu-box" style="height: 90%;">
+                        <h1 style="text-align: center; margin: 0">Recent Plays</h1>
                     </div>
                 </div>
-            </div>
-            <div id="stats">
-                <h1>Please invest in gdcheerios supporter for this.</h1>
             </div>
         {% endblock %}
     <script>
         const matchId = {{ match_id|int }};
-        const matchPrimary = "ranked_score";
-        const matchSecondary = "playcount";
-        const matchReconstruct = false; // determines if reconstructing pp from ground up
+        const matchPrimary = {{ match.primary_objective | tojson }};
+        const matchSecondary = {{ match.secondary_objective | tojson }};
         const ID = {{ current_osu_id }};
         const players = new Map();
+        const scores = new Map();
 
         class PlayerCard {
             constructor(id) {
-                console.log("Creating player card for id:", id);
                 this.element = document.createElement('div');
                 this.element.classList.add('player');
                 this.usernameEl = document.createElement('a');
                 this.usernameEl.classList.add('username');
                 this.placementEl = document.createElement('h3');
                 this.placementEl.classList.add('placement');
+                this.movementEl = document.createElement('span');
+                this.movementEl.classList.add('ladder-movement');
                 this.avatarEl = document.createElement('img');
                 this.avatarEl.classList.add('avatar');
                 this.objectiveEl = document.createElement('h3');
@@ -71,6 +252,8 @@
                     return false;
                 }
 
+                const previousValue = this[matchPrimary];
+
                 this.id = playerData.id;
                 this.username = playerData.username;
                 this.placement = 0;
@@ -82,6 +265,7 @@
                 this.global_rank = playerData.global_rank;
                 this.country_rank = playerData.country_rank;
                 this.pp = playerData.pp;
+                this.reconstructed_pp = playerData.reconstructed_pp;
                 this.last_refresh = playerData.last_refresh;
                 this.avatar_url = playerData.avatar;
                 this.background_url = playerData.background;
@@ -90,6 +274,15 @@
                 this.grade_s = playerData.grade_s;
                 this.grade_sh = playerData.grade_sh;
                 this.grade_a = playerData.grade_a;
+
+                this.statChanged = previousValue !== undefined &&
+                    Number(previousValue) !== Number(this[matchPrimary]);
+                this.statAnimationStart = previousValue;
+                this.statAnimationEnd = this[matchPrimary];
+                this.statChangeDirection = this.statChanged &&
+                    Number(this[matchPrimary]) > Number(previousValue)
+                    ? 'increase'
+                    : 'decrease';
 
                 return true;
             }
@@ -106,6 +299,11 @@
                     publishRefresh(userData.user);
                 }
 
+                if (userData.score && pullFromOsu){
+                    await addScore(userData.score.id, sendSocket)
+                    publishScore(userData.score.id)
+                }
+
                 return this.updateData(userData.user);
             }
 
@@ -119,11 +317,66 @@
 
             renderPlacement() {
                 this.placementEl.textContent = `${this.placement}`;
+                this.placementEl.className = 'placement';
+                this.element.classList.remove('placement-first', 'placement-second', 'placement-third');
+                if (this.placement >= 1 && this.placement <= 3) {
+                    const placementClass = `placement-${['first', 'second', 'third'][this.placement - 1]}`;
+                    this.placementEl.classList.add(placementClass);
+                    this.element.classList.add(placementClass);
+                }
+                if (this.ladderMovement) {
+                    this.movementEl.textContent = `${this.ladderMovement.direction === 'up' ? '↑' : '↓'} ${this.ladderMovement.distance}`;
+                    this.movementEl.className = `ladder-movement ladder-${this.ladderMovement.direction}`;
+                    this.placementEl.appendChild(this.movementEl);
+                } else {
+                    this.movementEl.textContent = '';
+                    this.movementEl.className = 'ladder-movement';
+                }
+            }
+
+            formatStatValue(value) {
+                return value.toLocaleString("en-US") + getStringEnding(matchPrimary);
+            }
+
+            animateStatValue(startValue, endValue) {
+                const start = Number(startValue);
+                const end = Number(endValue);
+                if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    this.objectiveEl.textContent = this.formatStatValue(end);
+                    return;
+                }
+
+                if (this.statAnimationFrame) {
+                    cancelAnimationFrame(this.statAnimationFrame);
+                }
+
+                const duration = 650;
+                const startedAt = performance.now();
+                const animate = (now) => {
+                    const progress = Math.min((now - startedAt) / duration, 1);
+                    const easedProgress = 1 - Math.pow(1 - progress, 3);
+                    const value = start + (end - start) * easedProgress;
+                    const displayValue = Number.isInteger(start) && Number.isInteger(end)
+                        ? Math.round(value)
+                        : value;
+                    this.objectiveEl.textContent = this.formatStatValue(displayValue);
+
+                    if (progress < 1) {
+                        this.statAnimationFrame = requestAnimationFrame(animate);
+                    } else {
+                        this.statAnimationFrame = null;
+                        this.objectiveEl.textContent = this.formatStatValue(end);
+                    }
+                };
+
+                this.statAnimationFrame = requestAnimationFrame(animate);
             }
 
             render() {
                 this.element.replaceChildren();
-                this.placementEl.textContent = `${this.placement}`;
+                this.renderPlacement();
                 this.usernameEl.textContent = this.username || '';
                 this.usernameEl.href = `https://osu.ppy.sh/users/${this.id}`;
                 this.usernameEl.target = "_blank";
@@ -140,8 +393,132 @@
                     : gradient;
                 this.element.style.backgroundSize = 'cover';
                 this.element.style.backgroundPosition = 'center';
-                this.objectiveEl.textContent = formatNumber(this[matchPrimary]);
+                this.objectiveEl.textContent = this.formatStatValue(this[matchPrimary]);
+                if (this.statChanged) {
+                    this.animateStatValue(this.statAnimationStart, this.statAnimationEnd);
+                    this.statChanged = false;
+                }
                 this.element.appendChild(this.objectiveEl);
+                return this.element;
+            }
+        }
+
+        class ScoreCard {
+            constructor(id){
+                this.id = id;
+                this.title = 'title';
+                this.artist = 'artist';
+                this.cover = '';
+                this.score = 0;
+                this.pp = 0;
+                this.rank = 'F';
+                this.accuracy = 0;
+                this.userId = null;
+            }
+
+            async fetchScoreInfo(){
+                const score_data = await getScore(this.id)
+                this.title = score_data.title;
+                this.artist = score_data.artist;
+                this.score = score_data.score;
+                this.pp = score_data.pp;
+                this.rank = score_data.rank;
+                this.accuracy = score_data.accuracy;
+                this.cover = score_data.cover;
+                this.userId = score_data.user_id;
+            }
+
+            getRankText(rank){
+                const rankEl = document.createElement('h5');
+                rankEl.style.margin = "0 4px 0 12px";
+
+                switch (rank) {
+                    case "SSH":
+                        rankEl.textContent = "SS+";
+                        rankEl.classList.add('rank-s-plus');
+                        break;
+                    case "SS":
+                        rankEl.textContent = "SS";
+                        rankEl.classList.add('rank-s');
+                        break;
+                    case "SH":
+                        rankEl.textContent = "S+";
+                        rankEl.classList.add('rank-s-plus');
+                        break;
+                    case "S":
+                        rankEl.textContent = "S";
+                        rankEl.classList.add('rank-s');
+                        break;
+                    case "A":
+                        rankEl.textContent = "A";
+                        rankEl.classList.add('rank-a');
+                        break;
+                    case "B":
+                        rankEl.textContent = "B";
+                        rankEl.classList.add('rank-b');
+                        break;
+                    case "C":
+                        rankEl.textContent = "C";
+                        rankEl.classList.add('rank-c');
+                        break;
+                    case "D":
+                        rankEl.textContent = "D";
+                        rankEl.classList.add('rank-d');
+                        break;
+                    case "F":
+                        rankEl.textContent = "F";
+                        rankEl.classList.add('rank-f');
+                        break;
+                }
+                return rankEl;
+            }
+
+            async render() {
+                const userData = await getUser(this.userId, false);
+
+                this.element = document.createElement('div');
+                this.element.classList.add('score-card');
+
+                const gradient = 'radial-gradient(circle, rgba(25, 25, 25, 0.9) 0%, rgba(25, 25, 25, 0.85) 50%, rgba(30, 30, 30, 0.8) 100%)';
+                const hasCover = this.cover && this.cover !== 'undefined';
+                this.element.style.background = hasCover
+                    ? `${gradient}, url('${this.cover}')`
+                    : gradient;
+                this.element.style.backgroundSize = 'cover';
+                this.element.style.backgroundPosition = 'center';
+
+                this.element.innerHTML = `
+                    <div class="score-row">
+                        <span style="text-wrap: nowrap;">${this.artist} - ${this.title}</span>
+                    </div>
+                    <div id="objective" class="score-row"></div>
+                    <h6 style="margin: 0 0 2px 4px;">Submitted by <a href="https://osu.ppy.sh/users/${this.userId}" target="_blank">${userData.user.username}</a></h6>
+
+                `;
+
+                const objectiveContainer = this.element.querySelector('#objective');
+                objectiveContainer.append(this.getRankText(this.rank));
+
+                const accSpan = document.createElement('span');
+                accSpan.style.margin = "0 8px";
+                accSpan.style.fontWeight = "bold";
+                accSpan.style.color = "#66aaff";
+                accSpan.textContent = (this.accuracy * 100).toFixed(2) + "%";
+                objectiveContainer.append(accSpan);
+
+                const scoreSpan = document.createElement('span');
+                scoreSpan.style.margin = "0 8px";
+                scoreSpan.style.fontWeight = "bold";
+                scoreSpan.textContent = this.score.toLocaleString("en-US") + ' score';
+                objectiveContainer.append(scoreSpan);
+
+                const ppSpan = document.createElement('span');
+                ppSpan.style.margin = "0 8px";
+                ppSpan.style.fontWeight = "bold";
+                ppSpan.style.color = "#ff66aa";
+                ppSpan.textContent = this.pp != null ? Math.round(this.pp) + "pp" : "0 pp";
+                objectiveContainer.append(ppSpan);
+
                 return this.element;
             }
         }
@@ -157,6 +534,38 @@
             return players.has(youCard.id);
         }
 
+        function getStringEnding(objective = "total_score") {
+            switch (objective){
+                case "total_score":
+                    return " score";
+                case "ranked_score":
+                    return " score";
+                case "accuracy":
+                    return "%";
+                case "pp":
+                    return "pp";
+                case "playcount":
+                    return " plays";
+                case "global_rank":
+                    return " rank";
+                case "country_rank":
+                    return " rank";
+                case "grade_ss":
+                    return " SS";
+                case "grade_ssh":
+                    return " SS+";
+                case "grade_sh":
+                    return " S+";
+                case "grade_s":
+                    return " S";
+                case "grade_a":
+                    return " A";
+                case "total_hits":
+                    return " hits";
+                case "reconstructed_pp":
+                    return "pp";
+            }
+        }
 
         function formatNumber(num) {
             if (num === null || num === undefined) return '0';
@@ -179,8 +588,29 @@
         function sort() {
             const sortedPlayers = Array.from(players.values()).sort((a, b) => b[matchPrimary] - a[matchPrimary]);
 
+            const oldPositions = new Map();
+            sortedPlayers.forEach(player => {
+                if (player.element.parentNode === playersList) {
+                    const rect = player.element.getBoundingClientRect();
+                    oldPositions.set(player.id, rect.top);
+                }
+            });
+
             sortedPlayers.forEach((player, index) => {
+                const oldPlacement = player.placement;
                 player.placement = index + 1;
+                if (oldPlacement > 0 && oldPlacement !== player.placement) {
+                    player.ladderMovement = {
+                        direction: player.placement < oldPlacement ? 'up' : 'down',
+                        distance: Math.abs(oldPlacement - player.placement)
+                    };
+                    player.element.classList.remove('ladder-up', 'ladder-down');
+                    void player.element.offsetWidth;
+                    player.element.classList.add(`ladder-${player.ladderMovement.direction}`);
+                } else {
+                    player.ladderMovement = null;
+                    player.element.classList.remove('ladder-up', 'ladder-down');
+                }
                 player.renderPlacement();
             });
 
@@ -197,10 +627,30 @@
                 }
                 player.element.classList.toggle(
                     'player-hidden',
-                    (youInTheMatch()) ? player.placement > 8 : player.placement > 11
+                    player.placement >= 20
                 );
             });
             playersList.appendChild(fragment);
+
+            requestAnimationFrame(() => {
+                sortedPlayers.forEach(player => {
+                    const oldTop = oldPositions.get(player.id);
+                    if (oldTop !== undefined) {
+                        const newRect = player.element.getBoundingClientRect();
+                        const deltaY = oldTop - newRect.top;
+
+                        if (deltaY !== 0) {
+                            player.element.style.transform = `translateY(${deltaY}px)`;
+                            player.element.style.transition = 'none';
+
+                            requestAnimationFrame(() => {
+                                player.element.style.transition = 'transform 0.3s ease-out';
+                                player.element.style.transform = 'translateY(0)';
+                            });
+                        }
+                    }
+                });
+            });
         }
 
         // api
@@ -222,8 +672,7 @@
 
 
         async function getUser(id, pullFromOsu = true) {
-            const url = `${buildApiUrl('/api/osu/fetch-user')}/${id}?skip_api=${!pullFromOsu}?match=${matchId}`;
-
+            const url = `${buildApiUrl('/api/osu/fetch-user')}/${id}?skip_api=${!pullFromOsu}&match=${matchId}`;
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -248,6 +697,46 @@
                 yourCardContainer.appendChild(youElement);
             }
             sort();
+        }
+
+        async function getScore(id) {
+            const url = `${buildApiUrl('/api/osu/score')}/${id}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        }
+
+        async function addScore(id) {
+            if (scores.get(id)) return;
+            console.log(`Adding score with ID: ${id}`);
+            const scoreCard = new ScoreCard(id);
+            scores.set(id, scoreCard);
+            await scoreCard.fetchScoreInfo();
+            const recentScoresEl = document.getElementById('recent-scores');
+            const scoreCardEl = await scoreCard.render();
+
+            const existingScores = recentScoresEl.querySelectorAll('.score-card');
+
+            if (existingScores.length > 0) {
+                recentScoresEl.insertBefore(scoreCardEl, existingScores[0]);
+            } else {
+                recentScoresEl.appendChild(scoreCardEl);
+            }
+
+            scoreCardEl.style.animation = 'slideIn 0.45s ease-out both';
+
+            const allScores = recentScoresEl.querySelectorAll('.score-card');
+            if (allScores.length > 8) {
+                const oldestScore = allScores[allScores.length - 1];
+                oldestScore.style.animation = 'fadeOut 0.45s ease-out forwards';
+                oldestScore.addEventListener('animationend', () => {
+                    if (oldestScore.parentNode === recentScoresEl) {
+                        recentScoresEl.removeChild(oldestScore);
+                    }
+                }, {once: true});
+            }
         }
 
         // ws
@@ -288,7 +777,7 @@
                     if (data.type === 'refreshed' && data.match_id === matchId && data.user) {
                         const player = players.get(Number(data.user.id));
                         if (!player) {
-                            console.warn('Received refresh for player not on this page:', data.user.id);
+                            addPlayer(data.user.id);
                             return;
                         }
 
@@ -299,6 +788,10 @@
                             youCard.render();
                         }
                         sort();
+                    }
+
+                    if (data.type === 'new_score' && data.match_id === matchId && data.score_id && data.score_id) {
+                        addScore(data.score_id, false);
                     }
 
                 } catch (e) {
@@ -332,7 +825,27 @@
             return true;
         }
 
+        function publishScore(scoreId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.warn('WebSocket is not connected; score was not shared');
+                return false;
+            }
+
+            ws.send(JSON.stringify({
+                type: 'new_score',
+                match_id: matchId,
+                score_id: scoreId
+            }));
+            return true;
+        }
+
         connectWebSocket();
+
+        // loading
+        window.addEventListener('load', function () {
+            for (const player_id of {{ player_ids | tojson}}) addPlayer(player_id);
+            for (const scoreId of {{ recent_scores | tojson }}) addScore(scoreId);
+        });
 
         window.addEventListener('beforeunload', function() {
             closing = true;
@@ -355,7 +868,6 @@
         document.getElementById('refresh-button').addEventListener('click', async function () {
             const player = await players.get(youCard.id);
             await player.refresh(true, true);
-            sort();
         });
 
     </script>

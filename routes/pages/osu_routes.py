@@ -23,7 +23,20 @@ def osu_match(id):
         "SELECT * FROM osu.matches WHERE id = %s",
         params=(id,)
     )
-    players = []
+    player_ids = [player_id[0] for player_id in environment.database.fetch_all(
+        "SELECT user_id FROM osu.match_users where match_id = %s and placement <= 20", params=(id,))]
+    recent_scores = environment.database.fetch_all(
+        """
+        SELECT id
+        FROM osu.scores
+        WHERE user_id IN %s
+          AND submitted_at <= COALESCE(%s::timestamp, NOW())
+          AND submitted_at > %s
+        ORDER BY submitted_at DESC
+        LIMIT 8
+        """,
+        params=(tuple(player_ids), match["ended_at"], match["started_at"])
+    )
 
     if not match:
         return "Match not found", 404
@@ -47,4 +60,6 @@ def osu_match(id):
         is_admin=is_admin,
         match_id=id,
         websocket_url=environment.frontend_websocket_url,
+        player_ids=player_ids,
+        recent_scores=recent_scores
     )

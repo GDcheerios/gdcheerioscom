@@ -33,8 +33,7 @@ def _json_safe(value):
 def fetch_osu_user(id):
     match_id = request.args.get("match")
     skip_api = request.args.get("skip_api", "false").lower() == "true"
-    data = osu_api.fetch_osu_data(id, skip_api=skip_api)
-
+    data = osu_api.fetch_osu_data(id, skip_api=skip_api, match_id=match_id)
 
     if not data:
         return {"error": "user not found"}
@@ -51,10 +50,9 @@ def add_osu_user():
 
     environment.database.execute(
         """
-        INSERT INTO osu.match_users 
+        INSERT INTO osu.match_users
             (match_id, user_id, starting_score, starting_playcount)
-        values 
-            (%s, %s, %s, %s)
+        values (%s, %s, %s, %s)
         """,
         params=(match_id, user['id'], user['total_score'], user['playcount'])
     )
@@ -111,36 +109,32 @@ def create_match():
     user_id = Account.id_from_session(request.cookies.get("session"))
     match_id = environment.database.fetch_one(
         """
-        INSERT INTO osu.matches
-        (name,
-         opener_id,
-         open)
-        values (%s,
+        INSERT INTO osu.matches(name,
+                                opener_id,
+                                open,
+                                primary_objective,
+                                secondary_objective)
+        VALUES (%s,
+                %s,
+                %s,
                 %s,
                 %s)
-        returning id
+        RETURNING id
         """,
-        params=(data["matchName"], user_id, data["open"])
+        params=(data["matchName"], user_id, data["open"], data["primaryObjective"], data["secondaryObjective"])
     )[0]
-    for player in data["players"]:
-        in_team = False
-        for team in data["teams"]:
-            if player in team["players"]:
-                team_name = team["name"]
-                in_team = True
-
-            if not in_team:
-                team_name = None
-
-        player_data = osu_api.fetch_osu_data(player, True)
-        print(player_data)
-        logger.info("create_match match_id=%s", match_id)
+    logger.info("create_match match_id=%s", match_id)
+    for id in data["players"]:
+        player = osu_api.fetch_osu_data(id, skip_api=True)
+        player["user"]["reconstructed_pp"] = 0
         environment.database.execute(
-            "INSERT INTO osu.match_users (match_id, user_id, starting_stats, team) values (%s, %s, %s, %s)",
-            params=(match_id, player_data["user"]["id"], player_data["user"], team_name))
+            "INSERT INTO osu.match_users (match_id, user_id, starting_stats, team) values (%s, %s, %s::jsonb, %s)",
+            params=(match_id, id, json.dumps(_json_safe(player["user"])), data["players"][id]["team"])
+        )
 
     return {
-        "id": match_id
+        "id": match_id,
+        "data": data
     }
 
 
@@ -150,7 +144,8 @@ def end_match(id):
     if str(Account.id_from_session(request.cookies.get("session"))) != str(match_id["opener_id"]):
         return {"error": "not your match_id"}
 
-    match_users = environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s", params=(id,))
+    match_users = environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s",
+                                                 params=(id,))
     logger.info("ending match id=%s users=%s", id, match_users)
     environment.database.execute("UPDATE osu.matches SET ended = true WHERE id = %s", params=(id,))
     for user in match_users:
@@ -168,4 +163,16 @@ def end_match(id):
         )
 
     return {"success": True}
+
+
+# endregion
+
+# region scores
+
+@osu_api_blueprint.get('/osu/score/<id>')
+def get_score(id):
+    score = environment.database.fetch_to_dict("SELECT * FROM osu.scores WHERE id = %s", params=(id,))
+
+    return score
+
 # endregion
