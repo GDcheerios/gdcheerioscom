@@ -13,7 +13,6 @@
     width: 60%;
 }
 
-/* --- MATCH LAYOUT: players left, teams right --- */
 .match-layout {
     display: flex;
     align-items: flex-start;
@@ -23,12 +22,10 @@
     padding: 0 5%;
 }
 
-/* Left column: player list */
 .match-players-column {
     flex: 2;
 }
 
-/* Right column: teams overview */
 .teams-overview {
     flex: 1;
     color: #ffffff;
@@ -83,13 +80,14 @@
 
 .player {
     height: 32px;
-    width: 90%;
+    width: 98%;
     border-radius: 12px;
     display: flex;
     flex-direction: row;
     align-items: start;
     margin-bottom: 6px;
     margin-right: auto;
+    margin-left: auto;
     opacity: 1;
     position: relative;
     transition: opacity 0.3s ease, top 0.3s ease;
@@ -118,7 +116,55 @@
     font-weight: bold;
     margin-top: auto;
     margin-bottom: auto;
+}
 
+.score-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-left: auto;
+    margin-right: auto;
+    height: 64px;
+    width: 98%;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    border: 2px solid #b8b8b8;
+    overflow: hidden;
+}
+
+.score-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 5px 1px 1px 5px;
+}
+
+.rank-s-plus {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+}
+
+.rank-s {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.9);
+}
+
+.rank-a {
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.9);
+}
+
+.rank-b {
+    text-shadow: 0 0 5px rgba(0, 128, 255, 0.9);
+}
+
+.rank-c {
+    text-shadow: 0 0 5px rgba(255, 128, 0, 0.9);
+}
+
+.rank-d {
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.9);
+}
+
+.rank-f {
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
 }
 
 .objective {
@@ -171,6 +217,23 @@ input::placeholder {
     color: #aaa;
 }
 
+button {
+    padding: 10px 14px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #ffffffaa;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+}
+
+button:hover {
+    border-color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
 .config-container {
     display: flex;
     flex-direction: row;
@@ -196,13 +259,11 @@ input::placeholder {
     width: min(720px, 92vw);
 }
 
-/* NEW/CHANGED: keep the whole matches index content from being super wide */
 .matches-panel {
     width: min(980px, 92vw);
     margin: 0 auto;
 }
 
-/* Column list styling for match links */
 #matches [data-section] {
     display: flex;
     flex-direction: column;
@@ -210,7 +271,7 @@ input::placeholder {
 }
 
 a.match-link {
-    display: block;              /* makes each match take its own row */
+    display: block;
     width: 100%;
     box-sizing: border-box;
 
@@ -228,7 +289,7 @@ a.match-link:hover {
     background: rgba(0, 0, 0, 0.7);
     text-decoration: none;
 }
-/* Column list styling for match links */
+
 #matches [data-section] {
     display: flex;
     flex-direction: column;
@@ -236,7 +297,7 @@ a.match-link:hover {
 }
 
 a.match-link {
-    display: block;              /* makes each match take its own row */
+    display: block;
     width: 100%;
     box-sizing: border-box;
 
@@ -276,7 +337,6 @@ a.match-link:hover {
     background: rgba(255, 255, 255, 0.12);
 }
 
-/* Column list styling for match links */
 #matches [data-section] {
     display: flex;
     flex-direction: column;
@@ -284,7 +344,7 @@ a.match-link:hover {
 }
 
 a.match-link {
-    display: block;              /* makes each match take its own row */
+    display: block;
     width: 100%;
     box-sizing: border-box;
 
