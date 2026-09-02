@@ -41,20 +41,43 @@ def fetch_osu_user(id):
     return _json_safe(data)
 
 
+@osu_api_blueprint.get('/osu/search/<query>')
+def search_osu_user(query):
+    match_id = request.args.get("match_id")
+    print(match_id, query)
+    user_ids = [id[0] for id in environment.database.fetch_all(
+        """
+        SELECT 
+            m.user_id 
+        FROM
+            osu.match_users m
+        JOIN osu.users u ON m.user_id = u.id
+        WHERE 
+            m.match_id = %s
+            and username ILIKE %s
+        """,
+        params=(match_id, f"%{query}%")
+    )]
+
+    print(user_ids)
+
+    return user_ids
+
+
 @osu_api_blueprint.post('/osu/add-user')
 def add_osu_user():
     user = request.json["user"]
-    match_id = request.json["match"]
+    match_id = request.json["match_id"]
 
     user = osu_api.fetch_osu_data(user)
 
     environment.database.execute(
         """
         INSERT INTO osu.match_users
-            (match_id, user_id, starting_score, starting_playcount)
-        values (%s, %s, %s, %s)
+            (match_id, user_id, starting_stats)
+        values (%s, %s, %s)
         """,
-        params=(match_id, user['id'], user['total_score'], user['playcount'])
+        params=(match_id, user['user']['id'], json.dumps(_json_safe(user['user'])))
     )
     return {"success": True}
 
@@ -140,26 +163,24 @@ def create_match():
 
 @osu_api_blueprint.post('/osu/end-match/<id>')
 def end_match(id):
-    match_id = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
-    if str(Account.id_from_session(request.cookies.get("session"))) != str(match_id["opener_id"]):
+    match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
+    if str(Account.id_from_session(request.cookies.get("session"))) != str(match["opener_id"]):
         return {"error": "not your match_id"}
 
-    match_users = environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s",
-                                                 params=(id,))
+    match_users = [user[0] for user in environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s",
+                                                 params=(id,))]
     logger.info("ending match id=%s users=%s", id, match_users)
     environment.database.execute("UPDATE osu.matches SET ended = true WHERE id = %s", params=(id,))
     for user in match_users:
-        user = user[0]
-        user = osu_api.fetch_osu_data(user)
+        user = osu_api.fetch_osu_data(user, skip_api=True)["user"]
         environment.database.execute(
             """
             UPDATE osu.match_users
-            SET ending_score     = %s,
-                ending_playcount = %s
+            SET ending_stats = %s
             WHERE user_id = %s
               AND match_id = %s;
             """,
-            params=(user["total_score"], user["playcount"], user["id"], id)
+            params=(json.dumps(_json_safe(user)), user["id"], id)
         )
 
     return {"success": True}
@@ -171,8 +192,6 @@ def end_match(id):
 
 @osu_api_blueprint.get('/osu/score/<id>')
 def get_score(id):
-    score = environment.database.fetch_to_dict("SELECT * FROM osu.scores WHERE id = %s", params=(id,))
-
-    return score
+    return environment.database.fetch_to_dict("SELECT * FROM osu.scores WHERE id = %s", params=(id,))
 
 # endregion
