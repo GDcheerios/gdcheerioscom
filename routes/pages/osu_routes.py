@@ -24,18 +24,34 @@ def osu_match(id):
         params=(id,)
     )
     player_ids = [player_id[0] for player_id in environment.database.fetch_all(
-        "SELECT user_id FROM osu.match_users where match_id = %s and placement <= 20", params=(id,))]
+        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 20 LIMIT 20", params=(id,))]
     recent_scores = environment.database.fetch_all(
         """
-        SELECT id
-        FROM osu.scores
-        WHERE user_id IN %s
-          AND submitted_at <= COALESCE(%s::timestamp, NOW())
-          AND submitted_at > %s
-        ORDER BY submitted_at DESC
-        LIMIT 8
+        WITH match AS (
+            SELECT *
+            FROM osu.matches
+            WHERE id = %s
+        ),
+        match_users AS (
+            SELECT
+                mu.user_id,
+                mu.match_id
+            FROM osu.match_users mu,
+                match m
+            WHERE mu.match_id = m.id
+        )
+        SELECT
+            s.id
+        FROM osu.scores s,
+            match_users,
+            match
+        WHERE s.user_id = match_users.user_id
+            and s.submitted_at > match.started_at
+            and s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
+        ORDER BY s.submitted_at DESC
+        LIMIT 5
         """,
-        params=(tuple(player_ids), match["ended_at"], match["started_at"])
+        params=(match["id"],)
     )
 
     if not match:
@@ -52,6 +68,15 @@ def osu_match(id):
         if osu_data:
             current_osu_id = osu_data["id"]
 
+    in_match = False
+    if current_osu_id:
+        result = environment.database.fetch_one("SELECT 1 FROM osu.match_users WHERE match_id = %s AND user_id = %s",
+                                                params=(id, current_osu_id))
+        in_match = True if result else False
+
+    if in_match and current_osu_id not in player_ids:
+        player_ids.append(current_osu_id)
+
     return render_template(
         'osu/match.html',
         match=match,
@@ -59,6 +84,8 @@ def osu_match(id):
         is_creator=is_creator,
         is_admin=is_admin,
         match_id=id,
+        id=request_id,
+        in_match=in_match,
         websocket_url=environment.frontend_websocket_url,
         player_ids=player_ids,
         recent_scores=recent_scores
