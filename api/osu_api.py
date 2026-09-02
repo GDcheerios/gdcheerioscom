@@ -108,8 +108,8 @@ def compare_to_match(user, match_id: int) -> dict:
             select mu.user_id,
             DENSE_RANK() OVER (
                 ORDER BY
-                (to_jsonb(u)->>%s)::bigint - (mu.starting_stats->>%s)::bigint DESC,
-                (to_jsonb(u)->>%s)::bigint - (mu.starting_stats->>%s)::bigint DESC
+                (to_jsonb(u)->>%s)::numeric - (mu.starting_stats->>%s)::numeric,
+                (to_jsonb(u)->>%s)::numeric - (mu.starting_stats->>%s)::numeric
             ) AS placement
             FROM osu.match_users mu
             JOIN osu.users u ON mu.user_id = u.id
