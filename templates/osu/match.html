@@ -1,7 +1,7 @@
 <html>
     <head>
         {% block head %}
-        <title>{{ match.name }} Score Farm</title>
+        <title>{{ match.name }}</title>
         <link rel="stylesheet" href="/static/style.css">
         <link rel="stylesheet" href="/static/osu-style.css">
             <style>
@@ -196,25 +196,57 @@
             <h1 style="text-align: center">{{ match.name }}</h1>
             <div style="display: flex; flex-direction: row; justify-content: space-evenly; height: 80%; width: 100%; margin: auto;">
                 <div class="osu-box" style="width: 35%;">
+                    <div style="display: flex; flex-direction: row; justify-content: start; align-items: start;">
+                        <button id="clear-button" onclick="clearSearch()"style="width: 20%; padding: 8px; font-size: 16px; border: 2px solid rgba(220, 100, 100, 0.8); border-radius: 12px; margin: 10px auto;">Clear</button>
+                        <label for="search-input"></label><input type="text" id="search-input" placeholder="Search players..." style="width: 40%; padding: 10px; font-size: 16px; border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; margin: 10px auto;">
+                        <button id="search-button" onclick="searchButton()" style="width: 20%; padding: 8px; font-size: 16px; border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; margin: 10px auto;">Search</button>
+                    </div>
                     <div class="players-list-frame">
                         <div id="players-list" style="height: 100%;"></div>
                         <div id="players-list-fade" class="players-list-fade" aria-hidden="true"></div>
                     </div>
-                    <div id="you-container" style="height: 25%; display: none;">
+                    <div id="you-container" style="height: 20px;">
                         <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent 0%, rgba(100, 150, 220, 0.8) 50%, transparent 100%); margin: 10px 0;"></div>
                         <div id="your-card"></div>
-                        <div id="controls" style="display: flex;">
-                            <button id="refresh-button"
-                                    style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
-                                Refresh
-                            </button>
-                        </div>
+                        {% if not match['ended'] %}
+                            <div id="controls" style="display: flex;">
+                                {% if id %}
+                                    {% if not in_match and current_osu_id and match["open"] %}
+                                        <button id="join-button"
+                                                onclick="joinButton()"
+                                                style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
+                                            Join Match
+                                        </button>
+                                    {% else %}
+                                        <button id="refresh-button"
+                                                onclick="refreshButton()"
+                                                style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
+                                            Refresh
+                                        </button>
+                                    {% endif %}
+                                    {% if is_admin or is_creator %}
+                                        <button id="end-button"
+                                                onclick="endButton()"
+                                                style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81 0 0), rgb(81 0 0)); border: 2px solid rgb(255 0 0); border-radius: 12px; cursor: pointer; margin: 10px auto;">
+                                            End Match
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                                {% if not id or not current_osu_id %}
+                                    <button id="link-button"
+                                            onclick="linkButton()"
+                                            style="adding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
+                                        link user
+                                    </button>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div style="display: flex; flex-direction: column; justify-content: space-between; width: 40%;">
-{#                    <div id="teams" class="osu-box" style="height: 45%;">#}
-{#                        <h1 style="text-align: center; margin: 0">Teams</h1>#}
-{#                    </div>#}
+                    <div id="teams" class="osu-box" style="height: 45%;">
+                        <h1 style="text-align: center; margin: 0">Teams</h1>
+                    </div>
                     <div id="recent-scores" class="osu-box" style="height: 90%;">
                         <h1 style="text-align: center; margin: 0">Recent Plays</h1>
                     </div>
@@ -225,7 +257,7 @@
         const matchId = {{ match_id|int }};
         const matchPrimary = {{ match.primary_objective | tojson }};
         const matchSecondary = {{ match.secondary_objective | tojson }};
-        const ID = {{ current_osu_id }};
+        const ID = {{ current_osu_id | tojson }};
         const players = new Map();
         const scores = new Map();
 
@@ -256,7 +288,7 @@
 
                 this.id = playerData.id;
                 this.username = playerData.username;
-                this.placement = 0;
+                this.placement = playerData.placement;
                 this.total_score = playerData.total_score;
                 this.ranked_score = playerData.ranked_score;
                 this.playcount = playerData.playcount;
@@ -598,7 +630,7 @@
 
             sortedPlayers.forEach((player, index) => {
                 const oldPlacement = player.placement;
-                player.placement = index + 1;
+                {#player.placement = index + 1;#}
                 if (oldPlacement > 0 && oldPlacement !== player.placement) {
                     player.ladderMovement = {
                         direction: player.placement < oldPlacement ? 'up' : 'down',
@@ -728,7 +760,7 @@
             scoreCardEl.style.animation = 'slideIn 0.45s ease-out both';
 
             const allScores = recentScoresEl.querySelectorAll('.score-card');
-            if (allScores.length > 8) {
+            if (allScores.length > 5) {
                 const oldestScore = allScores[allScores.length - 1];
                 oldestScore.style.animation = 'fadeOut 0.45s ease-out forwards';
                 oldestScore.addEventListener('animationend', () => {
@@ -865,10 +897,73 @@
         });
 
         // button logic
-        document.getElementById('refresh-button').addEventListener('click', async function () {
+        async function refreshButton() {
             const player = await players.get(youCard.id);
             await player.refresh(true, true);
-        });
+        }
+
+        function linkButton() {
+            console.log("linkButton");
+            {% if id %}
+                window.location.href = `/account/{{ id }}`;
+            {% else %}
+                window.location.href = `/account`;
+            {% endif %}
+        }
+
+        async function joinButton() {
+            const url = `${buildApiUrl('/api/osu/add-user')}`
+            await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    match_id: matchId,
+                    user: ID
+                })
+            });
+            await addPlayer(ID);
+        }
+
+        async function endButton(){
+            const url = `${buildApiUrl('/api/osu/end-match')}/${matchId}`
+            await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            window.location.reload();
+        }
+
+        async function searchButton() {
+            const searchQuery = document.getElementById("search-input").value.trim();
+
+            const url = `${buildApiUrl('/api/osu/search')}/${searchQuery}` + `?match_id=${matchId}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+
+            players.clear();
+            playersList.replaceChildren();
+
+            for (const id of data) {
+                await addPlayer(Number(id), false);
+            }
+            sort();
+        }
+
+        async function clearSearch() {
+            players.clear();
+            playersList.replaceChildren();
+            for (const player_id of {{ player_ids | tojson}}) addPlayer(player_id);
+        }
 
     </script>
     </body>
