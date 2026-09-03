@@ -362,10 +362,10 @@
                     <div class="osu-box" style="height: 90%;">
                         <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px;">
                             <div style="cursor: pointer;" onclick="showRecentPlays()">
-                                <h1 style="text-align: center; margin: 0">Recent Plays</h1>
+                                <h1 id="recentPlaysEl" style="color: white; text-align: center; margin: 0">Recent Plays</h1>
                             </div>
                             <div style="cursor: pointer;" onclick="showBestPlays()">
-                            <h1 style="text-align: center; margin: 0">Best Plays</h1>
+                            <h1 id="bestPlaysEl" style="color: gray; text-align: center; margin: 0">Best Plays</h1>
                             </div>
                         </div>
                         <div id="scores"></div>
@@ -1337,6 +1337,8 @@
         }
 
         async function showRecentPlays() {
+            document.getElementById("recentPlaysEl").style.color = "white";
+            document.getElementById("bestPlaysEl").style.color = "gray";
             showingBestScores = false;
             scoresDiv.replaceChildren();
             scores.clear();
@@ -1355,6 +1357,8 @@
         }
 
         async function showBestPlays() {
+            document.getElementById("recentPlaysEl").style.color = "gray";
+            document.getElementById("bestPlaysEl").style.color = "white";
             showingBestScores = true;
             scoresDiv.replaceChildren();
             scores.clear();
