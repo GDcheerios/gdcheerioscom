@@ -499,37 +499,6 @@
                 }
             }
 
-            animateStatValue(startValue, endValue) {
-                const start = Number(startValue);
-                const end = Number(endValue);
-                if (!Number.isFinite(start) || !Number.isFinite(end)) return;
-
-                if (this.statAnimationFrame) {
-                    cancelAnimationFrame(this.statAnimationFrame);
-                }
-
-                const duration = 650;
-                const startedAt = performance.now();
-                const animate = (now) => {
-                    const progress = Math.min((now - startedAt) / duration, 1);
-                    const easedProgress = 1 - Math.pow(1 - progress, 3);
-                    const value = start + (end - start) * easedProgress;
-                    const displayValue = Number.isInteger(start) && Number.isInteger(end)
-                        ? Math.round(value)
-                        : value;
-                    this.setObjectiveValue(displayValue);
-
-                    if (progress < 1) {
-                        this.statAnimationFrame = requestAnimationFrame(animate);
-                    } else {
-                        this.statAnimationFrame = null;
-                        this.setObjectiveValue(end);
-                    }
-                };
-
-                this.statAnimationFrame = requestAnimationFrame(animate);
-            }
-
             onClick() {
                 if (selectedPlayer === this) {
                     selectedPlayer = null;
@@ -625,10 +594,6 @@
                     : gradient;
                 this.element.style.backgroundSize = 'cover';
                 this.element.style.backgroundPosition = 'center';
-                if (this.statChanged) {
-                    this.animateStatValue(this.statAnimationStart, this.statAnimationEnd);
-                    this.statChanged = false;
-                }
                 this.element.appendChild(this.objectiveEl);
                 this.objectiveEl.textContent = this[matchPrimary].toLocaleString("en-US") + getStringEnding(matchPrimary);
                 if (isOverflowing(this.objectiveEl)) this.objectiveEl.textContent = formatNumber(this[matchPrimary]);
