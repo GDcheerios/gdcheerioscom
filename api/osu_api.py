@@ -419,7 +419,8 @@ def extract_info(data):
 
 def fetch_osu_data(user_id, skip_api=False, match_id=None):
     result = extract_info(get_user_info(user_id, skip_api=skip_api))
-    result["user"] = compare_to_match(result["user"], match_id)
+    if match_id:
+        result["user"] = compare_to_match(result["user"], match_id)
 
     return result
 
