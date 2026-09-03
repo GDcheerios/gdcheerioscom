@@ -78,27 +78,6 @@
     overflow: hidden;
 }
 
-.player {
-    height: 32px;
-    width: 98%;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: row;
-    align-items: start;
-    margin-bottom: 6px;
-    margin-right: auto;
-    margin-left: auto;
-    opacity: 1;
-    position: relative;
-    transition: opacity 0.3s ease, top 0.3s ease;
-}
-
-.player-hidden {
-    position: relative;
-    transition: opacity 0.3s ease, top 0.3s ease;
-    opacity: 0;
-}
-
 .placement {
     margin-left: 8px;
 }

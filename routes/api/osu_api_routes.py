@@ -47,14 +47,11 @@ def search_osu_user(query):
     print(match_id, query)
     user_ids = [id[0] for id in environment.database.fetch_all(
         """
-        SELECT 
-            m.user_id 
-        FROM
-            osu.match_users m
-        JOIN osu.users u ON m.user_id = u.id
-        WHERE 
-            m.match_id = %s
-            and username ILIKE %s
+        SELECT m.user_id
+        FROM osu.match_users m
+                 JOIN osu.users u ON m.user_id = u.id
+        WHERE m.match_id = %s
+          and username ILIKE %s
         """,
         params=(match_id, f"%{query}%")
     )]
@@ -69,7 +66,7 @@ def add_osu_user():
     user = request.json["user"]
     match_id = request.json["match_id"]
 
-    user = osu_api.fetch_osu_data(user)
+    user = osu_api.fetch_osu_data(user)['user']
 
     environment.database.execute(
         """
@@ -77,9 +74,9 @@ def add_osu_user():
             (match_id, user_id, starting_stats)
         values (%s, %s, %s)
         """,
-        params=(match_id, user['user']['id'], json.dumps(_json_safe(user['user'])))
+        params=(match_id, user['id'], json.dumps(_json_safe(user)))
     )
-    return {"success": True}
+    return _json_safe(user)
 
 
 @osu_api_blueprint.post('/osu/remove-user')
@@ -167,8 +164,9 @@ def end_match(id):
     if str(Account.id_from_session(request.cookies.get("session"))) != str(match["opener_id"]):
         return {"error": "not your match_id"}
 
-    match_users = [user[0] for user in environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s",
-                                                 params=(id,))]
+    match_users = [user[0] for user in
+                   environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s",
+                                                  params=(id,))]
     logger.info("ending match id=%s users=%s", id, match_users)
     environment.database.execute("UPDATE osu.matches SET ended = true WHERE id = %s", params=(id,))
     for user in match_users:
@@ -190,8 +188,22 @@ def end_match(id):
 
 # region scores
 
-@osu_api_blueprint.get('/osu/score/<id>')
+@osu_api_blueprint.get('/osu/score/<int:id>')
 def get_score(id):
     return environment.database.fetch_to_dict("SELECT * FROM osu.scores WHERE id = %s", params=(id,))
+
+
+@osu_api_blueprint.get('/osu/scores/<int:match_id>/recent')
+def get_recent_scores(match_id: int):
+    limit = request.args.get("limit", type=int, default=5)
+
+    return osu_api.get_recent_scores(match_id, limit)
+
+
+@osu_api_blueprint.get('/osu/scores/<int:match_id>/best')
+def get_best_score(match_id):
+    limit = request.args.get("limit", type=int, default=5)
+
+    return osu_api.get_best_scores(match_id, limit)
 
 # endregion

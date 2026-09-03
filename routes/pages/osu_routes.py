@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request
 
 import environment
-from api.osu_api import get_matches, fetch_osu_data
+from api.osu_api import get_matches, fetch_osu_data, get_recent_scores
 from objects.Account import Account
 
 osu_blueprint = Blueprint('osu_blueprint', __name__)
@@ -24,35 +24,8 @@ def osu_match(id):
         params=(id,)
     )
     player_ids = [player_id[0] for player_id in environment.database.fetch_all(
-        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 20 LIMIT 20", params=(id,))]
-    recent_scores = environment.database.fetch_all(
-        """
-        WITH match AS (
-            SELECT *
-            FROM osu.matches
-            WHERE id = %s
-        ),
-        match_users AS (
-            SELECT
-                mu.user_id,
-                mu.match_id
-            FROM osu.match_users mu,
-                match m
-            WHERE mu.match_id = m.id
-        )
-        SELECT
-            s.id
-        FROM osu.scores s,
-            match_users,
-            match
-        WHERE s.user_id = match_users.user_id
-            and s.submitted_at > match.started_at
-            and s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
-        ORDER BY s.submitted_at DESC
-        LIMIT 5
-        """,
-        params=(match["id"],)
-    )
+        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 20 ORDER BY placement LIMIT 20", params=(id,))]
+    recent_scores = get_recent_scores(id)
 
     if not match:
         return "Match not found", 404
