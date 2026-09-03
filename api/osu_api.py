@@ -183,7 +183,7 @@ def get_user_info(user_identifier, skip_api=False):
     if (
             not user_check
             or user_check["last_refresh"]
-            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=0)
+            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=1)
     ):
         if not skip_api:
             logger.info("getting osu user %s", user_identifier)
