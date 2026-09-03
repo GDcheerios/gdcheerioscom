@@ -13,7 +13,6 @@
     width: 60%;
 }
 
-/* --- MATCH LAYOUT: players left, teams right --- */
 .match-layout {
     display: flex;
     align-items: flex-start;
@@ -23,12 +22,10 @@
     padding: 0 5%;
 }
 
-/* Left column: player list */
 .match-players-column {
     flex: 2;
 }
 
-/* Right column: teams overview */
 .teams-overview {
     flex: 1;
     color: #ffffff;
@@ -39,13 +36,10 @@
     margin-bottom: 10px;
 }
 
-/* Individual team card */
 .team-card {
-    background: rgba(0, 0, 0, 0.65);
     border-radius: 12px;
     padding: 10px 12px;
     margin-bottom: 10px;
-    border: 2px solid #ffffff22;
 }
 
 .team-card-header {
@@ -73,156 +67,85 @@
     opacity: 0.9;
 }
 
-/* --- existing player styles --- */
-
-.player-listing {
-    position: relative;
-    overflow: hidden;
+.osu-box{
+    background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65));
+    border: 2px solid rgba(100, 150, 220, 0.8);
     border-radius: 12px;
-    border: 4px solid #ffffff;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-
-.player {
-    position: relative;
+    padding: 10px 12px;
     overflow: hidden;
+}
+
+.placement {
+    margin-left: 8px;
+}
+
+.avatar{
+    width: 32px;
+    height: 32px;
     border-radius: 12px;
-    border: 4px solid #ffffff;
-    padding: 10px;
-    margin-bottom: 10px;
-    width: 100%;
-    margin-left: 0;
+    margin-left: 8px;
 }
 
-/* Row containing rank text + player card */
-.player-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    margin-bottom: 10px;
+.username {
+    margin-left: 8px;
+    font-size: 1.17em;
+    font-weight: bold;
+    margin-top: auto;
+    margin-bottom: auto;
 }
 
-/* Simple white rank indicator on the left */
-.player-rank {
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 1.1rem;
-    text-align: right;
-    width: 2.5ch;
-}
-
-.player-bg {
-    position: absolute;
-    inset: 0;
-    background-size: cover;
-    background-position: center;
-    filter: blur(8px);
-    transform: scale(1.05);
-    z-index: 0;
-}
-
-.player-content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    justify-content: space-between;
-    width: 100%;
-}
-
-/* LEFT: everything except score */
-.player-main {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* RIGHT: only score, very emphasized */
-.player-score {
-    margin-left: auto;
-    text-align: right;
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(0, 0, 0, 1);
-}
-
-.player-score-value {
-    font-size: 2.4rem;
-    font-weight: 900;
-    letter-spacing: 0.03em;
-}
-
-.player-score-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    opacity: 0.8;
-}
-
-/* NEW: small “important” stats next to the score */
-.player-score-stats {
-    margin-top: 4px;
+.score-card {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    opacity: 0.9;
-}
-
-.player-score-stat {
-    line-height: 1.05;
-    white-space: nowrap;
-}
-
-.player-score-stat-label {
-    opacity: 0.85;
-}
-
-.player-score-stat-value {
-    font-variant-numeric: tabular-nums;
-}
-
-/* Small refresh button on player card */
-.player-refresh-button {
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    border-radius: 8px;
-    border: 2px solid #ffffffaa;
-    background: rgba(0, 0, 0, 0.6);
-    color: #ffffff;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-.player-refresh-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-
-/* Text block next to avatar */
-.player-text {
-    color: #ffffff;
-    text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
-}
-
-.player-text-name {
-    font-size: 1.2rem;
-    font-weight: 700;
-}
-
-.player-text-meta {
-    font-size: 0.9rem;
-    opacity: 0.9;
-}
-
-.player-avatar {
-    width: 64px;
+    justify-content: space-between;
+    margin-left: auto;
+    margin-right: auto;
     height: 64px;
-    border-radius: 16px;
-    object-fit: cover;
-    border: 2px solid #000000;
+    width: 98%;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    border: 2px solid #b8b8b8;
+    overflow: hidden;
+}
+
+.score-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 5px 1px 1px 5px;
+}
+
+.rank-s-plus {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+}
+
+.rank-s {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.9);
+}
+
+.rank-a {
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.9);
+}
+
+.rank-b {
+    text-shadow: 0 0 5px rgba(0, 128, 255, 0.9);
+}
+
+.rank-c {
+    text-shadow: 0 0 5px rgba(255, 128, 0, 0.9);
+}
+
+.rank-d {
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.9);
+}
+
+.rank-f {
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+}
+
+.objective {
+    margin-left: auto;
+    margin-right: 6px;
 }
 
 .create {
@@ -270,6 +193,23 @@ input::placeholder {
     color: #aaa;
 }
 
+button {
+    padding: 10px 14px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #ffffffaa;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+}
+
+button:hover {
+    border-color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
 .config-container {
     display: flex;
     flex-direction: row;
@@ -295,13 +235,11 @@ input::placeholder {
     width: min(720px, 92vw);
 }
 
-/* NEW/CHANGED: keep the whole matches index content from being super wide */
 .matches-panel {
     width: min(980px, 92vw);
     margin: 0 auto;
 }
 
-/* Column list styling for match links */
 #matches [data-section] {
     display: flex;
     flex-direction: column;
@@ -309,7 +247,7 @@ input::placeholder {
 }
 
 a.match-link {
-    display: block;              /* makes each match take its own row */
+    display: block;
     width: 100%;
     box-sizing: border-box;
 
@@ -327,7 +265,7 @@ a.match-link:hover {
     background: rgba(0, 0, 0, 0.7);
     text-decoration: none;
 }
-/* Column list styling for match links */
+
 #matches [data-section] {
     display: flex;
     flex-direction: column;
@@ -335,7 +273,7 @@ a.match-link:hover {
 }
 
 a.match-link {
-    display: block;              /* makes each match take its own row */
+    display: block;
     width: 100%;
     box-sizing: border-box;
 
@@ -375,7 +313,6 @@ a.match-link:hover {
     background: rgba(255, 255, 255, 0.12);
 }
 
-/* Column list styling for match links */
 #matches [data-section] {
     display: flex;
     flex-direction: column;
@@ -383,7 +320,7 @@ a.match-link:hover {
 }
 
 a.match-link {
-    display: block;              /* makes each match take its own row */
+    display: block;
     width: 100%;
     box-sizing: border-box;
 

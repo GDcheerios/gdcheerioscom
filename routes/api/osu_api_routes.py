@@ -27,116 +27,73 @@ def _json_safe(value):
     return value
 
 
-def _notify_osu_user_refreshed(user_data, match_id=None):
-    websocket_url = getattr(environment, "backend_websocket_url", None)
-    if not websocket_url:
-        logger.debug("websocket_url is not configured; skipping refresh notification")
-        return
-
-    try:
-        from websockets.sync.client import connect
-    except Exception:
-        logger.exception("websockets client library is not available")
-        return
-
-    match_ids = []
-    try:
-        if match_id is not None:
-            match_ids = [int(match_id)]
-        elif user_data and user_data.get("id") is not None:
-            rows = environment.database.fetch_all(
-                """
-                SELECT DISTINCT match_id
-                FROM osu.match_users
-                WHERE user_id = %s
-                """,
-                params=(user_data["id"],)
-            )
-            match_ids = [int(row[0]) for row in rows]
-    except Exception:
-        logger.exception("failed to compute match_ids for refreshed osu user")
-
-    payload = {
-        "type": "osu_user_refreshed",
-        "match_id": int(match_id) if match_id is not None else None,
-        "match_ids": match_ids,
-        "user": _json_safe(user_data),
-    }
-
-    if match_id is not None and user_data and user_data.get("id") is not None:
-        try:
-            match_user = environment.database.fetch_to_dict(
-                """
-                SELECT
-                    match_id,
-                    user_id,
-                    starting_score,
-                    starting_playcount,
-                    ending_score,
-                    ending_playcount,
-                    team,
-                    nickname
-                FROM osu.match_users
-                WHERE match_id = %s
-                  AND user_id = %s
-                """,
-                params=(int(match_id), int(user_data["id"]))
-            )
-            if match_user:
-                payload["match_user"] = _json_safe(match_user)
-        except Exception:
-            logger.exception("failed to include match_user payload for refresh notification")
-
-    try:
-        with connect(websocket_url) as ws:
-            ws.send(json.dumps(payload))
-            response = ws.recv()
-            logger.info("osu refresh notification acknowledged: %s", response)
-    except Exception:
-        logger.exception("failed to send osu refresh notification")
-
-
 # region User API
 
 @osu_api_blueprint.get('/osu/fetch-user/<id>')
 def fetch_osu_user(id):
     match_id = request.args.get("match")
-    if match_id is not None:
-        try:
-            match_id = int(match_id)
-        except (TypeError, ValueError):
-            match_id = None
-
-    data = osu_api.fetch_osu_data(id)
+    skip_api = request.args.get("skip_api", "false").lower() == "true"
+    data = osu_api.fetch_osu_data(id, skip_api=skip_api, match_id=match_id)
 
     if not data:
         return {"error": "user not found"}
 
-    _notify_osu_user_refreshed(data, match_id=match_id)
     return _json_safe(data)
 
 
-@osu_api_blueprint.post('/osu/add-user')
-def fetch_osu_user_matches():
-    user = request.json["user"]
-    match_id = request.json["match"]
+@osu_api_blueprint.get('/osu/search/<query>')
+def search_osu_user(query):
+    match_id = request.args.get("match_id")
+    print(match_id, query)
+    user_ids = [id[0] for id in environment.database.fetch_all(
+        """
+        SELECT m.user_id
+        FROM osu.match_users m
+                 JOIN osu.users u ON m.user_id = u.id
+        WHERE m.match_id = %s
+          and username ILIKE %s
+        """,
+        params=(match_id, f"%{query}%")
+    )]
 
-    user = osu_api.fetch_osu_data(user)
+    print(user_ids)
+
+    return user_ids
+
+
+@osu_api_blueprint.post('/osu/add-user')
+def add_osu_user():
+    user = request.json["user"]
+    match_id = request.json["match_id"]
+
+    user = osu_api.fetch_osu_data(user)['user']
+
+    existing = environment.database.fetch_one(
+        """
+        SELECT user_id
+        FROM osu.match_users
+        WHERE match_id = %s
+          AND user_id = %s
+        """,
+        params=(match_id, user['id'])
+    )
+
+    if existing:
+        return {"error": "user already in match"}
 
     environment.database.execute(
         """
-        INSERT INTO osu.match_users 
-            (match_id, user_id, starting_score, starting_playcount)
-        values 
-            (%s, %s, %s, %s)
+        INSERT INTO osu.match_users
+            (match_id, user_id, starting_stats)
+        values (%s, %s, %s)
         """,
-        params=(match_id, user['id'], user['total_score'], user['playcount'])
+        params=(match_id, user['id'], json.dumps(_json_safe(user)))
     )
-    return {"success": True}
+    return _json_safe(user)
 
 
 @osu_api_blueprint.post('/osu/remove-user')
-def remove_osu_user_from_match():
+def remove_osu_user():
     user = request.json["user"]
     match_id = request.json["match"]
 
@@ -185,71 +142,81 @@ def create_match():
     user_id = Account.id_from_session(request.cookies.get("session"))
     match_id = environment.database.fetch_one(
         """
-        INSERT INTO osu.matches
-        (name,
-         opener_id,
-         open)
-        values (%s,
+        INSERT INTO osu.matches(name,
+                                opener_id,
+                                open,
+                                primary_objective,
+                                secondary_objective)
+        VALUES (%s,
+                %s,
+                %s,
                 %s,
                 %s)
-        returning id
+        RETURNING id
         """,
-        params=(data["matchName"], user_id, data["open"])
+        params=(data["matchName"], user_id, data["open"], data["primaryObjective"], data["secondaryObjective"])
     )[0]
-    for player in data["players"]:
-        in_team = False
-        for team in data["teams"]:
-            if player in team["players"]:
-                team_name = team["name"]
-                in_team = True
-
-            if not in_team:
-                team_name = None
-
-        player_data = osu_api.fetch_osu_data(player)
-        logger.info("create_match match_id=%s", match_id)
+    logger.info("create_match match_id=%s", match_id)
+    for id in data["players"]:
+        player = osu_api.fetch_osu_data(id, skip_api=True)
+        player["user"]["reconstructed_pp"] = 0
         environment.database.execute(
-            "INSERT INTO osu.match_users (match_id, user_id, starting_score, starting_playcount, team) values (%s, %s, %s, %s, %s)",
-            params=(match_id, player_data["id"], player_data["total_score"], player_data["playcount"], team_name))
+            "INSERT INTO osu.match_users (match_id, user_id, starting_stats, team) values (%s, %s, %s::jsonb, %s)",
+            params=(match_id, id, json.dumps(_json_safe(player["user"])), data["players"][id]["team"])
+        )
 
     return {
-        "id": match_id
+        "id": match_id,
+        "data": data
     }
-
-
-@osu_api_blueprint.post('/osu/refresh-match_id/<id>')
-def refresh_all_in_match(id: int):
-    users = environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s", params=(id,))
-    for user in users:
-        data = osu_api.fetch_osu_data(user[0])
-        if data:
-            _notify_osu_user_refreshed(data, match_id=id)
-
-    return {"success": True}
 
 
 @osu_api_blueprint.post('/osu/end-match/<id>')
 def end_match(id):
-    match_id = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
-    if str(Account.id_from_session(request.cookies.get("session"))) != str(match_id["opener_id"]):
+    match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
+    if str(Account.id_from_session(request.cookies.get("session"))) != str(match["opener_id"]):
         return {"error": "not your match_id"}
 
-    match_users = environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s", params=(id,))
+    match_users = [user[0] for user in
+                   environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s",
+                                                  params=(id,))]
     logger.info("ending match id=%s users=%s", id, match_users)
     environment.database.execute("UPDATE osu.matches SET ended = true WHERE id = %s", params=(id,))
     for user in match_users:
-        user = user[0]
-        user = osu_api.fetch_osu_data(user)
+        user = osu_api.fetch_osu_data(user, skip_api=True)["user"]
         environment.database.execute(
             """
             UPDATE osu.match_users
-            SET ending_score     = %s,
-                ending_playcount = %s
+            SET ending_stats = %s
             WHERE user_id = %s
               AND match_id = %s;
             """,
-            params=(user["total_score"], user["playcount"], user["id"], id)
+            params=(json.dumps(_json_safe(user)), user["id"], id)
         )
 
     return {"success": True}
+
+
+# endregion
+
+# region scores
+
+@osu_api_blueprint.get('/osu/score/<int:id>')
+def get_score(id):
+    return environment.database.fetch_to_dict("SELECT * FROM osu.scores WHERE id = %s", params=(id,))
+
+
+@osu_api_blueprint.get('/osu/scores/<int:match_id>/recent')
+def get_recent_scores(match_id: int):
+    limit = request.args.get("limit", type=int, default=5)
+
+    return osu_api.get_recent_scores(match_id, limit)
+
+
+@osu_api_blueprint.get('/osu/scores/<int:match_id>/best')
+def get_best_score(match_id):
+    limit = request.args.get("limit", type=int, default=5)
+
+    return osu_api.get_best_scores(match_id, limit)
+
 # endregion
