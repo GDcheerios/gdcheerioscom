@@ -24,7 +24,7 @@ def osu_match(id):
         params=(id,)
     )
     player_ids = [player_id[0] for player_id in environment.database.fetch_all(
-        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 20 ORDER BY placement LIMIT 20", params=(id,))]
+        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 15 ORDER BY placement LIMIT 15", params=(id,))]
     recent_scores = get_recent_scores(id)
 
     if not match:
