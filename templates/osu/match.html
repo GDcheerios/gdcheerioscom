@@ -5,6 +5,10 @@
         <link rel="stylesheet" href="/static/style.css">
         <link rel="stylesheet" href="/static/osu-style.css">
             <style>
+                :root {
+                    --player-details-height: 232px;
+                }
+
                 @keyframes slideIn {
                     from {
                         opacity: 0;
@@ -187,6 +191,108 @@
                     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 52px), transparent 100%);
                     mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 52px), transparent 100%);
                 }
+
+                .player {
+                    height: 32px;
+                    width: 98%;
+                    border-radius: 12px;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: start;
+                    margin-bottom: 6px;
+                    margin-right: auto;
+                    margin-left: auto;
+                    opacity: 1;
+                    position: relative;
+                    transition: opacity 0.3s ease, top 0.3s ease;
+                }
+
+                .player .username {
+                    flex: 0 1 auto;
+                    min-width: 0;
+                    overflow: hidden;
+                    white-space: nowrap;
+                }
+
+                .player .objective {
+                    flex: 0 1 auto;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    margin-top: auto;
+                    margin-bottom: auto;
+                }
+
+                .player-container {
+                    position: relative;
+                    width: 98%;
+                    height: 32px;
+                    margin: 0 auto 8px;
+                    z-index: 0;
+                    transition: margin-bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+                }
+
+                .player-container > .player {
+                    position: relative;
+                    z-index: 2;
+                    width: 100%;
+                    margin: 0;
+                    cursor: pointer;
+                    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+                }
+
+                .player-container.expanded {
+                    margin-bottom: var(--player-details-height);
+                    z-index: 10;
+                }
+
+                .player-container.expanded .player-details {
+                    height: var(--player-details-height);
+                    opacity: 1;
+                    pointer-events: auto;
+                    border-color: rgba(100, 150, 220, 0.5);
+                    transform: translateY(24px) scaleY(1);
+                    border-top-left-radius: 4px;
+                    border-top-right-radius: 4px;
+                }
+
+                .player-details {
+                    display: flex;
+                    flex-direction: row;
+                    position: absolute;
+                    z-index: 1;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    margin: 0 auto;
+                    width: 98%;
+                    height: 32px;
+                    box-sizing: border-box;
+                    padding: 0 12px;
+                    overflow: hidden;
+                    opacity: 0;
+                    pointer-events: none;
+                    border: 2px solid transparent;
+                    border-radius: 12px;
+                    background: rgba(10, 10, 26, 0.9);
+                    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+                    transform: translateY(0) scaleY(0.92);
+                    transform-origin: top;
+                    transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                    transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                    opacity 0.25s ease,
+                    border-color 0.35s ease;
+                }
+
+                .player-container.expanded .player-details {
+                    height: var(--player-details-height);
+                    opacity: 1;
+                    pointer-events: auto;
+                    border-color: rgba(100, 150, 220, 0.5);
+                    border-top-color: transparent;
+                    border-top-left-radius: 0;
+                    border-top-right-radius: 0;
+                    transform: translateY(30px) scaleY(1);
+                }
             </style>
         {% endblock %}
     </head>
@@ -225,11 +331,17 @@
                                         </button>
                                     {% endif %}
                                     {% if is_admin or is_creator %}
+                                        <button id="add-user-button"
+                                                onclick="addUserButton()"
+                                                style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
+                                            Add User
+                                        </button>
                                         <button id="end-button"
                                                 onclick="endButton()"
                                                 style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81 0 0), rgb(81 0 0)); border: 2px solid rgb(255 0 0); border-radius: 12px; cursor: pointer; margin: 10px auto;">
                                             End Match
                                         </button>
+                                        
                                     {% endif %}
                                 {% endif %}
                                 {% if not id or not current_osu_id %}
@@ -247,8 +359,16 @@
                     <div id="teams" class="osu-box" style="height: 45%;">
                         <h1 style="text-align: center; margin: 0">Teams</h1>
                     </div>
-                    <div id="recent-scores" class="osu-box" style="height: 90%;">
-                        <h1 style="text-align: center; margin: 0">Recent Plays</h1>
+                    <div class="osu-box" style="height: 90%;">
+                        <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px;">
+                            <div style="cursor: pointer;" onclick="showRecentPlays()">
+                                <h1 style="text-align: center; margin: 0">Recent Plays</h1>
+                            </div>
+                            <div style="cursor: pointer;" onclick="showBestPlays()">
+                            <h1 style="text-align: center; margin: 0">Best Plays</h1>
+                            </div>
+                        </div>
+                        <div id="scores"></div>
                     </div>
                 </div>
             </div>
@@ -260,11 +380,19 @@
         const ID = {{ current_osu_id | tojson }};
         const players = new Map();
         const scores = new Map();
+        let selectedPlayer = null;
+        let showingBestScores = false;
 
         class PlayerCard {
             constructor(id) {
+                this.container = document.createElement('div');
+                this.container.classList.add('player-container');
                 this.element = document.createElement('div');
                 this.element.classList.add('player');
+                this.detailsElement = document.createElement('div');
+                this.detailsElement.classList.add('player-details');
+                this.container.appendChild(this.detailsElement);
+                this.container.appendChild(this.element);
                 this.usernameEl = document.createElement('a');
                 this.usernameEl.classList.add('username');
                 this.placementEl = document.createElement('h3');
@@ -276,6 +404,11 @@
                 this.objectiveEl = document.createElement('h3');
                 this.objectiveEl.classList.add('objective');
                 this.id = id;
+                this.element.style.cursor = 'pointer';
+                this.element.addEventListener('click', (event) => {
+                    if (event.target.closest('a')) return;
+                    this.onClick();
+                });
             }
 
             updateData(playerData) {
@@ -366,19 +499,10 @@
                 }
             }
 
-            formatStatValue(value) {
-                return value.toLocaleString("en-US") + getStringEnding(matchPrimary);
-            }
-
             animateStatValue(startValue, endValue) {
                 const start = Number(startValue);
                 const end = Number(endValue);
                 if (!Number.isFinite(start) || !Number.isFinite(end)) return;
-
-                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                    this.objectiveEl.textContent = this.formatStatValue(end);
-                    return;
-                }
 
                 if (this.statAnimationFrame) {
                     cancelAnimationFrame(this.statAnimationFrame);
@@ -393,17 +517,90 @@
                     const displayValue = Number.isInteger(start) && Number.isInteger(end)
                         ? Math.round(value)
                         : value;
-                    this.objectiveEl.textContent = this.formatStatValue(displayValue);
+                    this.setObjectiveValue(displayValue);
 
                     if (progress < 1) {
                         this.statAnimationFrame = requestAnimationFrame(animate);
                     } else {
                         this.statAnimationFrame = null;
-                        this.objectiveEl.textContent = this.formatStatValue(end);
+                        this.setObjectiveValue(end);
                     }
                 };
 
                 this.statAnimationFrame = requestAnimationFrame(animate);
+            }
+
+            onClick() {
+                if (selectedPlayer === this) {
+                    selectedPlayer = null;
+                } else {
+                    if (selectedPlayer) {
+                        selectedPlayer.container.classList.remove('expanded');
+                    }
+                    selectedPlayer = this;
+                }
+
+                this.container.classList.toggle('expanded', selectedPlayer === this);
+
+                setTimeout(() => {
+                    sort();
+                    this.render();
+                }, 200);
+            }
+
+            renderDetails() {
+                this.detailsElement.replaceChildren();
+                const controls = document.createElement('div');
+                controls.style.flexDirection = 'column';
+
+                const detailsContent = document.createElement('div');
+
+                const createStat = (label, value) => {
+                    const statEl = document.createElement('div');
+                    statEl.innerHTML = `<span style="color: #888;">${label}:</span> <span style="font-weight: bold; color: #fff;">${value}</span>`;
+                    return statEl;
+                };
+
+                const statsText = document.createElement('h3');
+                statsText.textContent = 'Statistics';
+                detailsContent.appendChild(statsText);
+                detailsContent.appendChild(createStat('Accuracy', (this.accuracy || 0).toFixed(2) + '%'));
+                detailsContent.appendChild(createStat('Total PP', Math.round(this.pp || 0).toLocaleString()));
+                detailsContent.appendChild(createStat('Playcount', (this.playcount || 0).toLocaleString()));
+                detailsContent.appendChild(createStat('Global Rank', '#' + (this.global_rank || 0).toLocaleString()));
+
+                {% if is_owner or is_admin %}
+                    this.detailsElement.appendChild(controls);
+
+                    const controlsText = document.createElement('h3');
+                    controlsText.textContent = 'Controls';
+                    controls.appendChild(controlsText);
+
+                    const refreshButton = document.createElement('button');
+                    refreshButton.textContent = 'Refresh';
+                    refreshButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 8px; cursor: pointer; margin: 8px 0;';
+                    refreshButton.onclick = async () => {
+                        await this.refresh(true, true);
+                    };
+                    controls.appendChild(refreshButton);
+
+                    const removeButton = document.createElement('button');
+                    removeButton.textContent = 'Remove User';
+                    removeButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81, 0, 0), rgb(81, 0, 0)); border: 2px solid rgb(255, 0, 0); border-radius: 8px; cursor: pointer; margin: 8px 0;';
+                    removeButton.onclick = async () => {
+                        await removeUserButton(this.id);
+                    };
+                    controls.appendChild(removeButton);
+
+                    const separator = document.createElement('div');
+                    separator.style.width = '2px';
+                    separator.style.background = 'linear-gradient(to bottom, transparent 0%, rgba(100, 150, 220, 0.6) 15%, rgba(100, 150, 220, 0.6) 85%, transparent 100%)';
+                    separator.style.margin = '0 12px';
+                    separator.style.alignSelf = 'stretch';
+
+                    this.detailsElement.appendChild(separator);
+                {% endif %}
+                this.detailsElement.appendChild(detailsContent);
             }
 
             render() {
@@ -418,6 +615,9 @@
                 this.element.appendChild(this.placementEl);
                 this.element.appendChild(this.avatarEl);
                 this.element.appendChild(this.usernameEl);
+                if (isOverflowing(this.usernameEl)) {
+                    this.usernameEl.textContent = abbreviateWord(this.username);
+                }
                 const gradient = 'linear-gradient(to right, rgba(25, 25, 25, 1) 0%, rgba(25, 25, 25, 1) 25%, rgba(25, 25, 25, 0.75) 50%, rgba(25, 25, 25, 0.5) 75%, rgba(30, 30, 30, 0.5) 100%)';
                 const hasBackground = this.background_url && this.background_url !== 'undefined';
                 this.element.style.background = hasBackground
@@ -425,13 +625,15 @@
                     : gradient;
                 this.element.style.backgroundSize = 'cover';
                 this.element.style.backgroundPosition = 'center';
-                this.objectiveEl.textContent = this.formatStatValue(this[matchPrimary]);
                 if (this.statChanged) {
                     this.animateStatValue(this.statAnimationStart, this.statAnimationEnd);
                     this.statChanged = false;
                 }
                 this.element.appendChild(this.objectiveEl);
-                return this.element;
+                this.objectiveEl.textContent = this[matchPrimary].toLocaleString("en-US") + getStringEnding(matchPrimary);
+                if (isOverflowing(this.objectiveEl)) this.objectiveEl.textContent = formatNumber(this[matchPrimary]);
+                this.renderDetails();
+                return this.container;
             }
         }
 
@@ -446,6 +648,7 @@
                 this.rank = 'F';
                 this.accuracy = 0;
                 this.userId = null;
+                this.submitted_at = null;
             }
 
             async fetchScoreInfo(){
@@ -458,6 +661,7 @@
                 this.accuracy = score_data.accuracy;
                 this.cover = score_data.cover;
                 this.userId = score_data.user_id;
+                this.submitted_at = score_data.submitted_at;
             }
 
             getRankText(rank){
@@ -524,8 +728,7 @@
                         <span style="text-wrap: nowrap;">${this.artist} - ${this.title}</span>
                     </div>
                     <div id="objective" class="score-row"></div>
-                    <h6 style="margin: 0 0 2px 4px;">Submitted by <a href="https://osu.ppy.sh/users/${this.userId}" target="_blank">${userData.user.username}</a></h6>
-
+                    <h6 style="margin: 0 0 2px 4px;">Submitted by <a href="https://osu.ppy.sh/users/${this.userId}" target="_blank">${userData.user.username}</a> ${formatTimestamp(this.submitted_at)}</h6>
                 `;
 
                 const objectiveContainer = this.element.querySelector('#objective');
@@ -541,8 +744,16 @@
                 const scoreSpan = document.createElement('span');
                 scoreSpan.style.margin = "0 8px";
                 scoreSpan.style.fontWeight = "bold";
+                scoreSpan.style.flex = "0 1 auto";
+                scoreSpan.style.minWidth = "0";
+                scoreSpan.style.overflow = "hidden";
+                scoreSpan.style.textOverflow = "ellipsis";
+                scoreSpan.style.whiteSpace = "nowrap";
                 scoreSpan.textContent = this.score.toLocaleString("en-US") + ' score';
                 objectiveContainer.append(scoreSpan);
+                if (scoreSpan.scrollWidth > scoreSpan.clientWidth) {
+                    scoreSpan.textContent = formatNumber(this.score) + ' score';
+                }
 
                 const ppSpan = document.createElement('span');
                 ppSpan.style.margin = "0 8px";
@@ -558,7 +769,7 @@
         // visual
         const playersList = document.getElementById('players-list');
         const teamsDiv = document.getElementById('teams');
-        const recentPlaysDiv = document.getElementById('recent-plays');
+        const scoresDiv = document.getElementById('scores');
         const youCardElement = document.getElementById('your-card');
         const youCard = new PlayerCard(ID);
 
@@ -599,6 +810,37 @@
             }
         }
 
+        function isOverflowing(element) {
+            if (!element || !element.isConnected) return false;
+            const epsilon = 0.5;
+            return element.scrollHeight - element.clientHeight > epsilon ||
+                element.scrollWidth - element.clientWidth > epsilon;
+        }
+
+        function abbreviateWord(word){
+            if (word == null) return "";
+
+            const dynamicDelimiters = ["-", "_", ",", ";"];
+            const delimiterPattern = new RegExp(
+                `[${dynamicDelimiters.join("")}\\s]+`,
+                "u"
+            );
+            const words = String(word).trim().split(delimiterPattern).filter(Boolean);
+            const initials = [];
+
+            for (const part of words) {
+                const pieces = part.match(
+                    /[A-Z]+(?=[A-Z][a-z]|$)|[A-Z]?[a-z]+|[0-9]+/g
+                ) || [];
+
+                for (const piece of pieces) {
+                    initials.push(piece[0]);
+                }
+            }
+
+            return initials.join("").toUpperCase();
+        }
+
         function formatNumber(num) {
             if (num === null || num === undefined) return '0';
 
@@ -617,13 +859,36 @@
             return num.toString();
         }
 
+        function formatTimestamp(isoString) {
+            if (!isoString) return 'Unknown';
+
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+
+            const options = {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'};
+            return date.toLocaleDateString('en-US', options);
+        }
+
         function sort() {
-            const sortedPlayers = Array.from(players.values()).sort((a, b) => b[matchPrimary] - a[matchPrimary]);
+            const sortedPlayers = Array.from(players.values()).sort((a, b) => {
+                if (a === selectedPlayer) return -1;
+                if (b === selectedPlayer) return 1;
+                return ((a.placement - b.placement))
+            });
 
             const oldPositions = new Map();
             sortedPlayers.forEach(player => {
-                if (player.element.parentNode === playersList) {
-                    const rect = player.element.getBoundingClientRect();
+                if (player.container.parentNode === playersList) {
+                    const rect = player.container.getBoundingClientRect();
                     oldPositions.set(player.id, rect.top);
                 }
             });
@@ -648,10 +913,10 @@
 
             const fragment = document.createDocumentFragment();
             sortedPlayers.forEach(player => {
-                if (player.element.parentNode === playersList) {
-                    playersList.removeChild(player.element);
+                if (player.container.parentNode === playersList) {
+                    playersList.removeChild(player.container);
                 }
-                fragment.appendChild(player.element);
+                fragment.appendChild(player.container);
                 const currentPlayer = players.get(youCard.id);
                 if (currentPlayer) {
                     youCard.placement = currentPlayer.placement;
@@ -668,16 +933,16 @@
                 sortedPlayers.forEach(player => {
                     const oldTop = oldPositions.get(player.id);
                     if (oldTop !== undefined) {
-                        const newRect = player.element.getBoundingClientRect();
+                            const newRect = player.container.getBoundingClientRect();
                         const deltaY = oldTop - newRect.top;
 
                         if (deltaY !== 0) {
-                            player.element.style.transform = `translateY(${deltaY}px)`;
-                            player.element.style.transition = 'none';
+                            player.container.style.transform = `translateY(${deltaY}px)`;
+                            player.container.style.transition = 'none';
 
                             requestAnimationFrame(() => {
-                                player.element.style.transition = 'transform 0.3s ease-out';
-                                player.element.style.transform = 'translateY(0)';
+                                player.container.style.transition = 'transform 0.3s ease-out';
+                                player.container.style.transform = 'translateY(0)';
                             });
                         }
                     }
@@ -718,15 +983,15 @@
             const player = new PlayerCard(id);
             await player.refresh(refresh);
             players.set(player.id, player);
-            const playerElement = player.render();
-            playersList.appendChild(playerElement);
+            playersList.appendChild(player.container);
+            player.render();
             if (player.id === ID) {
                 const youContainer = document.getElementById('you-container');
                 const yourCardContainer = document.getElementById('your-card');
                 await youCard.refresh();
-                const youElement = youCard.render();
                 youContainer.style.display = 'block';
-                yourCardContainer.appendChild(youElement);
+                yourCardContainer.appendChild(youCard.container);
+                youCard.render();
             }
             sort();
         }
@@ -740,32 +1005,68 @@
             return response.json();
         }
 
+        function getScoreObjectiveValue(scoreCard, objective) {
+            switch (objective) {
+                case "total_score":
+                    return scoreCard.score || 0;
+                case "ranked_score":
+                    return scoreCard.score || 0;
+                case "pp":
+                    return scoreCard.pp || 0;
+                case "reconstructed_pp":
+                    return scoreCard.pp || 0;
+                case "accuracy":
+                    return (scoreCard.accuracy || 0) * 100;
+                default:
+                    return scoreCard.submitted_at || 0;
+            }
+        }
+
         async function addScore(id) {
             if (scores.get(id)) return;
             console.log(`Adding score with ID: ${id}`);
             const scoreCard = new ScoreCard(id);
             scores.set(id, scoreCard);
             await scoreCard.fetchScoreInfo();
-            const recentScoresEl = document.getElementById('recent-scores');
+            const scoresEl = document.getElementById('scores');
             const scoreCardEl = await scoreCard.render();
 
-            const existingScores = recentScoresEl.querySelectorAll('.score-card');
+            const existingScores = Array.from(scoresEl.querySelectorAll('.score-card'));
+            const newScoreValue = getScoreObjectiveValue(scoreCard, showingBestScores ? matchPrimary : "submitted_at");
 
-            if (existingScores.length > 0) {
-                recentScoresEl.insertBefore(scoreCardEl, existingScores[0]);
+            let insertPosition = null;
+            for (let i = 0; i < existingScores.length; i++) {
+                const existingScoreId = Array.from(scores.entries())
+                    .find(([_, card]) => card.element === existingScores[i])?.[0];
+
+                if (existingScoreId) {
+                    const existingCard = scores.get(existingScoreId);
+                    const existingValue = getScoreObjectiveValue(existingCard, showingBestScores ? matchPrimary : "submitted_at");
+
+                    if (newScoreValue > existingValue) {
+                        insertPosition = existingScores[i];
+                        break;
+                    }
+                }
+            }
+
+            if (insertPosition) {
+                scoresEl.insertBefore(scoreCardEl, insertPosition);
+            } else if (existingScores.length > 0) {
+                scoresEl.appendChild(scoreCardEl);
             } else {
-                recentScoresEl.appendChild(scoreCardEl);
+                scoresEl.appendChild(scoreCardEl);
             }
 
             scoreCardEl.style.animation = 'slideIn 0.45s ease-out both';
 
-            const allScores = recentScoresEl.querySelectorAll('.score-card');
+            const allScores = scoresEl.querySelectorAll('.score-card');
             if (allScores.length > 5) {
                 const oldestScore = allScores[allScores.length - 1];
                 oldestScore.style.animation = 'fadeOut 0.45s ease-out forwards';
                 oldestScore.addEventListener('animationend', () => {
-                    if (oldestScore.parentNode === recentScoresEl) {
-                        recentScoresEl.removeChild(oldestScore);
+                    if (oldestScore.parentNode === scoresEl) {
+                        scoresEl.removeChild(oldestScore);
                     }
                 }, {once: true});
             }
@@ -896,6 +1197,12 @@
             }
         });
 
+        window.addEventListener('resize', function() {
+            for (const player of players.values()) {
+                player.render();
+            }
+        });
+
         // button logic
         async function refreshButton() {
             const player = await players.get(youCard.id);
@@ -950,6 +1257,7 @@
             });
             const data = await response.json();
 
+            selectedPlayer = null;
             players.clear();
             playersList.replaceChildren();
 
@@ -960,9 +1268,106 @@
         }
 
         async function clearSearch() {
+            selectedPlayer = null;
             players.clear();
             playersList.replaceChildren();
             for (const player_id of {{ player_ids | tojson}}) addPlayer(player_id);
+        }
+
+        async function addUserButton() {
+            const userId = prompt("id or username");
+
+            const url = `${buildApiUrl('/api/osu/add-user')}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    match_id: matchId,
+                    user: userId.trim()
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.id) {
+                    await addPlayer(data.id);
+                } else {
+                    alert("Failed to add user");
+                }
+            } else {
+                alert("Failed to add user");
+            }
+        }
+
+        async function removeUserButton(userId) {
+            if (!confirm(`Are you sure you want to remove this user from the match?`)) {
+                return;
+            }
+
+            const url = `${buildApiUrl('/api/osu/remove-user')}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    match_id: matchId,
+                    user: userId
+                })
+            });
+
+            if (response.ok) {
+                const player = players.get(userId);
+                if (player) {
+                    if (selectedPlayer === player) {
+                        selectedPlayer = null;
+                    }
+                    players.delete(userId);
+                    if (player.container.parentNode === playersList) {
+                        playersList.removeChild(player.container);
+                    }
+                    sort();
+                }
+                alert("User removed successfully");
+            } else {
+                alert("Failed to remove user");
+            }
+        }
+
+        async function showRecentPlays() {
+            showingBestScores = false;
+            scoresDiv.replaceChildren();
+            scores.clear();
+
+            const response = await fetch (`${buildApiUrl('/api/osu/scores/' + matchId + '/recent')}`, {
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'}
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                for (const score of data) {
+                    for (const score of data) await addScore(score);
+                }
+            }
+        }
+
+        async function showBestPlays() {
+            showingBestScores = true;
+            scoresDiv.replaceChildren();
+            scores.clear();
+
+            const response = await fetch(`${buildApiUrl('/api/osu/scores/' + matchId + '/best')}`, {
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'}
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                for (const score of data) await addScore(score);
+            }
         }
 
     </script>
