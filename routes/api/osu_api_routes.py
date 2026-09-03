@@ -68,6 +68,19 @@ def add_osu_user():
 
     user = osu_api.fetch_osu_data(user)['user']
 
+    existing = environment.database.fetch_one(
+        """
+        SELECT user_id
+        FROM osu.match_users
+        WHERE match_id = %s
+          AND user_id = %s
+        """,
+        params=(match_id, user['id'])
+    )
+
+    if existing:
+        return {"error": "user already in match"}
+
     environment.database.execute(
         """
         INSERT INTO osu.match_users
