@@ -358,6 +358,12 @@
                 <div style="display: flex; flex-direction: column; justify-content: space-between; width: 40%;">
                     <div id="teams" class="osu-box" style="height: 45%;">
                         <h1 style="text-align: center; margin: 0">Teams</h1>
+                        {% for team in teams %}
+                            <div class="team-card"
+                                 style="border: 2px solid {{ team.color }}; border-radius: 12px; padding: 16px; margin-bottom: 12px; background: radial-gradient(circle at top left, {{ team.color }}33 0%, {{ team.color }}1a 40%, transparent 70%), linear-gradient(135deg, rgba(15, 15, 25, 0.95), rgba(20, 20, 30, 0.85)); box-shadow: 0 4px 12px {{ team.color }}40;">
+                            <h1 class="team-name" style="text-align: center; margin: 0">{{ team.name }}</h1>
+                            </div>
+                        {% endfor %}
                     </div>
                     <div class="osu-box" style="height: 90%;">
                         <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px;">
