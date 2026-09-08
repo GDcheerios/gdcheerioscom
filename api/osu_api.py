@@ -50,9 +50,9 @@ def compare_to_match(user, match_id: int) -> dict:
 
     match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(match_id,))
 
-    user_match_stats = environment.database.fetch_to_dict(
+    match_user = environment.database.fetch_to_dict(
         """
-        SELECT starting_stats, ending_stats
+        SELECT *
         FROM osu.match_users
         WHERE user_id = %s
           AND match_id = %s
@@ -62,22 +62,17 @@ def compare_to_match(user, match_id: int) -> dict:
 
     reconstructed_pp = environment.database.fetch_one(
         """
-        WITH scores AS (
-            SELECT
-                pp,
-                rank,
-                ROW_NUMBER() OVER(ORDER BY pp DESC) AS rank_index
-            FROM osu.scores
-            WHERE user_id = %s
-              AND submitted_at >= %s
-              AND submitted_at <= COALESCE(%s::timestamp, NOW())
-              AND rank != 'F'
-            LIMIT 100
-        ),
-             calc_pp AS (
-                 SELECT COALESCE(SUM(pp * POWER(0.95, rank_index - 1)), 0) AS total_pp
-                 FROM scores
-             )
+        WITH scores AS (SELECT pp,
+                               rank,
+                               ROW_NUMBER() OVER (ORDER BY pp DESC) AS rank_index
+                        FROM osu.scores
+                        WHERE user_id = %s
+                          AND submitted_at >= %s
+                          AND submitted_at <= COALESCE(%s::timestamp, NOW())
+                          AND rank != 'F'
+                        LIMIT 100),
+             calc_pp AS (SELECT COALESCE(SUM(pp * POWER(0.95, rank_index - 1)), 0) AS total_pp
+                         FROM scores)
         UPDATE osu.match_users
         SET reconstructed_pp = calc_pp.total_pp
         FROM calc_pp
@@ -93,43 +88,43 @@ def compare_to_match(user, match_id: int) -> dict:
             match["id"]
         )
     )
-    if not user_match_stats:
+    if not match_user:
         return user
 
-    reference_stats = user_match_stats["ending_stats"] if user_match_stats["ending_stats"] is not None else \
-        user_match_stats["starting_stats"]
+    reference_stats = match_user["ending_stats"] if match_user["ending_stats"] is not None else \
+        match_user["starting_stats"]
 
     if not reference_stats:
         return user
 
     placement = environment.database.fetch_one(
         """
-        WITH match AS (
-            SELECT * FROM osu.matches WHERE id = %s
-        ),
-        ranked_users AS (
-            select mu.user_id,
-                CASE LOWER(TRIM(m.primary_objective))
-                    WHEN 'reconstructed_pp' THEN DENSE_RANK() OVER (ORDER BY mu.reconstructed_pp DESC)
-                    ELSE
-                    DENSE_RANK() OVER (
-                        ORDER BY
-                        (to_jsonb(u)->>m.primary_objective)::numeric - (mu.starting_stats->>m.primary_objective)::numeric DESC,
-                        (to_jsonb(u)->>m.secondary_objective)::numeric - (mu.starting_stats->>m.secondary_objective)::numeric DESC
-                    )
-                END AS placement
-            FROM osu.match_users mu
-            JOIN match m ON mu.match_id = m.id
-            JOIN osu.users u ON mu.user_id = u.id
-        ),
-        updated_users AS (
-            UPDATE osu.match_users AS mu
-            SET placement = ru.placement
-            FROM ranked_users ru, match m
-            WHERE mu.user_id = ru.user_id
-            AND mu.match_id = m.id
-            RETURNING mu.user_id, ru.placement
-        )
+        WITH match AS (SELECT *
+                       FROM osu.matches
+                       WHERE id = %s),
+             ranked_users AS (select mu.user_id,
+                                     CASE LOWER(TRIM(m.primary_objective))
+                                         WHEN 'reconstructed_pp'
+                                             THEN DENSE_RANK() OVER (ORDER BY mu.reconstructed_pp DESC)
+                                         ELSE
+                                                     DENSE_RANK() OVER (
+                                                 ORDER BY
+                                                     (to_jsonb(u) ->> m.primary_objective)::numeric -
+                                                     (mu.starting_stats ->> m.primary_objective)::numeric DESC,
+                                                     (to_jsonb(u) ->> m.secondary_objective)::numeric -
+                                                     (mu.starting_stats ->> m.secondary_objective)::numeric DESC
+                                                 )
+                                         END AS placement
+                              FROM osu.match_users mu
+                                       JOIN match m ON mu.match_id = m.id
+                                       JOIN osu.users u ON mu.user_id = u.id),
+             updated_users AS (
+                 UPDATE osu.match_users AS mu
+                     SET placement = ru.placement
+                     FROM ranked_users ru, match m
+                     WHERE mu.user_id = ru.user_id
+                         AND mu.match_id = m.id
+                     RETURNING mu.user_id, ru.placement)
         SELECT uu.placement
         FROM updated_users uu
         WHERE uu.user_id = %s
@@ -140,6 +135,7 @@ def compare_to_match(user, match_id: int) -> dict:
     user = {
         "id": user["id"],
         "username": user["username"],
+        "nickname": match_user["nickname"],
         "total_score": user["total_score"] - reference_stats.get("total_score", 0),
         "ranked_score": user["ranked_score"] - reference_stats.get("ranked_score", 0),
         "total_hits": user["total_hits"] - reference_stats.get("total_hits", 0),
@@ -154,6 +150,8 @@ def compare_to_match(user, match_id: int) -> dict:
         "grade_sh": user["grade_sh"] - reference_stats.get("grade_sh", 0),
         "grade_a": user["grade_a"] - reference_stats.get("grade_a", 0),
         "avatar": user["avatar"],
+        "team": environment.database.fetch_to_dict("SELECT * FROM osu.teams WHERE id = %s",
+                                                   params=(match_user["team_id"],)) if match_user['team_id'] else None,
         "reconstructed_pp": reconstructed_pp,
         "placement": placement if placement is not None else 0,
         "background": user["background"]
@@ -183,7 +181,7 @@ def get_user_info(user_identifier, skip_api=False):
     if (
             not user_check
             or user_check["last_refresh"]
-            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=1)
+            <= dt.datetime.now(tz=timezone.utc) - dt.timedelta(minutes=environment.osu_refresh_cooldown)
     ):
         if not skip_api:
             logger.info("getting osu user %s", user_identifier)
@@ -265,6 +263,13 @@ def extract_info(data):
 
         if data:
             user_info = data['user']
+            last_refresh = user_info.get('last_refresh')
+            if last_refresh:
+                next_refresh = last_refresh + dt.timedelta(minutes=environment.osu_refresh_cooldown)
+            else:
+                next_refresh = dt.datetime.now(tz=timezone.utc) + dt.timedelta(
+                    minutes=environment.osu_refresh_cooldown)
+
             extracted_info = {
                 'id': user_info['id'],
                 'username': user_info['username'],
@@ -282,7 +287,8 @@ def extract_info(data):
                 'grade_sh': user_info['statistics']['grade_counts']['sh'],
                 'grade_a': user_info['statistics']['grade_counts']['a'],
                 'avatar': user_info['avatar_url'],
-                'background': user_info['cover_url']
+                'background': user_info['cover_url'],
+                'next_refresh': next_refresh
             }
 
             db = environment.database
@@ -372,7 +378,8 @@ def extract_info(data):
             if not exists["score"] and data['score']['id'] != 0:
                 db.execute(
                     """
-                    INSERT INTO osu.scores (id, beatmap_id, user_id, submitted_at, accuracy, rank, pp, score, cover, title, artist)
+                    INSERT INTO osu.scores (id, beatmap_id, user_id, submitted_at, accuracy, rank, pp, score, cover,
+                                            title, artist)
                     VALUES (%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s)
                     """,
                     params=(
@@ -425,6 +432,31 @@ def fetch_osu_data(user_id, skip_api=False, match_id=None):
     return result
 
 
+def get_team(id):
+    team = environment.database.fetch_to_dict(
+        """
+        SELECT t.*,
+               SUM(
+                       CASE LOWER(TRIM(m.primary_objective))
+                           WHEN 'reconstructed_pp' THEN mu.reconstructed_pp
+                           ELSE
+                               (to_jsonb(u) ->> m.primary_objective)::numeric
+                                   - (mu.starting_stats ->> m.primary_objective)::numeric
+                           END
+               ) AS points
+
+        FROM osu.teams t
+                 JOIN osu.match_users mu ON t.id = mu.team_id
+                 JOIN osu.users u ON u.id = mu.user_id
+                 JOIN osu.matches m ON m.id = mu.match_id
+        WHERE t.id = %s
+        GROUP BY t.id
+        """,
+        params=(id,)
+    )
+    return team
+
+
 # <editor-fold desc="osu score farm">
 
 def get_matches():
@@ -468,21 +500,15 @@ def get_matches():
 def get_recent_scores(match_id: int, limit: int = 5):
     return environment.database.fetch_all(
         """
-        WITH match AS (
-            SELECT *
-            FROM osu.matches
-            WHERE id = %s
-        ),
-             match_users AS (
-                 SELECT
-                     mu.user_id,
-                     mu.match_id
-                 FROM osu.match_users mu,
-                      match m
-                 WHERE mu.match_id = m.id
-             )
-        SELECT
-            s.id
+        WITH match AS (SELECT *
+                       FROM osu.matches
+                       WHERE id = %s),
+             match_users AS (SELECT mu.user_id,
+                                    mu.match_id
+                             FROM osu.match_users mu,
+                                  match m
+                             WHERE mu.match_id = m.id)
+        SELECT s.id
         FROM osu.scores s,
              match_users,
              match
@@ -499,32 +525,28 @@ def get_recent_scores(match_id: int, limit: int = 5):
 def get_best_scores(match_id: int, limit: int = 5):
     return environment.database.fetch_all(
         """
-        WITH match AS (
-            SELECT *
-            FROM osu.matches
-            WHERE id = %s
-        )
-        SELECT
-            s.id
+        WITH match AS (SELECT *
+                       FROM osu.matches
+                       WHERE id = %s)
+        SELECT s.id
         FROM osu.scores s,
              match
         WHERE s.submitted_at > match.started_at
           and s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
-        ORDER BY
-            (
-                COALESCE(
-                    (
-                        to_json(s.*)->>
-                        CASE LOWER(TRIM(match.primary_objective::text))
-                            WHEN 'reconstructed_pp' THEN 'pp'
-                            WHEN 'total_score' THEN 'score'
-                            WHEN 'ranked_score' THEN 'score'
-                            ELSE LOWER(TRIM(match.primary_objective::text))
-                        END
-                    )::numeric,
-                    0
-                )
-            ) DESC
+        ORDER BY (
+                     COALESCE(
+                             (
+                                 to_json(s.*) ->>
+                                 CASE LOWER(TRIM(match.primary_objective::text))
+                                     WHEN 'reconstructed_pp' THEN 'pp'
+                                     WHEN 'total_score' THEN 'score'
+                                     WHEN 'ranked_score' THEN 'score'
+                                     ELSE LOWER(TRIM(match.primary_objective::text))
+                                     END
+                                 )::numeric,
+                             0
+                     )
+                     ) DESC
         LIMIT %s
         """,
         params=(match_id, limit)
