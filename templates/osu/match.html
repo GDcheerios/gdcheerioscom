@@ -358,12 +358,6 @@
                 <div style="display: flex; flex-direction: column; justify-content: space-between; width: 40%;">
                     <div id="teams" class="osu-box" style="height: 45%;">
                         <h1 style="text-align: center; margin: 0">Teams</h1>
-                        {% for team in teams %}
-                            <div class="team-card"
-                                 style="border: 2px solid {{ team.color }}; border-radius: 12px; padding: 16px; margin-bottom: 12px; background: radial-gradient(circle at top left, {{ team.color }}33 0%, {{ team.color }}1a 40%, transparent 70%), linear-gradient(135deg, rgba(15, 15, 25, 0.95), rgba(20, 20, 30, 0.85)); box-shadow: 0 4px 12px {{ team.color }}40;">
-                            <h1 class="team-name" style="text-align: center; margin: 0">{{ team.name }}</h1>
-                            </div>
-                        {% endfor %}
                     </div>
                     <div class="osu-box" style="height: 90%;">
                         <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px;">
@@ -386,6 +380,7 @@
         const ID = {{ current_osu_id | tojson }};
         const players = new Map();
         const scores = new Map();
+        const teams = new Map();
         let selectedPlayer = null;
         let showingBestScores = false;
 
@@ -410,6 +405,8 @@
                 this.objectiveEl = document.createElement('h3');
                 this.objectiveEl.classList.add('objective');
                 this.id = id;
+                this.allowDetails = true;
+                this.next_refresh = null
                 this.element.style.cursor = 'pointer';
                 this.element.addEventListener('click', (event) => {
                     if (event.target.closest('a')) return;
@@ -427,6 +424,7 @@
 
                 this.id = playerData.id;
                 this.username = playerData.username;
+                this.nickname = playerData.nickname;
                 this.placement = playerData.placement;
                 this.total_score = playerData.total_score;
                 this.ranked_score = playerData.ranked_score;
@@ -437,7 +435,9 @@
                 this.country_rank = playerData.country_rank;
                 this.pp = playerData.pp;
                 this.reconstructed_pp = playerData.reconstructed_pp;
+                this.team = playerData.team;
                 this.last_refresh = playerData.last_refresh;
+                this.next_refresh = playerData.next_refresh;
                 this.avatar_url = playerData.avatar;
                 this.background_url = playerData.background;
                 this.grade_ss = playerData.grade_ss;
@@ -459,6 +459,12 @@
             }
 
             async refresh(pullFromOsu = false, sendSocket = false) {
+                const now = new Date();
+                if (this.next_refresh && new Date(this.next_refresh) > now && !pullFromOsu) {
+                    console.log(`Skipping refresh for player ${this.id}: next refresh at ${this.next_refresh}`);
+                    return false;
+                }
+
                 const userData = await getUser(this.id, pullFromOsu);
 
                 if (!userData || !userData.user || userData.user.id == null) {
@@ -515,7 +521,7 @@
                     selectedPlayer = this;
                 }
 
-                this.container.classList.toggle('expanded', selectedPlayer === this);
+                if (this.allowDetails) this.container.classList.toggle('expanded', selectedPlayer === this);
 
                 setTimeout(() => {
                     sort();
@@ -581,7 +587,7 @@
             render() {
                 this.element.replaceChildren();
                 this.renderPlacement();
-                this.usernameEl.textContent = this.username || '';
+                this.usernameEl.textContent = (this.nickname != null ? this.nickname : this.username) + ((this.team != null) ? ` [${this.team.acronym}]`.toUpperCase() : '');
                 this.usernameEl.href = `https://osu.ppy.sh/users/${this.id}`;
                 this.usernameEl.target = "_blank";
                 if (this.avatar_url) {
@@ -737,12 +743,63 @@
             }
         }
 
+        class TeamCard {
+            constructor(id) {
+                this.id = id;
+                this.name = "team";
+                this.acronym = "t";
+                this.color = "#808080";
+                this.points = 0;
+            }
+
+            async refresh() {
+                const team = await getTeam(this.id);
+                this.name = team.name;
+                this.acronym = team.acronym;
+                this.color = team.color;
+                this.points = team.points;
+            }
+            
+            render() {
+                this.element = document.createElement('div');
+                this.element.style.cssText = `
+        background: linear-gradient(135deg, 
+            ${this.color}99 0%, 
+            ${this.color}66 50%, 
+            ${this.color}33 100%);
+        border: 2px solid ${this.color};
+        border-radius: 12px;
+        padding: 8px;
+        margin: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    `;
+
+                const nameEl = document.createElement('h2');
+                nameEl.textContent = this.name;
+                nameEl.style.cssText = 'margin: 0 0 4px 0; color: #fff; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);';
+
+                const pointsEl = document.createElement('h2');
+                pointsEl.textContent = `${this.points.toLocaleString()} points`;
+                pointsEl.style.cssText = 'margin: 0; color: #fff; font-weight: bold;';
+
+                this.element.appendChild(nameEl);
+                this.element.appendChild(pointsEl);
+
+                return this.element;
+            }
+        }
+
         // visual
         const playersList = document.getElementById('players-list');
         const teamsDiv = document.getElementById('teams');
         const scoresDiv = document.getElementById('scores');
         const youCardElement = document.getElementById('your-card');
         const youCard = new PlayerCard(ID);
+        youCard.allowDetails = false;
 
         function youInTheMatch() {
             return players.has(youCard.id);
@@ -866,7 +923,6 @@
 
             sortedPlayers.forEach((player, index) => {
                 const oldPlacement = player.placement;
-                {#player.placement = index + 1;#}
                 if (oldPlacement > 0 && oldPlacement !== player.placement) {
                     player.ladderMovement = {
                         direction: player.placement < oldPlacement ? 'up' : 'down',
@@ -956,6 +1012,8 @@
             players.set(player.id, player);
             playersList.appendChild(player.container);
             player.render();
+
+            // determines when the player card gets added
             if (player.id === ID) {
                 const youContainer = document.getElementById('you-container');
                 const yourCardContainer = document.getElementById('your-card');
@@ -974,6 +1032,22 @@
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             return response.json();
+        }
+
+        async function getTeam(id) {
+            const url = `${buildApiUrl('/api/osu/get-team')}/${id}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        }
+
+        async function addTeam(id){
+            const teamCard = new TeamCard(id);
+            await teamCard.refresh()
+            teams.set(id, teamCard);
+            teamsDiv.appendChild(teamCard.render());
         }
 
         function getScoreObjectiveValue(scoreCard, objective) {
@@ -1149,6 +1223,7 @@
         window.addEventListener('load', function () {
             for (const player_id of {{ player_ids | tojson}}) addPlayer(player_id);
             for (const scoreId of {{ recent_scores | tojson }}) addScore(scoreId);
+            for (const teamId of {{ team_ids | tojson }}) addTeam(teamId);
         });
 
         window.addEventListener('beforeunload', function() {

@@ -41,6 +41,11 @@ def fetch_osu_user(id):
     return _json_safe(data)
 
 
+@osu_api_blueprint.get('/osu/get-team/<id>')
+def fetch_osu_team(id):
+    return _json_safe(osu_api.get_team(id))
+
+
 @osu_api_blueprint.get('/osu/search/<query>')
 def search_osu_user(query):
     match_id = request.args.get("match_id")
@@ -161,8 +166,8 @@ def create_match():
         player = osu_api.fetch_osu_data(id, skip_api=True)
         player["user"]["reconstructed_pp"] = 0
         environment.database.execute(
-            "INSERT INTO osu.match_users (match_id, user_id, starting_stats, team) values (%s, %s, %s::jsonb, %s)",
-            params=(match_id, id, json.dumps(_json_safe(player["user"])), data["players"][id]["team"])
+            "INSERT INTO osu.match_users (match_id, user_id, starting_stats) values (%s, %s, %s::jsonb)",
+            params=(match_id, id, json.dumps(_json_safe(player["user"])))
         )
 
     return {

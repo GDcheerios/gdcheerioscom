@@ -26,36 +26,15 @@ def osu_match(id):
     player_ids = [player_id[0] for player_id in environment.database.fetch_all(
         "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 15 ORDER BY placement LIMIT 15", params=(id,))]
     recent_scores = get_recent_scores(id)
-    teams = environment.database.fetch_all_to_dict(
+    team_ids = [team[0] for team in environment.database.fetch_all(
         """
-        WITH match AS (SELECT * FROM osu.matches WHERE id = %s),
-        match_users AS (SELECT * FROM osu.match_users, match WHERE match_id = match.id),
-        teams AS (
-            SELECT
-                t.*,
-                SUM(
-                    CASE LOWER(TRIM(m.primary_objective))
-                        WHEN 'reconstructed_pp' THEN mu.reconstructed_pp
-                        ELSE
-                            (to_jsonb(u) ->> m.primary_objective)::numeric
-                                - (mu.starting_stats ->> m.primary_objective)::numeric
-                        END
-                ) AS points
-            FROM osu.teams AS t
-                     JOIN match_users AS mu ON mu.team_id = t.id
-                     JOIN osu.users AS u ON u.id = mu.user_id
-                     CROSS JOIN match AS m
-            GROUP BY t.id
+        WITH match_users AS (
+            SELECT team_id FROM osu.match_users WHERE match_id = %s
         )
-        SELECT
-            *,
-            DENSE_RANK() OVER (ORDER BY t.points DESC) as placement
-        FROM teams t
+        SELECT id FROM osu.teams WHERE id IN (SELECT team_id FROM match_users)
         """,
         params=(id,)
-    )
-
-    print(teams)
+    )]
 
     if not match:
         return "Match not found", 404
@@ -92,5 +71,5 @@ def osu_match(id):
         websocket_url=environment.frontend_websocket_url,
         player_ids=player_ids,
         recent_scores=recent_scores,
-        teams=teams
+        team_ids=team_ids
     )
