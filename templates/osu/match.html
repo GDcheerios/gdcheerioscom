@@ -759,7 +759,11 @@
                 this.color = team.color;
                 this.points = team.points;
             }
-            
+
+            onclick() {
+                
+            }
+
             render() {
                 this.element = document.createElement('div');
                 this.element.style.cssText = `
@@ -772,6 +776,7 @@
         padding: 8px;
         margin: 4px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        cursor: pointer;
         display: flex;
         flex-direction: column;
         align-items: center;
