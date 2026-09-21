@@ -6,7 +6,7 @@
         <link rel="stylesheet" href="/static/osu-style.css">
             <style>
                 :root {
-                    --player-details-height: 232px;
+                    --player-details-height: 200px;
                 }
 
                 @keyframes slideIn {
@@ -445,6 +445,7 @@
                 this.grade_s = playerData.grade_s;
                 this.grade_sh = playerData.grade_sh;
                 this.grade_a = playerData.grade_a;
+                this.averages = playerData.averages;
 
                 this.statChanged = previousValue !== undefined &&
                     Number(previousValue) !== Number(this[matchPrimary]);
@@ -543,14 +544,18 @@
                 };
 
                 const statsText = document.createElement('h3');
-                statsText.textContent = 'Statistics';
+                statsText.textContent = 'Stats';
                 detailsContent.appendChild(statsText);
-                detailsContent.appendChild(createStat('Accuracy', (this.accuracy || 0).toFixed(2) + '%'));
-                detailsContent.appendChild(createStat('Total PP', Math.round(this.pp || 0).toLocaleString()));
-                detailsContent.appendChild(createStat('Playcount', (this.playcount || 0).toLocaleString()));
-                detailsContent.appendChild(createStat('Global Rank', '#' + (this.global_rank || 0).toLocaleString()));
+                detailsContent.appendChild(createStat("Plays", this.playcount.toLocaleString()))
 
-                {% if is_owner or is_admin %}
+                const averageText = document.createElement('h3');
+                averageText.textContent = 'Average';
+                detailsContent.appendChild(averageText);
+                detailsContent.appendChild(createStat('Score', parseInt(this.averages.score || 0).toLocaleString()));
+                detailsContent.appendChild(createStat('Accuracy', (this.averages.accuracy * 100 || 0).toFixed(2) + '%'));
+                detailsContent.appendChild(createStat('PP', parseInt(this.averages.pp || 0).toLocaleString()));
+
+                {% if (is_owner or is_admin) and not match_ended %}
                     this.detailsElement.appendChild(controls);
 
                     const controlsText = document.createElement('h3');

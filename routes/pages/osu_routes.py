@@ -62,6 +62,7 @@ def osu_match(id):
     return render_template(
         'osu/match.html',
         match=match,
+        match_ended=match["ended"],
         current_osu_id=current_osu_id,
         is_creator=is_creator,
         is_admin=is_admin,

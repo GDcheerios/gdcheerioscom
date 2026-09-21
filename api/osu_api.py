@@ -154,6 +154,11 @@ def compare_to_match(user, match_id: int) -> dict:
                                                    params=(match_user["team_id"],)) if match_user['team_id'] else None,
         "reconstructed_pp": reconstructed_pp,
         "placement": placement if placement is not None else 0,
+        "averages": {
+            "score": get_average_metric_by_score(match_id, user["id"], "score"),
+            "pp": get_average_metric_by_score(match_id, user["id"], "pp"),
+            "accuracy": get_average_metric_by_score(match_id, user["id"], "accuracy")
+        },
         "background": user["background"]
     }
 
@@ -269,6 +274,8 @@ def extract_info(data):
             else:
                 next_refresh = dt.datetime.now(tz=timezone.utc) + dt.timedelta(
                     minutes=environment.osu_refresh_cooldown)
+
+            next_refresh = next_refresh.isoformat()
 
             extracted_info = {
                 'id': user_info['id'],
@@ -497,7 +504,7 @@ def get_matches():
     }
 
 
-def get_recent_scores(match_id: int, limit: int = 5):
+def get_recent_scores(match_id: int, user_id: int | None = None, limit: int = 5):
     return environment.database.fetch_all(
         """
         WITH match AS (SELECT *
@@ -515,14 +522,15 @@ def get_recent_scores(match_id: int, limit: int = 5):
         WHERE s.user_id = match_users.user_id
           and s.submitted_at > match.started_at
           and s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
+          and (%s IS null or s.user_id = %s)
         ORDER BY s.submitted_at DESC
         LIMIT %s
         """,
-        params=(match_id, limit)
+        params=(match_id, user_id, user_id, limit)
     )
 
 
-def get_best_scores(match_id: int, limit: int = 5):
+def get_best_scores(match_id: int, user_id: int | None = None, limit: int = 5):
     return environment.database.fetch_all(
         """
         WITH match AS (SELECT *
@@ -533,6 +541,7 @@ def get_best_scores(match_id: int, limit: int = 5):
              match
         WHERE s.submitted_at > match.started_at
           and s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
+          and (%s IS null or s.user_id = %s)
         ORDER BY (
                      COALESCE(
                              (
@@ -549,7 +558,35 @@ def get_best_scores(match_id: int, limit: int = 5):
                      ) DESC
         LIMIT %s
         """,
-        params=(match_id, limit)
+        params=(match_id, user_id, user_id, limit)
     )
+
+
+def get_average_metric_by_score(match_id: int, user_id: int, metric: str = "accuracy", limit: int = 100):
+    return environment.database.fetch_one(
+        """
+        WITH match AS (
+            SELECT * from osu.matches
+            WHERE id = %s
+        ),
+        scores AS (
+            SELECT * from osu.scores
+            CROSS JOIN match m
+            WHERE user_id = %s
+              and submitted_at > m.started_at
+              and submitted_at <= COALESCE(m.ended_at::timestamp, NOW())
+            LIMIT %s
+        )
+        SELECT
+            CASE
+                WHEN %s = 'pp' THEN AVG(nullif(s.pp, 0))
+                WHEN %s = 'accuracy' THEN AVG(s.accuracy)
+                WHEN %s = 'score' THEN AVG(s.score)
+                ELSE 0
+            END
+        FROM scores s
+        """,
+        params=(match_id, user_id, limit, metric, metric, metric)
+    )[0]
 
 # </editor-fold>

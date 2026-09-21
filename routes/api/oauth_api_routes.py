@@ -122,7 +122,8 @@ def osu_callback():
         'Authorization': f"Bearer {response['access_token']}"
     }).json()
 
-    info = fetch_osu_data(user_info["id"])
+    info = fetch_osu_data(user_info["id"]).get("user")
+    print(info)
 
     from objects.Account import Account  # import here to avoid circular imports
 
