@@ -149,23 +149,25 @@ def compare_to_match(user, match_id: int) -> dict:
             params=(match_id, min(placement), max(placement))
         )
 
+    print(stats)
+
     user = {
         "id": user["id"],
         "username": user["username"],
         "nickname": match_user["nickname"],
-        "total_score": stats[0]["total_score"] - stats[1].get("total_score", 0),
-        "ranked_score": stats[0]["ranked_score"] - stats[1].get("ranked_score", 0),
-        "total_hits": stats[0]["total_hits"] - stats[1].get("total_hits", 0),
-        "playcount": stats[0]["playcount"] - stats[1].get("playcount", 0),
-        "accuracy": float(stats[0]["accuracy"]) - float(stats[1].get("accuracy", 0)),
-        "pp": stats[0]["pp"] - stats[1].get("pp", 0),
-        "global_rank": (stats[0]["global_rank"] or 0) - (stats[1].get("global_rank", 0) or 0),
-        "country_rank": (stats[0]["country_rank"] or 0) - (stats[1].get("country_rank", 0) or 0),
-        "grade_ss": stats[0]["grade_ss"] - stats[1].get("grade_ss", 0),
-        "grade_ssh": stats[0]["grade_ssh"] - stats[1].get("grade_ssh", 0),
-        "grade_s": stats[0]["grade_s"] - stats[1].get("grade_s", 0),
-        "grade_sh": stats[0]["grade_sh"] - stats[1].get("grade_sh", 0),
-        "grade_a": stats[0]["grade_a"] - stats[1].get("grade_a", 0),
+        "total_score": stats[0].get("total_score", 0) - stats[1].get("total_score", 0),
+        "ranked_score": stats[0].get("ranked_score", 0) - stats[1].get("ranked_score", 0),
+        "total_hits": stats[0].get("total_hits", 0) - stats[1].get("total_hits", 0),
+        "playcount": stats[0].get("playcount", 0) - stats[1].get("playcount", 0),
+        "accuracy": float(stats[0].get("accuracy", 0)) - float(stats[1].get("accuracy", 0)),
+        "pp": stats[0].get("pp", 0) - stats[1].get("pp", 0),
+        "global_rank": (stats[0].get("global_rank", 0) or 0) - (stats[1].get("global_rank", 0) or 0),
+        "country_rank": (stats[0].get("country_rank", 0) or 0) - (stats[1].get("country_rank", 0) or 0),
+        "grade_ss": stats[0].get("grade_ss", 0) - stats[1].get("grade_ss", 0),
+        "grade_ssh": stats[0].get("grade_ssh", 0) - stats[1].get("grade_ssh", 0),
+        "grade_s": stats[0].get("grade_s", 0) - stats[1].get("grade_s", 0),
+        "grade_sh": stats[0].get("grade_sh", 0) - stats[1].get("grade_sh", 0),
+        "grade_a": stats[0].get("grade_a", 0) - stats[1].get("grade_a", 0),
         "avatar": user["avatar"],
         "team": environment.database.fetch_to_dict("SELECT * FROM osu.teams WHERE id = %s",
                                                    params=(match_user["team_id"],)) if match_user['team_id'] else None,
