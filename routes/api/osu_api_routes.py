@@ -295,6 +295,8 @@ def create_match():
             "INSERT INTO osu.teams (match_id, name, acronym, color) VALUES (%s, %s, %s, %s) RETURNING id",
             params=(match_id, team["name"], team["acronym"], team["color"])
         )
+        print(db_result)
+
         team["dbID"] = db_result[0]
 
     for player_id, player_data in players.items():
@@ -306,7 +308,8 @@ def create_match():
         team_db_id = None
         if len(teams.items()) != 0:
             local_team_id = player_data["team"]
-            team_db_id = teams[local_team_id]["dbID"]
+            if local_team_id is not None:
+                team_db_id = teams[local_team_id]["dbID"]
 
         environment.database.execute(
             "INSERT INTO osu.match_users (match_id, user_id, starting_stats, team_id) VALUES (%s, %s, %s::jsonb, %s)",
