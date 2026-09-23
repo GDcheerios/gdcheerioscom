@@ -1319,7 +1319,7 @@
                                 <a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{ account.osu_data.username }}</a>
                             </div>
                             <div class="osu-rank-label">Global Rank</div>
-                            <div class="osu-rank-value">#{{ "{:,}".format(account.osu_data.rank) }}</div>
+                            <div class="osu-rank-value">#{{ "{:,}".format(account.osu_data.global_rank) }}</div>
                         </div>
                     </div>
                 </div>
@@ -1329,7 +1329,7 @@
                     <div class="osu-highlights">
                         <div class="osu-highlight">
                             <div class="label">Total Score</div>
-                            <div class="value">{{ "{:,}".format(account.osu_data.score) }}</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.total_score) }}</div>
                         </div>
                         <div class="osu-highlight">
                             <div class="label">Plays</div>
@@ -1341,7 +1341,7 @@
                         </div>
                         <div class="osu-highlight">
                             <div class="label">Performance</div>
-                            <div class="value">{{ "{:,}".format(account.osu_data.performance) }} pp</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.pp) }} pp</div>
                         </div>
                         <!-- empty cells auto-flow; layout remains neat on different widths -->
                     </div>

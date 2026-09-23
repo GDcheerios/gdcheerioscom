@@ -29,17 +29,21 @@ smtp_password = os.environ['SMTP_PASSWORD']
 email_verification = smtp_host != "" and smtp_email != "" and smtp_password != ""
 tracker.done_subtask("Importing environment variables", "checking email variables")
 
+tracker.start_subtask("Importing environment variables", "checking DB variables")
 db_user = os.environ['DB_USER']
 db_password = os.environ['DB_PASSWORD']
 db_hostname = os.environ['DB_HOSTNAME']
 db_port = 5432
 db = os.environ['DB']
+tracker.done_subtask("Importing environment variables", "checking DB variables")
+
 
 tracker.start_subtask("Importing environment variables", "checking osu! variables")
 osu_secret = os.environ['OSU_SECRET']
 osu_api_key = os.environ['OSU_API_KEY']
 osu_client_id = os.environ['CLIENT_ID']
 osu = osu_secret != "" and osu_api_key != "" and osu_client_id != ""
+osu_refresh_cooldown: int = int(os.environ.get('OSU_REFRESH_COOLDOWN', 2))
 tracker.done_subtask("Importing environment variables", "checking osu! variables")
 
 tracker.start_subtask("Importing environment variables", "checking stripes variables")
@@ -154,6 +158,7 @@ weekly_cost = 100  # cents
 tracker.done("Payment Setup")
 # endregion
 
+# region Database Checks
 tracker.start("Checking Database Environment")
 _dev_schema_exists = Database.fetch_one("""
                    SELECT EXISTS (
@@ -176,5 +181,6 @@ dev_timecard_exists = Database.fetch_one(
     """
 )[0]
 tracker.done("Checking Database Environment")
+# endregion
 
 tracker.complete()

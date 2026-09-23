@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request
 
 import environment
-from api.osu_api import get_matches
+from api.osu_api import get_matches, fetch_osu_data, get_recent_scores
 from objects.Account import Account
 
 osu_blueprint = Blueprint('osu_blueprint', __name__)
@@ -17,56 +17,62 @@ def osu():
     return render_template("osu/index.html", matches=get_matches(), account=account)
 
 
-@osu_blueprint.route("/match/<id>")
+@osu_blueprint.route("/match/<int:id>")
 def osu_match(id):
-    match = environment.database.fetch_to_dict("SELECT * FROM osu.matches WHERE id = %s", params=(id,))
-    players = environment.database.fetch_all_to_dict(
-        """
-        SELECT omu.match_id,
-               omu.user_id,
-               omu.starting_score,
-               omu.starting_playcount,
-               omu.ending_score,
-               omu.ending_playcount,
-               omu.team,
-               omu.nickname,
-               ou.id           AS id,
-               ou.username     AS username,
-               ou.total_score  AS score,
-               ou.playcount    AS playcount,
-               ou.accuracy     AS accuracy,
-               ou.pp           AS pp,
-               ou.global_rank  AS global_rank,
-               ou.avatar       AS avatar,
-               ou.background   AS background,
-               ou.last_refresh AS last_refresh
-        FROM osu.match_users omu
-                 LEFT JOIN osu.users ou ON omu.user_id = ou.id
-        WHERE omu.match_id = %s
-        """,
+    match = environment.database.fetch_to_dict(
+        "SELECT * FROM osu.matches WHERE id = %s",
         params=(id,)
     )
+    player_ids = [player_id[0] for player_id in environment.database.fetch_all(
+        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 20 ORDER BY placement LIMIT 20", params=(id,))]
+    recent_scores = get_recent_scores(id, limit=6)
+    team_ids = [team[0] for team in environment.database.fetch_all(
+        """
+        SELECT id FROM osu.teams WHERE match_id = %s
+        """,
+        params=(id,)
+    )]
+
+    print(team_ids)
+
+    if not match:
+        return "Match not found", 404
+
     current_osu_id = None
-    request_id = Account.id_from_session(request.cookies.get('session'))
+    request_id = Account.id_from_session(request.cookies.get("session"))
     is_creator = str(request_id) == str(match["opener_id"])
     is_admin = False
+    is_supporter = False
     if request_id:
         account = Account(request_id)
+        is_supporter = account.supporter
         is_admin = bool(account.is_admin)
         osu_data = account.get_osu_data()
         if osu_data:
             current_osu_id = osu_data["id"]
 
+    in_match = False
+    if current_osu_id:
+        result = environment.database.fetch_one("SELECT 1 FROM osu.match_users WHERE match_id = %s AND user_id = %s",
+                                                params=(id, current_osu_id))
+        in_match = True if result else False
+
+    if in_match and current_osu_id not in player_ids:
+        player_ids.append(current_osu_id)
+
     return render_template(
         'osu/match.html',
         match=match,
-        players=players,
+        match_ended=match["ended"],
+        is_supporter=is_supporter,
         current_osu_id=current_osu_id,
         is_creator=is_creator,
         is_admin=is_admin,
+        match_id=id,
+        id=request_id,
+        in_match=in_match,
         websocket_url=environment.frontend_websocket_url,
+        player_ids=player_ids,
+        recent_scores=recent_scores,
+        team_ids=team_ids
     )
-
-
-@osu_blueprint.route("/loading/<reason>/<id>")
-def osu_loading(reason, id): return render_template("osu/loading.html", reason=reason, id=id, msg="")
