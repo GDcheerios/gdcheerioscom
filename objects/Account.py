@@ -360,7 +360,7 @@ class Account:
         weeks = database.fetch_one(
             """
             UPDATE account.supports
-            SET \"user\" = %s
+            SET user_id = %s
             WHERE id = %s RETURNING weeks
             """,
             params=(id, supporter_id)
