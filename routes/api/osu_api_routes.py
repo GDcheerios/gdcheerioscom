@@ -1,4 +1,5 @@
 import json
+import re
 import urllib
 import requests
 from flask import Blueprint, request, redirect
@@ -57,6 +58,7 @@ def search_osu_user(query):
                  JOIN osu.users u ON m.user_id = u.id
         WHERE m.match_id = %s
           and username ILIKE %s
+        ORDER BY placement
         """,
         params=(match_id, f"%{query}%")
     )]
@@ -64,6 +66,10 @@ def search_osu_user(query):
     print(user_ids)
 
     return user_ids
+
+
+@osu_api_blueprint.get('/osu/team-users/<int:id>')
+def fetch_osu_team_users(id): return osu_api.get_team_users(id)
 
 
 @osu_api_blueprint.post('/osu/add-user')
@@ -114,6 +120,49 @@ def remove_osu_user():
     return {"success": True}
 
 
+@osu_api_blueprint.post('/osu/change-team')
+def change_team():
+    account_id = Account.id_from_session(request.cookies.get("session"))
+    if not account_id:
+        return {"error": "Sign in to change teams."}, 401
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return {"error": "Expected match_id, user and team_id."}, 400
+
+    for key in ("match_id", "user", "team_id"):
+        value = data.get(key)
+        if key == "team_id" and key in data and value is None:
+            continue
+        if type(value) is not int or value <= 0:
+            return {"error": "Invalid " + key + "."}, 400
+
+    match_id, user_id, team_id = data["match_id"], data["user"], data["team_id"]
+    match = environment.database.fetch_to_dict(
+        "SELECT opener_id, ended FROM osu.matches WHERE id = %s", params=(match_id,))
+
+    if not match:
+        return {"error": "Match not found."}, 404
+    if str(match["opener_id"]) != str(account_id) and not Account(account_id).is_admin:
+        return {"error": "Only the match creator or an admin can change teams."}, 403
+    if match["ended"]:
+        return {"error": "This match has ended."}, 409
+
+    if team_id is not None and not environment.database.fetch_one(
+            "SELECT id FROM osu.teams WHERE id = %s AND match_id = %s",
+            params=(team_id, match_id)):
+        return {"error": "Team not found in this match."}, 400
+
+    updated = environment.database.fetch_one(
+        "UPDATE osu.match_users SET team_id = %s WHERE match_id = %s AND user_id = %s RETURNING user_id",
+        params=(team_id, match_id, user_id))
+
+    if not updated:
+        return {"error": "Player not found in this match."}, 404
+
+    return {"success": True}
+
+
 @osu_api_blueprint.post('/osu/change-nickname')
 def change_nickname():
     user = request.json["user"]
@@ -134,40 +183,134 @@ def change_nickname():
     return {"success": True}
 
 
+@osu_api_blueprint.post('/osu/freeze')
+def freeze_user():
+    user_id = request.json["userId"]
+    match_id = request.json["match"]
+    user = osu_api.fetch_osu_data(user_id, skip_api=True)["user"]
+    environment.database.execute(
+        """
+        UPDATE osu.match_users
+        SET ending_stats = %s
+        WHERE user_id = %s
+          AND match_id = %s;
+        """,
+        params=(json.dumps(_json_safe(user)), user_id, match_id)
+    )
+    return {"success": True}
+
+
 # endregion
 
 
 # region match_id API
 
+def _validate_team(team):
+    if not isinstance(team, dict):
+        raise ValueError("Each team must be an object.")
+    name, acronym, color = (team.get(key) for key in ("name", "acronym", "color"))
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("Enter a team name.")
+    if not isinstance(acronym, str) or not 1 <= len(acronym.strip().upper()) <= 4:
+        raise ValueError("Team acronyms must contain 1–4 characters.")
+    if not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+        raise ValueError("Team colors must use #RRGGBB format.")
+    return {"name": name.strip(), "acronym": acronym.strip().upper(), "color": color.lower()}
+
+
+@osu_api_blueprint.post('/osu/create-team')
+def create_team():
+    user_id = Account.id_from_session(request.cookies.get("session"))
+
+    if not user_id:
+        return {"error": "Sign in to create a team."}, 401
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return {"error": "Expected a team object and match_id."}, 400
+
+    try:
+        team = _validate_team(data.get("team"))
+        match_id = int(data.get("match_id"))
+    except (ValueError, TypeError) as exc:
+        return {"error": str(exc) if isinstance(exc, ValueError) else "Invalid match ID."}, 400
+
+    match = environment.database.fetch_to_dict(
+        "SELECT opener_id, ended FROM osu.matches WHERE id = %s", params=(match_id,))
+
+    if not match:
+        return {"error": "Match not found."}, 404
+
+    if str(match["opener_id"]) != str(user_id):
+        return {"error": "Only the match creator can add teams."}, 403
+
+    if match["ended"]:
+        return {"error": "This match has ended."}, 409
+
+    team = environment.database.fetch_to_dict(
+        """
+        INSERT INTO osu.teams (name, acronym, color, match_id) VALUES (%s, %s, %s, %s) RETURNING *
+        """, params=(team["name"], team["acronym"], team["color"], match_id)
+    )
+    if not team:
+        return {"error": "Could not save team. Please try again."}, 500
+    return {"team": _json_safe(team)}, 201
+
+
 @osu_api_blueprint.post('/osu/create-match')
 def create_match():
-    global team_name
-    team_name = None
     data = request.json
+
+    # configuration
+    match_name = data["matchName"]
+    objective = data["objective"]
+    open = data["open"]
+
+    teams = data["teams"]
+    players = data["players"]
+
     user_id = Account.id_from_session(request.cookies.get("session"))
     match_id = environment.database.fetch_one(
         """
         INSERT INTO osu.matches(name,
                                 opener_id,
                                 open,
-                                primary_objective,
-                                secondary_objective)
+                                objective)
         VALUES (%s,
-                %s,
                 %s,
                 %s,
                 %s)
         RETURNING id
         """,
-        params=(data["matchName"], user_id, data["open"], data["primaryObjective"], data["secondaryObjective"])
+        params=(match_name, user_id, open, objective)
     )[0]
+
     logger.info("create_match match_id=%s", match_id)
-    for id in data["players"]:
-        player = osu_api.fetch_osu_data(id, skip_api=True)
-        player["user"]["reconstructed_pp"] = 0
+
+    for local_team_id, team in teams.items():
+        team["localID"] = local_team_id
+
+        db_result = environment.database.fetch_one(
+            "INSERT INTO osu.teams (match_id, name, acronym, color) VALUES (%s, %s, %s, %s) RETURNING id",
+            params=(match_id, team["name"], team["acronym"], team["color"])
+        )
+        team["dbID"] = db_result[0]
+
+    for player_id, player_data in players.items():
+        osu_player = osu_api.fetch_osu_data(player_id, skip_api=True)
+        user_stats = osu_player["user"]
+        user_stats["reconstructed_pp"] = 0
+        safe_stats_json = json.dumps(_json_safe(user_stats))
+
+        team_db_id = None
+        if len(teams.items()) != 0:
+            local_team_id = player_data["team"]
+            team_db_id = teams[local_team_id]["dbID"]
+
         environment.database.execute(
-            "INSERT INTO osu.match_users (match_id, user_id, starting_stats) values (%s, %s, %s::jsonb)",
-            params=(match_id, id, json.dumps(_json_safe(player["user"])))
+            "INSERT INTO osu.match_users (match_id, user_id, starting_stats, team_id) VALUES (%s, %s, %s::jsonb, %s)",
+            params=(match_id, player_id, safe_stats_json, team_db_id)
         )
 
     return {
@@ -200,6 +343,17 @@ def end_match(id):
         )
 
     return {"success": True}
+
+
+@osu_api_blueprint.get('/osu/get-metrics/<int:match_id>')
+def get_metrics(match_id):
+    return environment.database.fetch_all_to_dict(
+        """
+        SELECT * FROM osu.match_metrics WHERE match_id = %s and placement <= 10
+        ORDER BY date ASC, placement ASC
+        """,
+        params=(match_id,)
+    )
 
 
 # endregion

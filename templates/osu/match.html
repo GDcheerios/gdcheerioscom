@@ -1,12 +1,14 @@
 <html>
     <head>
         {% block head %}
-        <title>{{ match.name }}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="/static/style.css">
         <link rel="stylesheet" href="/static/osu-style.css">
+        <script src="/static/osu-team-creator.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
             <style>
                 :root {
-                    --player-details-height: 200px;
+                    --player-details-height: 260px;
                 }
 
                 @keyframes slideIn {
@@ -215,6 +217,7 @@
                 }
 
                 .player .objective {
+                    font-variant-numeric: tabular-nums;
                     flex: 0 1 auto;
                     overflow: hidden;
                     white-space: nowrap;
@@ -293,6 +296,224 @@
                     border-top-right-radius: 0;
                     transform: translateY(30px) scaleY(1);
                 }
+
+                .match-dashboard {
+                    box-sizing: border-box;
+                    width: min(1200px, calc(100% - 32px));
+                    margin: 0 auto 24px;
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+                    gap: 24px;
+                }
+
+                .match-player-panel,
+                .match-side-panel {
+                    min-width: 0;
+                }
+
+                .match-player-panel {
+                    height: 720px;
+                    box-sizing: border-box;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .match-player-panel .players-list-frame {
+                    flex: 1;
+                    min-height: 0;
+                    height: auto;
+                }
+
+                .match-player-panel #players-list {
+                    overflow: hidden;
+                }
+
+                .match-player-panel #you-container {
+                    height: auto;
+                    flex-shrink: 0;
+                }
+
+                .match-side-panel {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 24px;
+                }
+
+                #teams .match-team {
+                    position: relative;
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 4px 16px;
+                    min-height: 42px;
+                    box-sizing: border-box;
+                    padding: 8px 12px;
+                    margin: 6px 4px 0;
+                    border: 2px solid rgba(100, 150, 220, 0.35);
+                    border-radius: 12px;
+                    background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(10, 20, 45, 0.8));
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+                    isolation: isolate;
+                    overflow: hidden;
+                }
+
+                #teams .match-team::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    z-index: -1;
+                    border-radius: 10px; /* Inner radius: 12px minus the 2px border. */
+                    background: linear-gradient(135deg, var(--team-color), transparent);
+                    opacity: 0.18;
+                    pointer-events: none;
+                }
+
+                #teams .match-team-name {
+                    flex: 1 1 120px;
+                    min-width: 0;
+                    margin: 0;
+                    color: #e1e6ef;
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    line-height: 1.4;
+                    overflow-wrap: anywhere;
+                }
+
+                #teams .match-team-points {
+                    margin-left: auto;
+                    color: #e1e6ef;
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    font-variant-numeric: tabular-nums;
+                    line-height: 1.4;
+                    text-align: right;
+                    overflow-wrap: anywhere;
+                    min-width: 0;
+                    max-width: 100%;
+                }
+
+                #teams .match-team-unit {
+                    margin-left: 5px;
+                    color: #9ba9bf;
+                    font-size: 0.75rem;
+                    font-weight: 400;
+                }
+
+                .match-scores-panel {
+                    flex: 1;
+                }
+
+                .match-bottom-panel {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 24px;
+                    grid-column: 1 / -1;
+                    min-width: 0;
+                }
+
+                .match-charts {
+                    flex: 1;
+                }
+
+                .chart-header {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px 20px;
+                    padding: 8px 4px 16px;
+                    border-bottom: 1px solid rgba(100, 150, 220, 0.25);
+                }
+
+                .chart-header h1 { margin: 0; }
+
+                #charts-controls, .chart-view-buttons, .chart-mode-control {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .chart-view-buttons {
+                    gap: 4px;
+                    padding: 4px;
+                    background: rgba(8, 18, 42, 0.5);
+                    border: 1px solid rgba(100, 150, 220, 0.25);
+                    border-radius: 12px;
+                }
+
+                #charts-controls button, #chart-mode {
+                    box-sizing: border-box;
+                    min-height: 40px;
+                    margin: 0;
+                    padding: 9px 14px;
+                    border: 1px solid rgba(100, 150, 220, 0.4);
+                    border-radius: 8px;
+                    background: #192d5a;
+                    color: #d2e1f7;
+                    font: 600 14px/1.3 Arial, sans-serif;
+                    cursor: pointer;
+                    transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+                }
+
+                #charts-controls [data-chart-view] {
+                    background: transparent;
+                    border-color: transparent;
+                }
+
+                #charts-controls button:hover, #chart-mode:hover {
+                    background: #254477;
+                    border-color: #7ba8e9;
+                    color: white;
+                }
+
+                #charts-controls [aria-pressed="true"] {
+                    background: linear-gradient(135deg, #315d9e, #234578);
+                    border-color: #8bb8f5;
+                    color: white;
+                    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.2);
+                }
+
+                #charts-controls button:focus-visible, #chart-mode:focus-visible {
+                    outline: 2px solid #b7d8ff;
+                    outline-offset: 3px;
+                }
+
+                #charts-controls button:active { background: #18345e; }
+                .chart-mode-control label { color: #c1d2ec; font-size: 13px; }
+                #chart-mode { color-scheme: dark; }
+                #chart-mode-help, #chart-status { color: #c1d2ec; font-size: 13px; line-height: 1.5; }
+
+                @media (max-width: 600px) {
+                    #charts-controls, .chart-view-buttons { width: 100%; }
+                    .chart-view-buttons { box-sizing: border-box; }
+                    .chart-view-buttons button { flex: 1; }
+                    .chart-mode-control { flex: 1; }
+                    #chart-mode { flex: 1; }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    #charts-controls button, #chart-mode { transition: none; }
+                }
+
+                .match-dashboard #controls {
+                    flex-wrap: wrap;
+                }
+
+                @media (max-width: 900px) {
+                    .match-dashboard {
+                        grid-template-columns: minmax(0, 1fr);
+                        gap: 16px;
+                    }
+
+                    .match-player-panel {
+                        height: 600px;
+                    }
+
+                    .match-side-panel {
+                        gap: 16px;
+                    }
+                }
             </style>
         {% endblock %}
     </head>
@@ -300,8 +521,8 @@
     {% include 'navbar.html' %}
         {% block body %}
             <h1 style="text-align: center">{{ match.name }}</h1>
-            <div style="display: flex; flex-direction: row; justify-content: space-evenly; height: 80%; width: 100%; margin: auto;">
-                <div class="osu-box" style="width: 35%;">
+            <div class="match-dashboard">
+                <div class="osu-box match-player-panel">
                     <div style="display: flex; flex-direction: row; justify-content: start; align-items: start;">
                         <button id="clear-button" onclick="clearSearch()"style="width: 20%; padding: 8px; font-size: 16px; border: 2px solid rgba(220, 100, 100, 0.8); border-radius: 12px; margin: 10px auto;">Clear</button>
                         <label for="search-input"></label><input type="text" id="search-input" placeholder="Search players..." style="width: 40%; padding: 10px; font-size: 16px; border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; margin: 10px auto;">
@@ -311,7 +532,7 @@
                         <div id="players-list" style="height: 100%;"></div>
                         <div id="players-list-fade" class="players-list-fade" aria-hidden="true"></div>
                     </div>
-                    <div id="you-container" style="height: 20px;">
+                    <div id="you-container">
                         <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent 0%, rgba(100, 150, 220, 0.8) 50%, transparent 100%); margin: 10px 0;"></div>
                         <div id="your-card"></div>
                         {% if not match['ended'] %}
@@ -329,6 +550,11 @@
                                                 style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
                                             Refresh
                                         </button>
+                                        <button id="refresh-all-button"
+                                                onclick="refreshAllButton()"
+                                                style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
+                                            Refresh All
+                                        </button>
                                     {% endif %}
                                     {% if is_admin or is_creator %}
                                         <button id="add-user-button"
@@ -341,7 +567,6 @@
                                                 style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81 0 0), rgb(81 0 0)); border: 2px solid rgb(255 0 0); border-radius: 12px; cursor: pointer; margin: 10px auto;">
                                             End Match
                                         </button>
-                                        
                                     {% endif %}
                                 {% endif %}
                                 {% if not id or not current_osu_id %}
@@ -355,11 +580,14 @@
                         {% endif %}
                     </div>
                 </div>
-                <div style="display: flex; flex-direction: column; justify-content: space-between; width: 40%;">
-                    <div id="teams" class="osu-box" style="height: 45%;">
+                <div class="match-side-panel">
+                    <div id="teams" class="osu-box">
                         <h1 style="text-align: center; margin: 0">Teams</h1>
+                        {% if is_creator and not match['ended'] %}
+                            {% include 'osu/team_creator.html' %}
+                        {% endif %}
                     </div>
-                    <div class="osu-box" style="height: 90%;">
+                    <div class="osu-box match-scores-panel">
                         <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px;">
                             <div style="cursor: pointer;" onclick="showRecentPlays()">
                                 <h1 id="recentPlaysEl" style="color: white; text-align: center; margin: 0">Recent Plays</h1>
@@ -371,18 +599,99 @@
                         <div id="scores"></div>
                     </div>
                 </div>
+                <div class="match-bottom-panel">
+                    <div class="osu-box match-charts">
+                        <div class="chart-header">
+                            <h1>Charts</h1>
+                            <div id="charts-controls">
+                                {% if is_supporter or is_admin %}
+                                    <div class="chart-view-buttons" role="group" aria-label="Chart metric">
+                                    <button type="button" data-chart-view="placement" aria-pressed="true" onclick="updateChart('placement')">Placement</button>
+                                    <button type="button" data-chart-view="objective" aria-pressed="false" onclick="updateChart('objective')">Objective</button>
+                                    <button type="button" data-chart-view="plays" aria-pressed="false" onclick="updateChart('plays')">Plays</button>
+                                    </div>
+                                    <div class="chart-mode-control">
+                                    <label for="chart-mode">Mode</label>
+                                    <select id="chart-mode" onchange="updateChart(undefined, this.value)">
+                                        <option value="cumulative">Cumulative</option>
+                                        <option value="daily">Daily</option>
+                                    </select>
+                                    </div>
+                                    <button type="button" onclick="updateChart()">Refresh</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div style="margin: 5px; text-align: center;">
+                            {% if is_supporter or is_admin %}
+                                <p id="chart-mode-help">Cumulative shows the recorded totals, or placement, for each day.</p>
+                                <p id="chart-status" role="status">Loading metrics…</p>
+                                <div style="position: relative; height: 360px; width: 100%;">
+                                    <canvas id="chart" role="img" aria-label="Player placement over time"></canvas>
+                                </div>
+                            {% else %}
+                                <h1>Please invest in gdcheerios supporter to see these metrics</h1>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         {% endblock %}
     <script>
+        
         const matchId = {{ match_id|int }};
-        const matchPrimary = {{ match.primary_objective | tojson }};
-        const matchSecondary = {{ match.secondary_objective | tojson }};
+        const matchObjective = {{ match.objective | tojson }};
         const ID = {{ current_osu_id | tojson }};
         const players = new Map();
         const scores = new Map();
         const teams = new Map();
+        const teamCreator = document.getElementById('team-creator');
+        if (teamCreator) {
+            new OsuTeamCreator(teamCreator, async team => {
+                const response = await fetch('/api/osu/create-team', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({match_id: matchId, team})
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Could not create team.');
+                location.reload();
+            });
+        }
         let selectedPlayer = null;
         let showingBestScores = false;
+
+        const numberAnimations = new WeakMap();
+
+        function animateNumber(element, target, format = String, decimals = 0) {
+            target = Number(target);
+            const previous = numberAnimations.get(element);
+            if (previous?.target === target) {
+                previous.format = format;
+                element.textContent = format(previous.value);
+                return;
+            }
+            if (previous) cancelAnimationFrame(previous.frame);
+            const state = {target, value: previous?.value ?? target, format};
+            numberAnimations.set(element, state);
+            if (!Number.isFinite(state.value) || !Number.isFinite(target) ||
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches || state.value === target) {
+                state.value = target;
+                element.textContent = format(target);
+                return;
+            }
+            const start = state.value;
+            const startedAt = performance.now();
+            element.textContent = format(start);
+            const tick = now => {
+                const progress = Math.min((now - startedAt) / 650, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                state.value = progress === 1 ? target :
+                    Number((start + (target - start) * eased).toFixed(decimals));
+                element.textContent = state.format(state.value);
+                if (progress < 1) state.frame = requestAnimationFrame(tick);
+            };
+            state.frame = requestAnimationFrame(tick);
+        }
 
         class PlayerCard {
             constructor(id) {
@@ -398,12 +707,17 @@
                 this.usernameEl.classList.add('username');
                 this.placementEl = document.createElement('h3');
                 this.placementEl.classList.add('placement');
+                this.placementNumberEl = document.createElement('span');
+                this.placementEl.appendChild(this.placementNumberEl);
                 this.movementEl = document.createElement('span');
                 this.movementEl.classList.add('ladder-movement');
                 this.avatarEl = document.createElement('img');
                 this.avatarEl.classList.add('avatar');
                 this.objectiveEl = document.createElement('h3');
                 this.objectiveEl.classList.add('objective');
+                this.objectiveEl.addEventListener('animationend', () => {
+                    this.objectiveEl.classList.remove('stat-change', 'stat-increase', 'stat-decrease');
+                });
                 this.id = id;
                 this.allowDetails = true;
                 this.next_refresh = null
@@ -420,7 +734,7 @@
                     return false;
                 }
 
-                const previousValue = this[matchPrimary];
+                const previousValue = this[matchObjective];
 
                 this.id = playerData.id;
                 this.username = playerData.username;
@@ -448,11 +762,11 @@
                 this.averages = playerData.averages;
 
                 this.statChanged = previousValue !== undefined &&
-                    Number(previousValue) !== Number(this[matchPrimary]);
+                    Number(previousValue) !== Number(this[matchObjective]);
                 this.statAnimationStart = previousValue;
-                this.statAnimationEnd = this[matchPrimary];
+                this.statAnimationEnd = this[matchObjective];
                 this.statChangeDirection = this.statChanged &&
-                    Number(this[matchPrimary]) > Number(previousValue)
+                    Number(this[matchObjective]) > Number(previousValue)
                     ? 'increase'
                     : 'decrease';
 
@@ -494,7 +808,20 @@
             }
 
             renderPlacement() {
-                this.placementEl.textContent = `${this.placement}`;
+                const oldPlacement = this.renderedPlacement;
+                if (oldPlacement !== this.placement) {
+                    this.ladderMovement = oldPlacement > 0 && this.placement > 0 ? {
+                        direction: this.placement < oldPlacement ? 'up' : 'down',
+                        distance: Math.abs(oldPlacement - this.placement)
+                    } : null;
+                    this.element.classList.remove('ladder-up', 'ladder-down');
+                    if (this.ladderMovement) {
+                        void this.element.offsetWidth;
+                        this.element.classList.add(`ladder-${this.ladderMovement.direction}`);
+                    }
+                    this.renderedPlacement = this.placement;
+                }
+                animateNumber(this.placementNumberEl, this.placement);
                 this.placementEl.className = 'placement';
                 this.element.classList.remove('placement-first', 'placement-second', 'placement-third');
                 if (this.placement >= 1 && this.placement <= 3) {
@@ -555,7 +882,7 @@
                 detailsContent.appendChild(createStat('Accuracy', (this.averages.accuracy * 100 || 0).toFixed(2) + '%'));
                 detailsContent.appendChild(createStat('PP', parseInt(this.averages.pp || 0).toLocaleString()));
 
-                {% if (is_owner or is_admin) and not match_ended %}
+                {% if (is_creator or is_admin) and not match_ended %}
                     this.detailsElement.appendChild(controls);
 
                     const controlsText = document.createElement('h3');
@@ -577,6 +904,76 @@
                         await removeUserButton(this.id);
                     };
                     controls.appendChild(removeButton);
+
+                    const freezeButton = document.createElement('button');
+                    freezeButton.textContent = 'Freeze User';
+                    freezeButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81, 0, 0), rgb(81, 0, 0)); border: 2px solid rgb(255, 0, 0); border-radius: 8px; cursor: pointer; margin: 8px 0;';
+                    freezeButton.onclick = async () => {
+                        await freezeUserButton(this.id);
+                    };
+                    controls.appendChild(freezeButton);
+
+                    const teamForm = document.createElement('form');
+                    teamForm.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0;';
+                    const teamSelect = document.createElement('select');
+                    teamSelect.setAttribute('aria-label', 'Team for ' + this.username);
+                    teamSelect.style.cssText = 'max-width: 180px; padding: 8px; color: white; background: #192d5a; border-radius: 8px;';
+                    teamSelect.add(new Option('No team', ''));
+                    for (const team of teams.values()) {
+                        teamSelect.add(new Option(`${team.name} [${team.acronym}]`, String(team.id)));
+                    }
+                    teamSelect.value = this.team ? String(this.team.id) : '';
+                    const saveTeamButton = document.createElement('button');
+                    saveTeamButton.type = 'submit';
+                    saveTeamButton.textContent = this.team ? 'Change Team' : 'Add to Team';
+                    saveTeamButton.style.cssText = refreshButton.style.cssText;
+                    saveTeamButton.style.margin = '0';
+                    const teamMessage = document.createElement('span');
+                    teamMessage.setAttribute('role', 'status');
+                    teamMessage.style.cssText = 'flex-basis: 100%; font-size: 12px;';
+                    teamForm.append(teamSelect, saveTeamButton, teamMessage);
+                    teamForm.onsubmit = async event => {
+                        event.preventDefault();
+                        saveTeamButton.disabled = true;
+                        teamSelect.disabled = true;
+                        teamMessage.textContent = 'Saving…';
+                        try {
+                            const response = await fetch('/api/osu/change-team', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({match_id: matchId, user: this.id,
+                                    team_id: teamSelect.value ? Number(teamSelect.value) : null})
+                            });
+                            const result = await response.json();
+                            if (!response.ok) throw new Error(result.error || 'Could not save team.');
+                            location.reload();
+                        } catch (error) {
+                            teamMessage.textContent = error.message || 'Could not save team. Please try again.';
+                            saveTeamButton.disabled = false;
+                            teamSelect.disabled = false;
+                        }
+                    };
+                    controls.appendChild(teamForm);
+
+                    const nicknameInput = document.createElement('input');
+                    nicknameInput.type = 'text';
+                    nicknameInput.placeholder = 'Nickname';
+                    nicknameInput.value = this.nickname || '';
+                    nicknameInput.style.width = '160px';
+
+                    const submitButton = document.createElement('button');
+                    submitButton.textContent = "Change nickname";
+
+                    submitButton.style.cssText = refreshButton.style.cssText;
+                    submitButton.style.margin = '0';
+                    submitButton.style.width = '100px';
+
+                    submitButton.addEventListener('click', async (e) => {
+                        await changeNickname(this.id, nicknameInput.value);
+                        location.reload();
+                    });
+
+                    controls.append(nicknameInput, submitButton);
 
                     const separator = document.createElement('div');
                     separator.style.width = '2px';
@@ -612,8 +1009,20 @@
                 this.element.style.backgroundSize = 'cover';
                 this.element.style.backgroundPosition = 'center';
                 this.element.appendChild(this.objectiveEl);
-                this.objectiveEl.textContent = this[matchPrimary].toLocaleString("en-US") + getStringEnding(matchPrimary);
-                if (isOverflowing(this.objectiveEl)) this.objectiveEl.textContent = formatNumber(this[matchPrimary]);
+                const targetValue = this[matchObjective];
+                this.objectiveEl.textContent = targetValue.toLocaleString("en-US") + getStringEnding(matchObjective);
+                const compact = isOverflowing(this.objectiveEl);
+                animateNumber(this.objectiveEl, targetValue, value => compact ? formatNumber(value) :
+                    value.toLocaleString("en-US") + getStringEnding(matchObjective),
+                    ['pp', 'reconstructed_pp', 'accuracy'].includes(matchObjective) ? 2 : 0);
+                if (this.statChanged) {
+                    this.objectiveEl.classList.remove('stat-change', 'stat-increase', 'stat-decrease');
+                    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                        void this.objectiveEl.offsetWidth;
+                        this.objectiveEl.classList.add('stat-change', `stat-${this.statChangeDirection}`);
+                    }
+                    this.statChanged = false;
+                }
                 this.renderDetails();
                 return this.container;
             }
@@ -631,6 +1040,7 @@
                 this.accuracy = 0;
                 this.userId = null;
                 this.submitted_at = null;
+                this.viewingPlayers = false;
             }
 
             async fetchScoreInfo(){
@@ -765,39 +1175,36 @@
                 this.points = team.points;
             }
 
-            onclick() {
-                
+            async onClick() {
+                await showTeamPlayers(this.id);
             }
 
             render() {
                 this.element = document.createElement('div');
-                this.element.style.cssText = `
-        background: linear-gradient(135deg, 
-            ${this.color}99 0%, 
-            ${this.color}66 50%, 
-            ${this.color}33 100%);
-        border: 2px solid ${this.color};
-        border-radius: 12px;
-        padding: 8px;
-        margin: 4px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    `;
+                this.element.className = 'match-team';
+                this.element.style.cursor = 'pointer';
+                this.element.style.setProperty('--team-color', this.color || '#808080');
 
-                const nameEl = document.createElement('h2');
+                const nameEl = document.createElement('h3');
+                nameEl.className = 'match-team-name';
                 nameEl.textContent = this.name;
-                nameEl.style.cssText = 'margin: 0 0 4px 0; color: #fff; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);';
 
-                const pointsEl = document.createElement('h2');
-                pointsEl.textContent = `${this.points.toLocaleString()} points`;
-                pointsEl.style.cssText = 'margin: 0; color: #fff; font-weight: bold;';
+                const pointsEl = document.createElement('span');
+                pointsEl.className = 'match-team-points';
+                pointsEl.textContent = this.points.toLocaleString();
+
+                const unitEl = document.createElement('span');
+                unitEl.className = 'match-team-unit';
+                unitEl.textContent = 'points';
+                pointsEl.appendChild(unitEl);
 
                 this.element.appendChild(nameEl);
                 this.element.appendChild(pointsEl);
+
+                this.element.addEventListener('click', async (event) => {
+                    if (event.target.closest('a')) return;
+                    await this.onClick();
+                });
 
                 return this.element;
             }
@@ -808,8 +1215,17 @@
         const teamsDiv = document.getElementById('teams');
         const scoresDiv = document.getElementById('scores');
         const youCardElement = document.getElementById('your-card');
+        const chart = document.getElementById('chart');
         const youCard = new PlayerCard(ID);
         youCard.allowDetails = false;
+
+        let metricsChart = null;
+        let chartView = 'placement';
+        let chartMode = 'cumulative';
+        let chartRequest = 0;
+
+        const scoreLimit = 6;
+
 
         function youInTheMatch() {
             return players.has(youCard.id);
@@ -920,7 +1336,11 @@
             const sortedPlayers = Array.from(players.values()).sort((a, b) => {
                 if (a === selectedPlayer) return -1;
                 if (b === selectedPlayer) return 1;
-                return ((a.placement - b.placement))
+
+                const placementDiff = a.placement - b.placement;
+                if (placementDiff !== 0) return placementDiff;
+
+                return b[matchObjective] - a[matchObjective];
             });
 
             const oldPositions = new Map();
@@ -931,20 +1351,8 @@
                 }
             });
 
-            sortedPlayers.forEach((player, index) => {
-                const oldPlacement = player.placement;
-                if (oldPlacement > 0 && oldPlacement !== player.placement) {
-                    player.ladderMovement = {
-                        direction: player.placement < oldPlacement ? 'up' : 'down',
-                        distance: Math.abs(oldPlacement - player.placement)
-                    };
-                    player.element.classList.remove('ladder-up', 'ladder-down');
-                    void player.element.offsetWidth;
-                    player.element.classList.add(`ladder-${player.ladderMovement.direction}`);
-                } else {
-                    player.ladderMovement = null;
-                    player.element.classList.remove('ladder-up', 'ladder-down');
-                }
+            sortedPlayers.forEach(player => {
+                player.moveAnimation?.cancel();
                 player.renderPlacement();
             });
 
@@ -966,25 +1374,136 @@
             });
             playersList.appendChild(fragment);
 
-            requestAnimationFrame(() => {
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 sortedPlayers.forEach(player => {
                     const oldTop = oldPositions.get(player.id);
                     if (oldTop !== undefined) {
-                            const newRect = player.container.getBoundingClientRect();
+                        const newRect = player.container.getBoundingClientRect();
                         const deltaY = oldTop - newRect.top;
 
                         if (deltaY !== 0) {
-                            player.container.style.transform = `translateY(${deltaY}px)`;
-                            player.container.style.transition = 'none';
-
-                            requestAnimationFrame(() => {
-                                player.container.style.transition = 'transform 0.3s ease-out';
-                                player.container.style.transform = 'translateY(0)';
-                            });
+                            player.moveAnimation = player.container.animate([
+                                {transform: `translateY(${deltaY}px)`},
+                                {transform: 'translateY(0)'}
+                            ], {duration: 450, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'});
                         }
                     }
                 });
+            }
+        }
+
+        function chartMetricValues(labels, values, view, mode) {
+            return labels.map(date => {
+                const current = values.get(date);
+                if (current === undefined) return null;
+                if (mode === 'cumulative') return current;
+                const previousDate = new Date(Date.parse(date) - 86400000).toISOString().slice(0, 10);
+                const previous = values.get(previousDate);
+                if (previous === undefined) return null;
+                return view === 'placement' ? previous - current : current - previous;
             });
+        }
+
+        async function updateChart(view = chartView, mode = chartMode) {
+            if (!chart || !['placement', 'objective', 'plays'].includes(view) ||
+                !['cumulative', 'daily'].includes(mode)) return;
+            chartView = view;
+            chartMode = mode;
+            const daily = mode === 'daily';
+            const placementTotals = view === 'placement' && !daily;
+            document.getElementById('chart-mode').value = mode;
+            document.getElementById('chart-mode-help').textContent = daily
+                ? 'Change since the previous calendar day. Gaps mean a daily snapshot is missing.' +
+                    (view === 'placement' ? ' Positive values mean places gained.' : '')
+                : 'Cumulative shows the recorded totals, or placement, for each day.';
+            const request = ++chartRequest;
+            const status = document.getElementById('chart-status');
+            const metricTitle = view === 'objective' ? matchObjective.replaceAll('_', ' ') : view;
+            const title = daily ? `${metricTitle} — daily gain` : metricTitle;
+            status.textContent = 'Loading metrics…';
+            document.querySelectorAll('[data-chart-view]').forEach(button => {
+                const active = button.dataset.chartView === view;
+                button.setAttribute('aria-pressed', String(active));
+            });
+            try {
+                const response = await fetch(buildApiUrl(`/api/osu/get-metrics/${matchId}`));
+                if (!response.ok) throw new Error('Could not load metrics. Use Refresh to try again.');
+                const rows = await response.json();
+                if (!Array.isArray(rows)) throw new Error('Unexpected metrics response.');
+                if (request !== chartRequest) return;
+                const byPlayer = new Map();
+                const dates = new Set();
+                for (const row of rows) {
+                    if (row.date == null || row[view] == null || row.user_id == null) continue;
+                    const timestamp = Date.parse(row.date);
+                    const value = Number(row[view]);
+                    if (!Number.isFinite(timestamp) || !Number.isFinite(value)) continue;
+                    const date = new Date(timestamp).toISOString().slice(0, 10);
+                    const id = Number(row.user_id);
+                    if (!byPlayer.has(id)) byPlayer.set(id, new Map());
+                    byPlayer.get(id).set(date, value);
+                    dates.add(date);
+                }
+                const labels = Array.from(dates).sort();
+                const datasets = Array.from(byPlayer).sort(([a], [b]) => a - b).map(([id, values]) => {
+                    const player = players.get(id);
+                    const color = `hsl(${(id * 137.508) % 360}, 75%, 65%)`;
+                    return {
+                        label: player?.nickname || player?.username,
+                        data: chartMetricValues(labels, values, view, mode),
+                        borderColor: color,
+                        backgroundColor: color,
+                        borderWidth: 2,
+                        pointRadius: labels.length > 60 ? 1 : 3,
+                        spanGaps: false,
+                        tension: 0
+                    };
+                });
+                const options = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    {#interaction: {mode: 'index', intersect: false},#}
+                    plugins: {
+                        legend: {labels: {color: '#eee'}},
+                        tooltip: {callbacks: {label: context => {
+                            const value = context.parsed.y;
+                            if (value == null) return '';
+                            const formatted = placementTotals ? `#${value}` :
+                                (daily && value > 0 ? '+' : '') +
+                                value.toLocaleString(undefined, {maximumFractionDigits: 2}) +
+                                (view === 'placement' ? ' places' :
+                                    view === 'objective' ? (daily && matchObjective === 'accuracy'
+                                        ? ' percentage points' : getStringEnding(matchObjective)) : '');
+                            return `${context.dataset.label}: ${formatted}`;
+                        }}}
+                    },
+                    scales: {
+                        x: {title: {display: true, text: 'Date', color: '#eee'},
+                            ticks: {color: '#ccc', maxTicksLimit: 10}, grid: {color: '#ffffff15'}},
+                        y: {reverse: placementTotals, min: placementTotals ? 1 : undefined,
+                            beginAtZero: daily,
+                            title: {display: true, text: title, color: '#eee'},
+                            ticks: {color: '#ccc', precision: view === 'objective' ? 2 : 0},
+                            grid: {color: '#ffffff15'}}
+                    }
+                };
+                if (metricsChart) {
+                    metricsChart.data = {labels, datasets};
+                    metricsChart.options = options;
+                    metricsChart.update();
+                } else {
+                    metricsChart = new Chart(chart, {type: 'line', data: {labels, datasets}, options});
+                }
+                chart.setAttribute('aria-label', `Player ${title} over time`);
+                const hasValues = datasets.some(dataset => dataset.data.some(value => value !== null));
+                status.textContent = hasValues ? '' : daily && labels.length
+                    ? 'Daily gains need snapshots on two consecutive days.'
+                    : 'No metrics recorded for this match yet.';
+            } catch (error) {
+                if (request !== chartRequest) return;
+                status.textContent = error.message || 'Could not load metrics. Use Refresh to try again.';
+            }
         }
 
         // api
@@ -1054,6 +1573,7 @@
         }
 
         async function addTeam(id){
+            console.log(`adding team ${id}`);
             const teamCard = new TeamCard(id);
             await teamCard.refresh()
             teams.set(id, teamCard);
@@ -1087,7 +1607,7 @@
             const scoreCardEl = await scoreCard.render();
 
             const existingScores = Array.from(scoresEl.querySelectorAll('.score-card'));
-            const newScoreValue = getScoreObjectiveValue(scoreCard, showingBestScores ? matchPrimary : "submitted_at");
+            const newScoreValue = getScoreObjectiveValue(scoreCard, showingBestScores ? matchObjective : "submitted_at");
 
             let insertPosition = null;
             for (let i = 0; i < existingScores.length; i++) {
@@ -1096,7 +1616,7 @@
 
                 if (existingScoreId) {
                     const existingCard = scores.get(existingScoreId);
-                    const existingValue = getScoreObjectiveValue(existingCard, showingBestScores ? matchPrimary : "submitted_at");
+                    const existingValue = getScoreObjectiveValue(existingCard, showingBestScores ? matchObjective : "submitted_at");
 
                     if (newScoreValue > existingValue) {
                         insertPosition = existingScores[i];
@@ -1116,7 +1636,7 @@
             scoreCardEl.style.animation = 'slideIn 0.45s ease-out both';
 
             const allScores = scoresEl.querySelectorAll('.score-card');
-            if (allScores.length > 5) {
+            if (allScores.length > scoreLimit) {
                 const oldestScore = allScores[allScores.length - 1];
                 oldestScore.style.animation = 'fadeOut 0.45s ease-out forwards';
                 oldestScore.addEventListener('animationend', () => {
@@ -1169,12 +1689,22 @@
                             return;
                         }
 
+                        console.log(data.user.placement_map)
+
+                        for (const [id, placement] of data.user.placement_map) {
+                            const player = players.get(id);
+                            if (player) {
+                                player.refresh(false, true);
+                            }
+                        }
+
                         player.updateData(data.user);
                         player.render();
                         if (player.id === ID) {
                             youCard.updateData(data.user);
                             youCard.render();
                         }
+
                         sort();
                     }
 
@@ -1230,10 +1760,11 @@
         connectWebSocket();
 
         // loading
-        window.addEventListener('load', function () {
-            for (const player_id of {{ player_ids | tojson}}) addPlayer(player_id);
+        window.addEventListener('load', async function () {
+            await Promise.all({{ team_ids | tojson }}.map(teamId => addTeam(teamId)));
+            await Promise.all({{ player_ids | tojson }}.map(playerId => addPlayer(playerId)));
+            await updateChart();
             for (const scoreId of {{ recent_scores | tojson }}) addScore(scoreId);
-            for (const teamId of {{ team_ids | tojson }}) addTeam(teamId);
         });
 
         window.addEventListener('beforeunload', function() {
@@ -1263,6 +1794,12 @@
         async function refreshButton() {
             const player = await players.get(youCard.id);
             await player.refresh(true, true);
+        }
+
+        async function refreshAllButton() {
+            for (const player of players.values()) {
+                await player.refresh(true, true);
+            }
         }
 
         function linkButton() {
@@ -1327,7 +1864,8 @@
             selectedPlayer = null;
             players.clear();
             playersList.replaceChildren();
-            for (const player_id of {{ player_ids | tojson}}) addPlayer(player_id);
+            await Promise.all({{ player_ids | tojson }}.map(playerId => addPlayer(playerId)));
+            await updateChart();
         }
 
         async function addUserButton() {
@@ -1376,7 +1914,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    match_id: matchId,
+                    match: matchId,
                     user: userId
                 })
             });
@@ -1393,10 +1931,49 @@
                     }
                     sort();
                 }
-                alert("User removed successfully");
             } else {
                 alert("Failed to remove user",);
             }
+        }
+
+        async function changeNickname(userId, nickname) {
+            try {
+                const response = await fetch(buildApiUrl('/api/osu/change-nickname'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user: userId,
+                        match: matchId,
+                        nickname: nickname,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    alert(errorData?.message || "Failed to change nickname");
+                    return false;
+                }
+
+                return await response.json();
+            } catch (err) {
+                console.error("Network error changing nickname:", err);
+                alert("A network error occurred. Please try again.");
+                return false;
+            }
+        }
+
+        async function freezeUserButton(userId) {
+            const response = await fetch(`${buildApiUrl('/api/osu/freeze')}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    userId: userId,
+                    match: matchId,
+                }),
+            })
+
         }
 
         async function showRecentPlays() {
@@ -1406,7 +1983,7 @@
             scoresDiv.replaceChildren();
             scores.clear();
 
-            const response = await fetch (`${buildApiUrl('/api/osu/scores/' + matchId + '/recent')}`, {
+            const response = await fetch (`${buildApiUrl('/api/osu/scores/' + matchId + '/recent')}` + `?limit=${scoreLimit}`, {
                 method: 'GET',
                 headers: {'Content-Type': 'application/json'}
             });
@@ -1426,7 +2003,7 @@
             scoresDiv.replaceChildren();
             scores.clear();
 
-            const response = await fetch(`${buildApiUrl('/api/osu/scores/' + matchId + '/best')}`, {
+            const response = await fetch(`${buildApiUrl('/api/osu/scores/' + matchId + '/best')}` + `?limit=${scoreLimit}`, {
                 method: 'GET',
                 headers: {'Content-Type': 'application/json'}
             });
@@ -1434,6 +2011,25 @@
             if (response.ok) {
                 const data = await response.json();
                 for (const score of data) await addScore(score);
+            }
+        }
+
+        async function showTeamPlayers(teamID){
+            for (const team of teams){
+                team.viewingPlayers = team.id === teamID;
+            }
+
+            players.clear();
+            playersList.replaceChildren();
+
+            const response = await fetch(`${buildApiUrl('/api/osu/team-users/' + teamID)}`, {
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'}
+            })
+
+            if (response.ok){
+                const data = await response.json();
+                for (const player of data) await addPlayer(player);
             }
         }
 
