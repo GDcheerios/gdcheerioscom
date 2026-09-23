@@ -149,8 +149,6 @@ def compare_to_match(user, match_id: int) -> dict:
             params=(match_id, min(placement), max(placement))
         )
 
-    print(stats)
-
     user = {
         "id": user["id"],
         "username": user["username"],
