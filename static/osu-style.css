@@ -26,6 +26,10 @@
     flex: 2;
 }
 
+.team-creator {
+    flex: 1;
+}
+
 .teams-overview {
     flex: 1;
     color: #ffffff;
@@ -337,4 +341,190 @@ a.match-link:hover {
     border-color: #ffffff66;
     background: rgba(0, 0, 0, 0.7);
     text-decoration: none;
+}
+/* Index and shared team creator use the match dashboard palette. */
+.osu-index {
+    background: #0a0a1a;
+    color: #e1e6ef;
+}
+
+.osu-index-layout {
+    width: min(1200px, calc(100% - 32px));
+    margin: 0 auto 32px;
+    gap: 24px;
+}
+
+.osu-index-heading {
+    padding: 28px 16px 24px;
+    text-align: center;
+}
+.osu-index-heading h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); }
+.osu-index-heading h2 { color: #9ba9bf; font-size: 1rem; font-weight: 400; line-height: 1.5; }
+.osu-index-layout *, .team-creator, .team-creator * { box-sizing: border-box; }
+.osu-index-layout .osu-box { padding: 24px; }
+.match-create-panel > h1 { margin: 0 0 20px; font-size: 1.5rem; }
+.match-name-field { margin-bottom: 20px; }
+.match-name-field > label, .match-create-section > label:not(.match-open-option) {
+    display: block;
+    margin-bottom: 8px;
+    color: #b5c5de;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.match-create-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+.match-create-section {
+    min-width: 0;
+    padding: 18px;
+    border: 2px solid rgba(100, 150, 220, 0.35);
+    border-radius: 12px;
+    background: rgba(10, 10, 26, 0.45);
+}
+.match-create-section h2 { margin: 0 0 14px; font-size: 1.1rem; }
+.match-create-section #players:not(:empty) { margin-top: 14px; }
+.match-create-section #players + h2 { margin-top: 24px; }
+.player-add-controls { display: flex; gap: 10px; }
+.player-add-controls input { flex: 1; min-width: 0; }
+.player-add-controls button { flex-shrink: 0; }
+
+.osu-index-layout input:not([type="checkbox"]),
+.osu-index-layout select,
+.team-creator input {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: #e1e6ef;
+    background: rgba(10, 10, 26, 0.8);
+    border: 2px solid rgba(100, 150, 220, 0.55);
+    border-radius: 12px;
+    font: inherit;
+    font-size: 0.95rem;
+    color-scheme: dark;
+}
+.osu-index-layout input::placeholder, .team-creator input::placeholder { color: #9ba9bf; }
+.osu-index-layout select option { background: #0a0a1a; color: #e1e6ef; }
+.osu-index-layout button, .team-creator button {
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 2px solid rgba(100, 150, 220, 0.8);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65));
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.osu-index-layout button:hover, .team-creator button:hover {
+    border-color: #a0c4ff;
+    background: rgba(45, 75, 125, 0.75);
+}
+.osu-index-layout :is(input, select, button, a):focus-visible,
+.team-creator :is(input, button):focus-visible {
+    outline: 2px solid #a0c4ff;
+    outline-offset: 3px;
+    box-shadow: 0 0 12px rgba(100, 150, 220, 0.25);
+}
+.osu-index-layout button:disabled, .team-creator button:disabled { opacity: 0.55; cursor: wait; }
+.match-open-option { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+.match-open-option input { width: 18px; height: 18px; accent-color: #6496dc; }
+.osu-index-layout .create-match-submit { margin-top: 20px; padding-inline: 28px; }
+#create-error { color: #ff8f9e; }
+#create-error:empty { display: none; }
+
+.team-creator {
+    min-width: 0;
+    margin: 16px 0;
+    padding: 16px;
+    border: 2px solid rgba(100, 150, 220, 0.35);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(10, 20, 45, 0.8));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+.team-creator legend { padding: 0 8px; color: #e1e6ef; font-size: 0.95rem; font-weight: 600; }
+.team-creator-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 90px 64px;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.team-creator-fields label { min-width: 0; color: #b5c5de; font-size: 0.8rem; font-weight: 600; }
+.team-creator-fields input { display: block; height: 44px; margin-top: 8px; }
+.team-creator-fields input[data-team-field="acronym"] { text-transform: uppercase; }
+.team-creator-fields input[type="color"] { padding: 5px; cursor: pointer; }
+.team-creator [data-team-message] { margin: 12px 0 0; color: #b5c5de; font-size: 0.875rem; overflow-wrap: anywhere; }
+.team-creator [data-team-message]:empty { display: none; }
+.team-draft {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    border: 2px solid rgba(100, 150, 220, 0.35);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(10, 20, 45, 0.8));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+.team-draft-swatch { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+.team-draft > span:nth-child(2) { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.95rem; }
+.osu-index-layout .team-draft button, .osu-index-layout .remove-player { border-color: rgba(220, 100, 100, 0.65); }
+
+.osu-index #players .player {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    min-height: 56px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid rgba(100, 150, 220, 0.35);
+    border-radius: 12px;
+}
+.osu-index #players .avatar { width: 32px; height: 32px; margin: 0; }
+.osu-index #players .username { color: white; margin: 0; min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 0.95rem; }
+.osu-index #players .player select { width: auto; max-width: 150px; margin-left: auto; }
+.osu-index #players .remove-player { margin: 0; }
+.osu-index .matches-panel { width: 100%; margin: 0; }
+.osu-index .matches-toolbar { margin: 0 0 24px; flex-wrap: wrap; gap: 12px; }
+.osu-index .matches-toolbar #matchSearch { flex: 1 1 240px; width: auto; }
+.osu-index .match-filter { flex-wrap: wrap; gap: 8px; }
+.osu-index .filter-btn.is-active { background: rgba(100, 150, 220, 0.25); border-color: #a0c4ff; }
+.osu-index .matches-panel h1 { font-size: 1.25rem; margin: 24px 0 14px; }
+.osu-index a.match-link {
+    margin-bottom: 10px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(10, 20, 45, 0.8));
+    border: 2px solid rgba(100, 150, 220, 0.35);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+.osu-index a.match-link:hover { border-color: rgba(100, 150, 220, 0.8); background: rgba(25, 45, 90, 0.8); }
+.match-link-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.match-link-name { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.match-link-heading > span:last-child { color: #b5c5de; font-size: 0.8rem; flex-shrink: 0; }
+.match-link-details { margin-top: 8px; color: #9ba9bf; font-size: 0.8rem; }
+.osu-index-notice { text-align: center; font-size: 1.25rem; }
+
+@media (max-width: 900px) {
+    .osu-index-layout { gap: 16px; }
+    .match-create-columns { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+@media (max-width: 480px) {
+    .osu-index-layout .osu-box, .match-create-section { padding: 12px; }
+    .player-add-controls { flex-direction: column; }
+    .team-creator { padding: 12px; }
+    .team-creator-fields { grid-template-columns: minmax(0, 1fr) 64px; }
+    .team-creator-fields label:first-child { grid-column: 1 / -1; }
+    .osu-index-layout .create-match-submit, .team-create-button { width: 100%; }
+    .osu-index #players .player select { flex: 1 1 100%; max-width: 100%; }
+    .osu-index .match-filter { width: 100%; }
+    .osu-index .filter-btn { flex: 1; padding-inline: 8px; }
 }

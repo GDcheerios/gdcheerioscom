@@ -5,65 +5,48 @@
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="/static/osu-style.css">
-    <style>
-        @media (max-width: 700px) {
-            #create-match-form > div:nth-of-type(2) {
-                grid-template-columns: 1fr !important;
-            }
-        }
-        #players .player { width: 100%; min-height: 56px; height: auto; align-items: center; padding: 8px; box-sizing: border-box; margin-bottom: 8px; background-size: cover; background-position: center; border-radius: 12px; }
-        #players .player > * { position: relative; z-index: 1; }
-        #players .avatar { width: 40px; height: 40px; }
-        #players .username { color: white; }
-        #players .player select { margin-left: auto; max-width: 130px; }
-        #players .remove-player { margin-left: 8px; }
-    </style>
+    <script src="/static/osu-team-creator.js"></script>
 </head>
-<body>
+<body class="osu-index">
 {% include 'navbar.html' %}
-<div style="text-align: center"><h1>Welcome to osu!score farm</h1>
+<div class="osu-index-heading"><h1>Welcome to osu!score farm</h1>
     <h2>Set big scores to become the highest in the lobby!</h2></div>
-<div class="matches">
+<div class="matches osu-index-layout">
     {% set match_limit = 5 if account.supporter else 1 %}
     {% if account.osu_data %}
         {% set current_matches = account.osu_matches | rejectattr('ended') | list | length %}
-        {% if current_matches < match_limit %}
-            <section class="block" style="max-width: 900px; margin: 30px auto; padding: 24px;">
+        {% if current_matches < match_limit or account.is_admin %}
+            <section class="osu-box match-create-panel">
                 <h1>Create a match</h1>
                 <form id="create-match-form">
-                    <div style="margin-bottom: 24px;">
-                        <label for="match-name"></label>
+                    <div class="match-name-field">
+                        <label for="match-name">Match name</label>
                         <input id="match-name" name="matchName" type="text"
                                maxlength="120" required
                                placeholder="Match Name">
                     </div>
 
-                    <div style="display: flex;">
-                        <div class="block" style="padding: 18px;">
+                    <div class="match-create-columns">
+                        <div class="match-create-section">
                             <h2>Players</h2>
-                            <div style="display: flex;">
-                                <input type="text" id="player-name" placeholder="Player Name or ID">
+                            <div class="player-add-controls">
+                                <input type="text" id="player-name" aria-label="Player name or ID" placeholder="Player Name or ID">
                                 <button type="button" id="add-player">Add player</button>
                             </div>
                             <div id="players"></div>
                             <h2>Teams</h2>
-                            <div style="display: flex;">
-                                <input type="text" id="team-name" placeholder="Team name">
-                                <button type="button" id="add-team">Add team</button>
-                            </div>
+                            {% include 'osu/team_creator.html' %}
                             <div id="teams"></div>
                         </div>
 
-                        <div class="block" style="padding: 18px;">
+                        <div class="match-create-section">
                             <h2>Match options</h2>
                             <label for="primary-condition">Primary match condition</label>
-                            <select id="primary-condition" name="primaryObjective" required>
+                            <select id="primary-condition" name="objective" required>
                                 <option value="total_score">Total score</option>
                                 <option value="ranked_score">Ranked score</option>
                                 <option value="pp">Performance points</option>
                                 <option value="reconstructed_pp">Reconstructed PP</option>
-{#                                <option value="accuracy">Accuracy</option>#}
-{#                                <option value="playcount">Play count</option>#}
                                 <option value="global_rank">Global rank</option>
                                 <option value="country_rank">Country rank</option>
                                 <option value="grade_a">A Ranks</option>
@@ -72,61 +55,56 @@
                                 <option value="grade_x">SS Ranks</option>
                                 <option value="grade_xh">SS+ Ranks</option>
                             </select>
-                            <label for="secondary-condition">Secondary match condition</label>
-                            <p></p>
-                            <select id="secondary-condition" name="secondaryObjective" required>
-                                <option value="playcount">Play count</option>
-                                <option value="total_score">Total score</option>
-                                <option value="ranked_score">Ranked score</option>
-                                <option value="pp">Performance points</option>
-                                <option value="reconstructed_pp">Reconstructed PP</option>
-                                <option value="accuracy">Accuracy</option>
-                                <option value="global_rank">Global rank</option>
-                                <option value="country_rank">Country rank</option>
-                                <option value="grade_a">A Ranks</option>
-                                <option value="grade_s">S Ranks</option>
-                                <option value="grade_sh">S+ Ranks</option>
-                                <option value="grade_x">SS Ranks</option>
-                                <option value="grade_xh">SS+ Ranks</option>
-                            </select>
-                            <label style="display: flex; align-items: center; gap: 8px; margin: 18px 0 0;"><input
-                                    id="match-open" name="open" type="checkbox" style="width: auto;"> Open match</label>
+                            <label class="match-open-option"><input
+                                    id="match-open" name="open" type="checkbox"> Open match</label>
                         </div>
                     </div>
 
-                    <p id="create-error" role="alert" style="color: #ff8a8a;"></p>
-                    <button type="submit" style="margin-top: 20px;">Create match</button>
+                    <p id="create-error" role="alert"></p>
+                    <button type="submit" class="create-match-submit">Create match</button>
                 </form>
             </section>
             <script>
                 const teams = document.getElementById('teams'), error = document.getElementById('create-error');
                 const players = document.getElementById('players');
 
-                function addTeam(name) {
-                    name = name.trim();
-                    if (!name) {
-                        error.textContent = 'Enter a team name first.';
-                        return;
-                    }
+                const selectedPlayers = new Map();
+                const selectedTeams = new Map();
+                let nextTeamKey = 0;
+
+                new OsuTeamCreator(document.getElementById('team-creator'), team => {
+                    const key = String(nextTeamKey++);
+                    selectedTeams.set(key, team);
                     const row = document.createElement('div');
-                    row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
-                    row.innerHTML = `<input name="teamName" type="text" maxlength="80" required value="${name}"><button type="button" class="remove-team">Remove</button>`;
-                    row.querySelector('.remove-team').onclick = () => { row.remove(); refreshTeamSelectors(); };
-                    row.querySelector('input').oninput = refreshTeamSelectors;
+                    row.className = 'team-draft';
+                    const swatch = document.createElement('span');
+                    swatch.className = 'team-draft-swatch';
+                    swatch.style.backgroundColor = team.color;
+                    const label = document.createElement('span');
+                    label.textContent = `${team.name} [${team.acronym}]`;
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.textContent = 'Remove';
+                    remove.onclick = () => {
+                        selectedTeams.delete(key);
+                        row.remove();
+                        refreshTeamSelectors();
+                    };
+                    row.append(swatch, label, remove);
                     teams.appendChild(row);
                     refreshTeamSelectors();
-                }
-
-                const selectedPlayers = new Map();
+                });
 
                 function refreshTeamSelectors() {
                     document.querySelectorAll('.player-team').forEach(select => {
                         const current = select.value;
                         select.replaceChildren(new Option('No team', ''));
-                        document.querySelectorAll('input[name="teamName"]').forEach((input, index) => {
-                            select.add(new Option(input.value.trim() || `Team ${index + 1}`, String(index)));
+                        selectedTeams.forEach((team, key) => {
+                            select.add(new Option(`${team.name} [${team.acronym}]`, key));
                         });
-                        select.value = current;
+                        select.value = selectedTeams.has(current) ? current : '';
+                        const player = selectedPlayers.get(Number(select.closest('.player').dataset.playerId));
+                        if (player) player.team = select.value || null;
                     });
                 }
 
@@ -147,8 +125,7 @@
                         row.remove();
                     };
                     row.querySelector('.player-team').onchange = (e) => {
-                        const selectedIndex = e.target.selectedIndex;
-                        data.team = selectedIndex > 0 ? e.target.options[selectedIndex].text : null;
+                        data.team = e.target.value || null;
                     };
                     selectedPlayers.set(id, data);
                     players.appendChild(row);
@@ -168,11 +145,6 @@
                     } catch (requestError) { error.textContent = requestError.message; }
                 }
 
-                document.getElementById('add-team').onclick = () => {
-                    const input = document.getElementById('team-name');
-                    addTeam(input.value);
-                    input.value = '';
-                };
                 document.getElementById('add-player').onclick = () => addPlayer();
                 document.getElementById('create-match-form').onsubmit = async event => {
                     event.preventDefault();
@@ -180,9 +152,9 @@
                     const form = new FormData(event.currentTarget);
                     const payload = {
                         matchName: form.get('matchName').trim(),
-                        primaryObjective: form.get('primaryObjective'),
-                        secondaryObjective: form.get('secondaryObjective'),
+                        objective: form.get('objective'),
                         open: form.get('open') === 'on',
+                        teams: Object.fromEntries(selectedTeams),
                         players: Object.fromEntries(
                             Array.from(selectedPlayers.entries()).map(([id, data]) => [
                                 id,
@@ -196,8 +168,8 @@
                             ])
                         )
                     };
-                    console.log(payload);
-                    console.log(JSON.stringify(payload));
+                    const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
                     try {
                         const response = await fetch('/api/osu/create-match', {
                             method: 'POST',
@@ -209,6 +181,8 @@
                         window.location.href = '/osu/match/' + data.id;
                     } catch (requestError) {
                         error.textContent = requestError.message;
+                    } finally {
+                        submitButton.disabled = false;
                     }
                 };
 
@@ -228,31 +202,31 @@
                     return `${baseUrl}${normalizedPath}`;
                 }
             </script>
-        {% else %}<h1 style="text-align: center">You're at your match limit</h1>{% endif %}
-    {% else %}<h1 style="text-align: center">Please link your osu! account to start creating matches!</h1>{% endif %}
-    <div id="matches" class="matches-panel">
-        <div class="matches-toolbar"><input id="matchSearch" type="text" placeholder="Search matches by name...">
+        {% else %}<h1 class="osu-index-notice">You're at your match limit</h1>{% endif %}
+    {% else %}<h1 class="osu-index-notice">Please link your osu! account to start creating matches!</h1>{% endif %}
+    <div id="matches" class="matches-panel osu-box">
+        <div class="matches-toolbar"><input id="matchSearch" type="text" aria-label="Search matches" placeholder="Search matches by name...">
             <div class="match-filter">
                 <button type="button" class="filter-btn is-active" data-filter="all">All</button>
                 <button type="button" class="filter-btn" data-filter="ongoing">Ongoing</button>
                 <button type="button" class="filter-btn" data-filter="ended">Ended</button>
             </div>
         </div>
-        <div id="section-ongoing"><h1 style="text-align: center">Current matches</h1>
+        <div id="section-ongoing"><h1 class="osu-index-notice">Current matches</h1>
             {% for match in matches["current"] %}
                 <a class="match-link" data-status="ongoing" data-name="{{ match.name }}"
                    href="/osu/match/{{ match.id }}">
-                    <div style="display:flex;justify-content:space-between"><span
-                            style="font-weight:700">{{ match.name }}</span><span>{{ "Open" if match.open else "Closed" }}</span>
+                    <div class="match-link-heading"><span
+                            class="match-link-name">{{ match.name }}</span><span>{{ "Open" if match.open else "Closed" }}</span>
                     </div>
-                    <div style="font-size:12px;opacity:.85">{{ match.users | default(0) }} users ·
+                    <div class="match-link-details">{{ match.users | default(0) }} users ·
                         ID: {{ match.id }}</div>
                 </a>{% endfor %}</div>
-        <div id="section-ended"><h1 style="text-align: center">Finished matches</h1>{% for match in matches["old"] %}
+        <div id="section-ended"><h1 class="osu-index-notice">Finished matches</h1>{% for match in matches["old"] %}
             <a class="match-link" data-status="ended" data-name="{{ match.name }}" href="/osu/match/{{ match.id }}">
-                <div style="display:flex;justify-content:space-between"><span
-                        style="font-weight:700">{{ match.name }}</span><span>Ended</span></div>
-                <div style="font-size:12px;opacity:.85">{{ match.users | default(0) }} users · ID: {{ match.id }}</div>
+                <div class="match-link-heading"><span
+                        class="match-link-name">{{ match.name }}</span><span>Ended</span></div>
+                <div class="match-link-details">{{ match.users | default(0) }} users · ID: {{ match.id }}</div>
             </a>{% endfor %}</div>
     </div>
 </div>

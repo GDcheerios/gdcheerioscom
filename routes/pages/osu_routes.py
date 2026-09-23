@@ -24,17 +24,16 @@ def osu_match(id):
         params=(id,)
     )
     player_ids = [player_id[0] for player_id in environment.database.fetch_all(
-        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 15 ORDER BY placement LIMIT 15", params=(id,))]
-    recent_scores = get_recent_scores(id)
+        "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 20 ORDER BY placement LIMIT 20", params=(id,))]
+    recent_scores = get_recent_scores(id, limit=6)
     team_ids = [team[0] for team in environment.database.fetch_all(
         """
-        WITH match_users AS (
-            SELECT team_id FROM osu.match_users WHERE match_id = %s
-        )
-        SELECT id FROM osu.teams WHERE id IN (SELECT team_id FROM match_users)
+        SELECT id FROM osu.teams WHERE match_id = %s
         """,
         params=(id,)
     )]
+
+    print(team_ids)
 
     if not match:
         return "Match not found", 404
@@ -43,8 +42,10 @@ def osu_match(id):
     request_id = Account.id_from_session(request.cookies.get("session"))
     is_creator = str(request_id) == str(match["opener_id"])
     is_admin = False
+    is_supporter = False
     if request_id:
         account = Account(request_id)
+        is_supporter = account.supporter
         is_admin = bool(account.is_admin)
         osu_data = account.get_osu_data()
         if osu_data:
@@ -63,6 +64,7 @@ def osu_match(id):
         'osu/match.html',
         match=match,
         match_ended=match["ended"],
+        is_supporter=is_supporter,
         current_osu_id=current_osu_id,
         is_creator=is_creator,
         is_admin=is_admin,
