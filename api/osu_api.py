@@ -590,6 +590,7 @@ def get_best_scores(match_id: int, limit: int = 5):
              match
         WHERE s.submitted_at > match.started_at
           and s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
+          and s.user_id = match.user_id
         ORDER BY (
                      COALESCE(
                              (
