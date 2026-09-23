@@ -582,15 +582,22 @@ def get_recent_scores(match_id: int, limit: int = 5):
 def get_best_scores(match_id: int, limit: int = 5):
     return environment.database.fetch_all(
         """
-        WITH match AS (SELECT *
-                       FROM osu.matches
-                       WHERE id = %s)
+        WITH match AS (
+            SELECT *
+            FROM osu.matches
+            WHERE id = %s
+        )
         SELECT s.id
         FROM osu.scores s,
              match
         WHERE s.submitted_at > match.started_at
-          and s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
-          and s.user_id = match.user_id
+          AND s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
+          AND s.user_id IN (
+            SELECT DISTINCT user_id
+            FROM osu.match_events
+            WHERE match_id = match.id
+              AND user_id IS NOT NULL
+        )
         ORDER BY (
                      COALESCE(
                              (
@@ -607,7 +614,7 @@ def get_best_scores(match_id: int, limit: int = 5):
                      ) DESC
         LIMIT %s
         """,
-        params=(match_id, limit)
+        params=(match_id, limit),
     )
 
 
