@@ -62,7 +62,7 @@ def supporter_claim(id):
     session_id = request.cookies.get("session")
     support_data = database.fetch_to_dict("SELECT * FROM account.supports WHERE id = %s", (id,))
     if not support_data: return "Invalid supporter ID"
-    if support_data["user"] is not None: return "Supporter has already been claimed"
+    if support_data["user_id"] is not None: return "Supporter has already been claimed"
 
     if not session_id:
         return redirect(f"/account/login?supporter_id={id}")
