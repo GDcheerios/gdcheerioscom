@@ -593,10 +593,9 @@ def get_best_scores(match_id: int, limit: int = 5):
         WHERE s.submitted_at > match.started_at
           AND s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
           AND s.user_id IN (
-            SELECT DISTINCT user_id
-            FROM osu.match_events
-            WHERE match_id = match.id
-              AND user_id IS NOT NULL
+            SELECT mu.user_id
+            FROM osu.match_users mu
+            WHERE mu.match_id = match.id
         )
         ORDER BY (
                      COALESCE(
