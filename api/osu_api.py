@@ -9,20 +9,28 @@ from utils.logger import setup_logger
 logger = setup_logger("api.osu")
 
 expiration = 0
-token = 0
+token = None
 
 
 def client_grant():
     global expiration
     global token
     logger.info("granting client token")
-    response = requests.post(f"https://osu.ppy.sh/oauth/token",
-                             headers={"Accept": "application/json", "Content-Type": "application/json"},
-                             json={"client_id": environment.osu_client_id, "client_secret": f"{environment.osu_secret}",
-                                   "grant_type": "client_credentials", "scope": "public"}).json()
-    dt_obj = dt.datetime.now()
-    expiration = round(dt_obj.microsecond / 1000) + response["expires_in"]
+
+    response = requests.post(
+        "https://osu.ppy.sh/oauth/token",
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        json={
+            "client_id": environment.osu_client_id,
+            "client_secret": environment.osu_secret,
+            "grant_type": "client_credentials",
+            "scope": "public"
+        }
+    ).json()
+
+    expiration = dt.datetime.now().timestamp() + response["expires_in"] - 60
     token = response["access_token"]
+
     return token
 
 
@@ -30,10 +38,9 @@ def check_access():
     global expiration
     global token
     logger.info("checking access")
-    dt_obj = dt.datetime.now()
 
     try:
-        if round(dt_obj.microsecond / 1000) > expiration:
+        if dt.datetime.now().timestamp() > expiration:
             logger.info("renewing token")
             token = client_grant()
 
