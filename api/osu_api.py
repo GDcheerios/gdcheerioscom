@@ -181,24 +181,25 @@ def compare_to_match(user, match_id: int) -> dict:
         "background": user["background"]
     }
 
-    environment.database.execute(
-        """
-        INSERT INTO osu.match_metrics (match_id, user_id, placement, objective, plays, date)
-        VALUES (%s, %s, %s, %s, %s, CURRENT_DATE)
-        ON CONFLICT (match_id, user_id, date)
-            DO UPDATE SET
-                placement = EXCLUDED.placement,
-                objective = EXCLUDED.objective,
-                plays = EXCLUDED.plays;
-        """,
-        params=(
-            match_id,
-            user["id"],
-            placement[0],
-            user[match["objective"]],
-            user["playcount"]
+    if not match["ended"]:
+        environment.database.execute(
+            """
+            INSERT INTO osu.match_metrics (match_id, user_id, placement, objective, plays, date)
+            VALUES (%s, %s, %s, %s, %s, CURRENT_DATE)
+            ON CONFLICT (match_id, user_id, date)
+                DO UPDATE SET
+                    placement = EXCLUDED.placement,
+                    objective = EXCLUDED.objective,
+                    plays = EXCLUDED.plays;
+            """,
+            params=(
+                match_id,
+                user["id"],
+                placement[0],
+                user[match["objective"]],
+                user["playcount"]
+            )
         )
-    )
 
     return user
 
