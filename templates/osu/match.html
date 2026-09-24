@@ -598,11 +598,12 @@
                     </div>
                 </div>
                 <div class="match-side-panel">
-                    <div id="teams" class="osu-box">
+                    <div class="osu-box">
                         <h1 style="text-align: center; margin: 0">Teams</h1>
                         {% if is_creator and not match['ended'] %}
                             {% include 'osu/team_creator.html' %}
                         {% endif %}
+                        <div id="teams"></div>
                     </div>
                     <div class="osu-box match-scores-panel">
                         <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px;">
@@ -1185,11 +1186,13 @@
             }
 
             async refresh() {
+                console.log(`refreshing team card ${this.id}`);
                 const team = await getTeam(this.id);
                 this.name = team.name;
                 this.acronym = team.acronym;
                 this.color = team.color;
                 this.points = team.points;
+                sort();
             }
 
             async onClick() {
@@ -1359,6 +1362,15 @@
 
                 return b[matchObjective] - a[matchObjective];
             });
+
+            const sortedTeams = Array.from(teams.values()).sort((a, b) => {
+                return b.points - a.points;
+            });
+
+            teamsDiv.replaceChildren();
+            for (const team of sortedTeams) {
+                teamsDiv.appendChild(team.render());
+            }
 
             const oldPositions = new Map();
             sortedPlayers.forEach(player => {
@@ -1595,6 +1607,9 @@
             await teamCard.refresh()
             teams.set(id, teamCard);
             teamsDiv.appendChild(teamCard.render());
+            setInterval(async () => {
+                await teamCard.refresh();
+            }, 60000)
         }
 
         function getScoreObjectiveValue(scoreCard, objective) {
