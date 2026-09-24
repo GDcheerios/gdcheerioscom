@@ -372,7 +372,7 @@ class Account:
     def insert_supporter(id: int, weeks: int = 1):
         database.execute(
             """
-            INSERT INTO account.supports (\"user\", weeks)
+            INSERT INTO account.supports (user_id, weeks)
             VALUES (%s, %s)
             """,
             params=(id, weeks)
