@@ -20,7 +20,7 @@ def osu():
 @osu_blueprint.route("/match/<int:id>")
 def osu_match(id):
     match = environment.database.fetch_to_dict(
-        "SELECT * FROM osu.matches WHERE id = %s",
+        "SELECT *, (SELECT COUNT(*) from osu.match_users WHERE match_id = osu.matches.id) as player_count FROM osu.matches WHERE id = %s",
         params=(id,)
     )
     player_ids = [player_id[0] for player_id in environment.database.fetch_all(

@@ -2,6 +2,8 @@
     <head>
         {% block head %}
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{{ match.name }} Farm</title>
+        <meta name="description" content="farming for {{ match.objective.replace('_', ' ') }} against {{ match.player_count }} players">
         <link rel="stylesheet" href="/static/style.css">
         <link rel="stylesheet" href="/static/osu-style.css">
         <script src="/static/osu-team-creator.js"></script>
@@ -520,7 +522,22 @@
     <body style="background-color: #0a0a1a;">
     {% include 'navbar.html' %}
         {% block body %}
-            <h1 style="text-align: center">{{ match.name }}</h1>
+            <div style="text-align: center; font-family: sans-serif; color: #ffffff;">
+                <h1>{{ match.name }}</h1>
+
+                <div style="font-size: 14px; margin-top: 10px; line-height: 1.5;">
+{#                    <p>#}
+{#                        Started {{ match.started_at.strftime('%B %d, %Y') }}.#}
+{#                        {% if match.ended %}This match ended on {{ match.ended_at.strftime('%B %d, %Y') }}.{% endif %}#}
+{#                    </p>#}
+                    <p style="font-size: 16px; font-weight: bold; margin-top: 15px;">
+                        Objective: {{ match.objective.replace('_', ' ') | upper }}
+                    </p>
+                </div>
+            </div>
+            {% if in_match and current_osu_id and match["open"] %}
+                <h4 style="text-align: center">You have to <a style="color: #00d2ff; cursor: pointer;" onclick="refreshButton()">refresh</a> after every play you want to submit to the farm.</h4>
+            {% endif %}
             <div class="match-dashboard">
                 <div class="osu-box match-player-panel">
                     <div style="display: flex; flex-direction: row; justify-content: start; align-items: start;">
