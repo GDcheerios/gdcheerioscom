@@ -112,16 +112,16 @@ def create_app():
     # set up events
     startup_tracker.start("request_hooks")
 
-
     request_counter = meter.create_counter(
         "gdcheerioscom_req_count",
-        description="Total number of HTTP requests processed"
+        description="Total number of HTTP requests processed",
+        unit="1",
     )
 
-    request_duration_histogram = meter.create_histogram(
-        "gdcheerios_req_duration_seconds",
-        description="Duration of HTTP requests in seconds",
-        unit="s"
+    request_duration = meter.create_histogram(
+        "gdcheerioscom_req_duration_seconds",
+        description="HTTP request duration in seconds",
+        unit="s",
     )
 
     @app.before_request
@@ -154,15 +154,13 @@ def create_app():
             successful=(200 <= response.status_code < 500),
         )
 
-        metric_attributes = {
+        metric_labels = {
             "endpoint": g.req_endpoint,
             "method": request.method,
             "status_code": str(response.status_code),
-            "successful": success
         }
-
-        request_counter.add(1, metric_attributes)
-        request_duration_histogram.record(response.elapsed.total_seconds(), metric_attributes)
+        request_counter.add(1, metric_labels)
+        request_duration.record(g.req_duration, metric_labels)
 
         if not static: log_request(server_logger, request_payload)
 
@@ -172,7 +170,7 @@ def create_app():
 
     # load blueprints
     startup_tracker.start("blueprint_registration")
-    
+
     #   api
     app.register_blueprint(key_blueprint, url_prefix='/auth')
     app.register_blueprint(oauth_api_routes, url_prefix='/oauth')
