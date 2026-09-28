@@ -9,15 +9,17 @@
 </head>
 <body class="osu-index">
 {% include 'navbar.html' %}
-<div class="osu-index-heading"><h1>Welcome to osu!score farm</h1>
-    <h2>Set big scores to become the highest in the lobby!</h2></div>
+<div class="osu-index-heading">
+    <h1>Welcome to osu! farm site</h1>
+    <h2>Set cool scores to become the coolest in the lobby!</h2>
+</div>
 <div class="matches osu-index-layout">
     {% set match_limit = 5 if account.supporter else 1 %}
     {% if account.osu_data %}
         {% set current_matches = account.osu_matches | rejectattr('ended') | list | length %}
         {% if current_matches < match_limit or account.is_admin %}
             <section class="osu-box match-create-panel">
-                <h1>Create a match</h1>
+                <h1>Create a match</h1><h3>{{ current_matches }} open / {{ match_limit }} available</h3>
                 <form id="create-match-form">
                     <div class="match-name-field">
                         <label for="match-name">Match name</label>
