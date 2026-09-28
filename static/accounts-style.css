@@ -118,9 +118,15 @@
 }
 .profile-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 
+.profile-tags > .tag {
+    flex: 0 0 auto;
+}
+
 /* Replace plain tags with card chips, preserving special colors */
 .tag {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
     padding: 4px 8px;
     border-radius: 999px;
     color: white;
@@ -129,6 +135,140 @@
     font-size: 12px;
     border: 1px solid #2b2b2b;
     background: #1a1a1a;
+}
+
+.tag-add {
+    cursor: pointer;
+    font: inherit;
+    border-style: dashed;
+    opacity: 0.8;
+}
+
+.tag-add:hover {
+    opacity: 1;
+    border-color: #777;
+}
+
+#tags > .tag > button.tag-delete-button {
+    all: unset;
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    min-width: 0;
+    margin: 0 0 0 5px;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #fff;
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.65;
+}
+
+#tags > .tag > button.tag-delete-button svg {
+    display: block;
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#tags > .tag > button.tag-delete-button:hover {
+    background: transparent !important;
+    box-shadow: none !important;
+    opacity: 1;
+}
+
+.add-tag-form {
+    width: min(440px, 100%);
+    margin-top: 10px;
+}
+
+.add-tag-form[hidden] {
+    display: none;
+}
+
+.add-tag-container {
+    display: grid;
+    gap: 18px;
+    box-sizing: border-box;
+    padding: 20px;
+    border: 1px solid #353535;
+    border-radius: 22px;
+    background: #222;
+    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.3);
+}
+
+.add-tag-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.add-tag-fields input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    height: 42px;
+    padding: 0 13px;
+    border: 2px solid #777;
+    border-radius: 10px;
+    outline: none;
+    background: transparent;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.add-tag-fields input::placeholder {
+    color: #999;
+}
+
+.add-tag-fields input:focus {
+    border-color: #666;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.add-tag-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.add-tag-actions button {
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 11px;
+    background: #929292;
+    color: #0c0c0c;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.add-tag-actions button:hover {
+    background: #aaa;
+}
+
+@media (max-width: 520px) {
+    .add-tag-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .add-tag-container {
+        padding: 15px;
+    }
 }
 
 /* Leaderboard container */
@@ -489,6 +629,11 @@ img {
     border-color: #FFB6D9;
 }
 
+.tag-osu {
+    background-color: #f562a5;
+    border-color: #ffffff;
+}
+
 /* OSU specific metrics (separate from GQ) */
 .osu-metrics {
     display: grid;
@@ -515,14 +660,12 @@ img {
     font-weight: 800;
 }
 
-/* Responsive */
 @media (max-width: 800px) {
     .osu-metrics {
         grid-template-columns: repeat(2, minmax(0,1fr));
     }
 }
 
-/* OSU section layout (custom, separate from GQ) */
 .osu-section {
     display: grid;
     grid-template-columns: 280px 1fr;

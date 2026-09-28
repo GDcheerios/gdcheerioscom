@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, request
 
 import environment
 from api.gentrys_quest.leaderboard_api import get_top_players, get_leaderboard
-from objects import Account
+from objects.Account import Account
 
 gentrys_quest_blueprint = Blueprint("gentrys_quest_blueprint", __name__)
 
@@ -51,7 +51,7 @@ def gentrys_quest_leaderboard():
         for player in players:
             player["you"] = False
 
-    event_leaderboard = get_leaderboard(5, amount=10, user_id=user_id)
+    event_leaderboard = get_leaderboard(6, amount=10, user_id=user_id)
     if event_leaderboard:
         event_rows = event_leaderboard.get("leaderboard") or []
         found_you = False

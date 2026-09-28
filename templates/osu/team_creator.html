@@ -1,0 +1,16 @@
+<fieldset class="team-creator" id="team-creator">
+    <legend>Create a team</legend>
+    <div class="team-creator-fields">
+        <label>Name
+            <input data-team-field="name" type="text" placeholder="Team name">
+        </label>
+        <label>Acronym
+            <input data-team-field="acronym" type="text" maxlength="4" placeholder="TEAM">
+        </label>
+        <label>Color
+            <input data-team-field="color" type="color" value="#808080">
+        </label>
+    </div>
+    <button type="button" class="team-create-button" data-create-team>Add team</button>
+    <p data-team-message role="status" aria-live="polite"></p>
+</fieldset>

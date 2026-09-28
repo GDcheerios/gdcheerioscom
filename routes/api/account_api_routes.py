@@ -41,6 +41,7 @@ def create_account() -> Response:
         return redirect("/account/create")
 
     password = request.form.get("pw")
+    password = Account.get_password_hash(str(password))
     email = request.form.get("em")
     about_me = request.form.get("am")
 
@@ -62,8 +63,9 @@ def create_account() -> Response:
         return redirect(f"/account/create?msg={result['message']}")
     else:
         result = Account.create(username, password, email, about_me)
-        return redirect(f"/account/{result.id}")
-
+        resp = make_response(redirect(f"/account/{result.id}"))
+        _set_session_cookie(resp, Account.create_session(result.id))
+        return resp
 
 
 @account_api_blueprint.post('/account/login-form')
@@ -115,7 +117,7 @@ def verify_account() -> Response:
         return Response(status=400)
 
     row = environment.database.fetch_to_dict(
-        "SELECT id, email, username, password, about, token, expires FROM pending_accounts WHERE id = %s",
+        "SELECT id, email, username, password, about, token, expires FROM account.pending WHERE id = %s",
         params=(sid,)
     )
     if not row:
@@ -124,7 +126,7 @@ def verify_account() -> Response:
     environment.database.execute(
         """
         DELETE
-        FROM pending_accounts
+        FROM account.pending
         WHERE expires < NOW()
            OR id = %s
         """,
@@ -161,9 +163,9 @@ def send_reset_email():
     email = request.json["email"]
     if not Account.email_exists(email): return Response(status=404)
 
-    id = environment.database.fetch_one("select id from accounts where email = %s", params=(email,))
+    id = environment.database.fetch_one("select id from account.users where email = %s", params=(email,))
     code = \
-    environment.database.fetch_one("insert into password_resets (\"user\") values (%s) returning id", params=(id,))[0]
+    environment.database.fetch_one("insert into account.password_resets (user_id) values (%s) returning id", params=(id,))[0]
     EmailManager.send_reset_password_email(email, code)
     return {"success": True}
 
@@ -174,16 +176,16 @@ def reset_password():
     password = request.json["password"]
 
     password_reset = environment.database.fetch_to_dict(
-        "select * from password_resets where id = %s and expires_at > NOW() - INTERVAL '24 hours'", params=(code,))
+        "select * from account.password_resets where id = %s and expires_at > NOW() - INTERVAL '24 hours'", params=(code,))
     if not password_reset:
         environment.database.execute(
-            "DELETE FROM password_resets WHERE id = %s OR expires_at <= NOW() - INTERVAL '24 hours'", params=(code,))
+            "DELETE FROM account.password_resets WHERE id = %s OR expires_at <= NOW() - INTERVAL '24 hours'", params=(code,))
         return Response(status=404)
 
     password_hash = Account.get_password_hash(password)
-    environment.database.execute("UPDATE accounts SET password = %s WHERE id = %s",
+    environment.database.execute("UPDATE account.users SET password = %s WHERE id = %s",
                                  params=(password_hash, password_reset["user"]))
-    environment.database.execute("DELETE FROM password_resets WHERE id = %s", params=(code,))
+    environment.database.execute("DELETE FROM account.password_resets WHERE id = %s", params=(code,))
 
     resp = Response(status=200)
     _set_session_cookie(resp, Account.create_session(password_reset["user"]))
@@ -225,6 +227,96 @@ def change_about():
     Account.change_about(int(id), about_me)
 
     return redirect(f'/user/{account.id}')
+
+
+@account_api_blueprint.post("/account/<int:account_id>/tags")
+def add_profile_tag(account_id: int):
+    admin_id = Account.id_from_session(request.cookies.get("session"))
+    if admin_id is None:
+        return {"error": "Authentication required."}, 401
+
+    admin = Account(admin_id)
+    if not admin.exists or not admin.is_admin:
+        return {"error": "Administrator access is required."}, 403
+
+    account = Account(account_id)
+    if not account.exists:
+        return {"error": "Account not found."}, 404
+
+    title = str(request.form.get("name", "")).strip()
+    tag_type = str(request.form.get("tag_type", "")).strip().lower()
+    if not title or not tag_type:
+        return {"error": "Tag name and type are required."}, 400
+    if len(title) > 50 or len(tag_type) > 30:
+        return {"error": "Tag name or type is too long."}, 400
+    if not tag_type.replace("-", "").replace("_", "").isalnum():
+        return {"error": "Tag type may only contain letters, numbers, hyphens, and underscores."}, 400
+
+    account.add_tag(title, tag_type)
+    return redirect(f"/account/{account.id}")
+
+
+@account_api_blueprint.post("/account/<int:account_id>/tags/<int:tag_id>/delete")
+def delete_profile_tag(account_id: int, tag_id: int):
+    admin_id = Account.id_from_session(request.cookies.get("session"))
+    if admin_id is None:
+        return {"error": "Authentication required."}, 401
+
+    admin = Account(admin_id)
+    if not admin.exists or not admin.is_admin:
+        return {"error": "Administrator access is required."}, 403
+
+    account = Account(account_id)
+    if not account.exists:
+        return {"error": "Account not found."}, 404
+    if not account.delete_tag(tag_id):
+        return {"error": "Tag not found."}, 404
+
+    return redirect(f"/account/{account.id}")
+
+
+@account_api_blueprint.post("/account/timecard")
+def update_timecard():
+    user_id = Account.id_from_session(request.cookies.get("session"))
+    if user_id is None:
+        return {"error": "Authentication required."}, 401
+
+    account = Account(user_id)
+    if not account.has_tag("dev"):
+        return {"error": "A developer tag is required."}, 403
+    if not environment.dev_timecard_exists:
+        return {"error": "Timecards are unavailable."}, 503
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+
+    if action == "start":
+        project = str(data.get("project", "")).strip()
+        if not project:
+            return {"error": "A project name is required."}, 400
+        if len(project) > 100:
+            return {"error": "Project names must be 100 characters or fewer."}, 400
+
+        active_shift = next(
+            (shift for shift in account.get_timecard() if shift["ended_at"] is None),
+            None
+        )
+        if active_shift:
+            return {"error": "End the active shift before starting another."}, 409
+
+        return {"shift": account.start_shift(project)}, 201
+
+    if action == "end":
+        shift_id = data.get("shift_id")
+        if not isinstance(shift_id, int):
+            return {"error": "A valid shift ID is required."}, 400
+
+        shift = account.end_shift(shift_id)
+        if not shift:
+            return {"error": "Active shift not found."}, 404
+        return {"shift": shift}
+
+    return {"error": "Action must be 'start' or 'end'."}, 400
 
 
 @account_api_blueprint.get("/account/check/username")

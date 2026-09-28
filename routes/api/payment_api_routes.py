@@ -1,7 +1,7 @@
 import stripe
 from flask import Blueprint, redirect, url_for, session, request, jsonify
 import environment
-from objects import Account
+from objects.Account import Account
 from utils.logger import setup_logger
 
 payments_api_blueprint = Blueprint('payment api', __name__)
@@ -71,9 +71,9 @@ def stripe_webhook():
         return jsonify(success=False), 400
 
     if event['type'] == 'checkout.session.completed':
-        session_obj = event['data']['object']
-        user_id = session_obj.get('client_reference_id')
-        metadata = session_obj.get('metadata', {})
+        session_data = event['data']['object'].to_dict()
+        user_id = session_data.get('client_reference_id')
+        metadata = session_data.get('metadata') or {}
         weeks = int(metadata.get('weeks', 1))
 
         if user_id:
