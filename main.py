@@ -10,9 +10,10 @@ from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 # flask packages
-from flask import Flask, g, request, render_template
+from flask import Flask, g, request, render_template, Response
 from flask_bcrypt import Bcrypt
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -185,6 +186,14 @@ def create_app():
     app.register_blueprint(account_blueprint, url_prefix='/account')
     app.register_blueprint(osu_blueprint, url_prefix='/osu')
     startup_tracker.done("blueprint_registration")
+
+    @app.route("/metrics", methods=["GET"])
+    def metrics_endpoint():
+        return Response(
+            generate_latest(),
+            mimetype=CONTENT_TYPE_LATEST,
+        )
+
     return app
 
 
