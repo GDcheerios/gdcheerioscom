@@ -2,13 +2,10 @@
 import logging
 import os
 import time
-from opentelemetry import _logs
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 # flask packages
-from flask import Flask, g, request, render_template
+from flask import Flask, g, request, render_template, Response
 from flask_bcrypt import Bcrypt
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -43,13 +40,8 @@ from routes.pages.osu_routes import osu_blueprint
 from api.key_api import verify_api_key_header
 from objects.Account import Account
 
-logger_provider = LoggerProvider()
-_logs.set_logger_provider(logger_provider)
-otel_log_exporter = OTLPLogExporter(endpoint="http://status:4318/v1/logs")
-logger_provider.add_log_record_processor(BatchLogRecordProcessor(otel_log_exporter))
-otel_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
 server_logger = setup_logger("main")
-server_logger.addHandler(otel_handler)
+server_logger.addHandler(environment.otel_handler)
 startup_tracker = TaskTracker(server_logger, name="flask_server_startup")
 
 
@@ -103,6 +95,18 @@ def create_app():
     # set up events
     startup_tracker.start("request_hooks")
 
+    request_counter = environment.meter.create_counter(
+        "gdcheerioscom_req_count",
+        description="Total number of HTTP requests processed",
+        unit="1",
+    )
+
+    request_duration = environment.meter.create_histogram(
+        "gdcheerioscom_req_duration_seconds",
+        description="HTTP request duration in seconds",
+        unit="s",
+    )
+
     @app.before_request
     def before_request():
         request_start()
@@ -132,6 +136,15 @@ def create_app():
             user_id=user_id if 'user_id' in locals() else None,
             successful=(200 <= response.status_code < 500),
         )
+
+        metric_labels = {
+            "endpoint": g.req_endpoint,
+            "method": request.method,
+            "status_code": str(response.status_code),
+        }
+        request_counter.add(1, metric_labels)
+        request_duration.record(g.req_duration, metric_labels)
+
         if not static: log_request(server_logger, request_payload)
 
         return response
@@ -155,6 +168,14 @@ def create_app():
     app.register_blueprint(account_blueprint, url_prefix='/account')
     app.register_blueprint(osu_blueprint, url_prefix='/osu')
     startup_tracker.done("blueprint_registration")
+
+    @app.route("/metrics", methods=["GET"])
+    def metrics_endpoint():
+        return Response(
+            generate_latest(),
+            mimetype=CONTENT_TYPE_LATEST,
+        )
+
     return app
 
 

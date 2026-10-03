@@ -4,6 +4,7 @@ python-dotenv>=1.2.2
 websockets==16.0
 stripe==15.6.0
 gunicorn==26.2.0
+prometheus-client==0.26.0
 
 opentelemetry-api
 opentelemetry-sdk

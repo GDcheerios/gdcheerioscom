@@ -1,6 +1,16 @@
 import datetime as dt
+import logging
 import math
 import os
+
+from opentelemetry import _logs
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 
 from GPSystem import GPSystem
 from PSQLConnector.connector import PSQLConnection as Database
@@ -60,6 +70,22 @@ google = google_client_id != "" and google_client_secret != ""
 tracker.done_subtask("Importing environment variables", "checking google variables")
 
 tracker.done("Importing environment variables")
+# endregion
+
+
+# region metrics
+tracker.start("Initializing metrics")
+logger_provider = LoggerProvider()
+_logs.set_logger_provider(logger_provider)
+otel_log_exporter = OTLPLogExporter(endpoint="http://status:4318/v1/logs")
+logger_provider.add_log_record_processor(BatchLogRecordProcessor(otel_log_exporter))
+otel_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+metric_exporter = OTLPMetricExporter(endpoint="http://status:4318/v1/metrics")
+metric_reader = PeriodicExportingMetricReader(metric_exporter)
+meter_provider = MeterProvider(metric_readers=[metric_reader])
+metrics.set_meter_provider(meter_provider)
+meter = metrics.get_meter("gdcheerios_metrics")
+tracker.done("Initializing metrics")
 # endregion
 
 # region Loading Gentry's Quest
