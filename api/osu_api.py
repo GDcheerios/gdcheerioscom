@@ -3,10 +3,21 @@ import datetime as dt
 from datetime import timezone
 import traceback
 
+from opentelemetry.metrics import Observation
+
 import environment
 from utils.logger import setup_logger
 
 logger = setup_logger("api.osu")
+
+total_refreshes = environment.meter.create_counter(
+    name="gdcheerioscom_osu_refreshes_count",
+    description="How many osu refreshes there are."
+)
+total_refreshes_with_api_call = environment.meter.create_counter(
+    name="gdcheerioscom_osu_refreshes_api_call_count",
+    description="How many osu refreshes there are with an API call."
+)
 
 expiration = 0
 token = None
@@ -229,6 +240,9 @@ def get_user_info(user_identifier, skip_api=False):
         params=(str(user_identifier), str(user_identifier))
     )
 
+    total_refreshes.add(1)
+
+
     if (
             not user_check
             or user_check["last_refresh"]
@@ -258,6 +272,8 @@ def get_user_info(user_identifier, skip_api=False):
                     "include_fails": "1"
                 }
             ).json()
+
+            total_refreshes_with_api_call.add(1)
 
             if len(recent_score_req) == 0:
                 return {
@@ -650,3 +666,76 @@ def get_average_metric_by_score(match_id: int, user_id: int, metric: str = "accu
     )[0]
 
 # </editor-fold>
+
+
+def get_total_matches_count(options):
+    count = environment.database.fetch_one("SELECT COUNT(*) FROM osu.matches")[0]
+    logger.info("Total matches count: %s", count)
+    yield Observation(count)
+
+
+def get_total_open_matches(options):
+    count = environment.database.fetch_one("SELECT COUNT(*) FROM osu.matches WHERE ended IS FALSE")[0]
+    logger.info("Total open matches count: %s", count)
+    yield Observation(count)
+
+
+def get_total_closed_matches(options):
+    count = environment.database.fetch_one("SELECT COUNT(*) FROM osu.matches WHERE ended IS TRUE")[0]
+    logger.info("Total closed matches count: %s", count)
+    yield Observation(count)
+
+
+def get_total_osu_users(options):
+    count = environment.database.fetch_one("SELECT COUNT(*) FROM osu.users")[0]
+    logger.info("Total osu users count: %s", count)
+    yield Observation(count)
+
+
+def get_total_osu_users_in_match(options):
+    count = environment.database.fetch_one("SELECT COUNT(*) FROM osu.match_users")[0]
+    logger.info("Total osu users in match count: %s", count)
+    yield Observation(count)
+
+
+def get_total_osu_scores(options):
+    count = environment.database.fetch_one("SELECT COUNT(*) FROM osu.scores")[0]
+    logger.info("Total osu scores count: %s", count)
+    yield Observation(count)
+
+
+total_matches_metric = environment.meter.create_observable_gauge(
+    name="gdcheerioscom_osu_matches_count",
+    description="How many matches there are.",
+    callbacks=[get_total_matches_count]
+)
+
+total_open_matches = environment.meter.create_observable_gauge(
+    name="gdcheerioscom_osu_open_matches_count",
+    description="How many open matches there are.",
+    callbacks=[get_total_open_matches]
+)
+
+total_closed_matches = environment.meter.create_observable_gauge(
+    name="gdcheerioscom_osu_closed_matches_count",
+    description="How many closed matches there are.",
+    callbacks=[get_total_closed_matches]
+)
+
+total_osu_users = environment.meter.create_observable_gauge(
+    name="gdcheerioscom_osu_users_count",
+    description="How many osu users there are.",
+    callbacks=[get_total_osu_users]
+)
+
+total_osu_users_in_match = environment.meter.create_observable_gauge(
+    name="gdcheerioscom_osu_users_in_match_count",
+    description="How many osu users are in matches.",
+    callbacks=[get_total_osu_users_in_match]
+)
+
+total_osu_scores = environment.meter.create_observable_gauge(
+    name="gdcheerioscom_osu_scores_count",
+    description="How many osu scores there are.",
+    callbacks=[get_total_osu_scores]
+)
