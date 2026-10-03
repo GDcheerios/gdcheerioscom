@@ -153,7 +153,7 @@ def create_app():
 
     # load blueprints
     startup_tracker.start("blueprint_registration")
-
+    
     #   api
     app.register_blueprint(key_blueprint, url_prefix='/auth')
     app.register_blueprint(oauth_api_routes, url_prefix='/oauth')

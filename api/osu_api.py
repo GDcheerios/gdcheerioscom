@@ -88,6 +88,8 @@ def compare_to_match(user, match_id: int) -> dict:
                           AND submitted_at >= %s
                           AND submitted_at <= COALESCE(%s::timestamp, NOW())
                           AND rank != 'F'
+                          AND pp IS NOT NULL
+                          AND pp > 0
                         LIMIT 100),
              calc_pp AS (SELECT COALESCE(SUM(pp * POWER(0.95, rank_index - 1)), 0) AS total_pp
                          FROM scores)

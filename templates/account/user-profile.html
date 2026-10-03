@@ -1316,20 +1316,22 @@
                         <img class="osu-avatar" src="https://a.ppy.sh/{{ account.osu_data.id }}" alt="osu avatar">
                         <div>
                             <div class="osu-username">
-                                <a href="https://osu.ppy.sh/users/{{ account.osu_id }}" target="_blank">{{ account.osu_data.username }}</a>
+                                <a href="https://osu.ppy.sh/users/{{ account.osu_data.id }}" target="_blank">{{ account.osu_data.username }}</a>
                             </div>
                             <div class="osu-rank-label">Global Rank</div>
                             <div class="osu-rank-value">#{{ "{:,}".format(account.osu_data.global_rank) }}</div>
+                            <div class="osu-rank-label">Country Rank</div>
+                            <div class="osu-rank-value">#{{ "{:,}".format(account.osu_data.country_rank) }}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right: concise highlights (no extra stats beyond existing four) -->
                 <div class="osu-card">
                     <div class="osu-highlights">
                         <div class="osu-highlight">
-                            <div class="label">Total Score</div>
-                            <div class="value">{{ "{:,}".format(account.osu_data.total_score) }}</div>
+                            <div class="label">Score</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.total_score) }} Total</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.ranked_score) }} Ranked</div>
                         </div>
                         <div class="osu-highlight">
                             <div class="label">Plays</div>
@@ -1340,10 +1342,33 @@
                             <div class="value">{{ account.osu_data.accuracy }}%</div>
                         </div>
                         <div class="osu-highlight">
+                            <div class="label">Hits</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.total_hits) }}</div>
+                        </div>
+                        <div class="osu-highlight">
                             <div class="label">Performance</div>
                             <div class="value">{{ "{:,}".format(account.osu_data.pp) }} pp</div>
                         </div>
-                        <!-- empty cells auto-flow; layout remains neat on different widths -->
+                        <div class="osu-highlight">
+                            <div class="label">A ranks</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.grade_a) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">S ranks</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.grade_s) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">S+ ranks</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.grade_sh) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">SS ranks</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.grade_ss) }}</div>
+                        </div>
+                        <div class="osu-highlight">
+                            <div class="label">SS+ ranks</div>
+                            <div class="value">{{ "{:,}".format(account.osu_data.grade_ssh) }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
