@@ -2,14 +2,6 @@
 import logging
 import os
 import time
-from opentelemetry import _logs
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 # flask packages
@@ -48,18 +40,8 @@ from routes.pages.osu_routes import osu_blueprint
 from api.key_api import verify_api_key_header
 from objects.Account import Account
 
-logger_provider = LoggerProvider()
-_logs.set_logger_provider(logger_provider)
-otel_log_exporter = OTLPLogExporter(endpoint="http://status:4318/v1/logs")
-logger_provider.add_log_record_processor(BatchLogRecordProcessor(otel_log_exporter))
-otel_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
-metric_exporter = OTLPMetricExporter(endpoint="http://status:4318/v1/metrics")
-metric_reader = PeriodicExportingMetricReader(metric_exporter)
-meter_provider = MeterProvider(metric_readers=[metric_reader])
-metrics.set_meter_provider(meter_provider)
-meter = metrics.get_meter("gdcheerios_metrics")
 server_logger = setup_logger("main")
-server_logger.addHandler(otel_handler)
+server_logger.addHandler(environment.otel_handler)
 startup_tracker = TaskTracker(server_logger, name="flask_server_startup")
 
 
@@ -113,13 +95,13 @@ def create_app():
     # set up events
     startup_tracker.start("request_hooks")
 
-    request_counter = meter.create_counter(
+    request_counter = environment.meter.create_counter(
         "gdcheerioscom_req_count",
         description="Total number of HTTP requests processed",
         unit="1",
     )
 
-    request_duration = meter.create_histogram(
+    request_duration = environment.meter.create_histogram(
         "gdcheerioscom_req_duration_seconds",
         description="HTTP request duration in seconds",
         unit="s",
