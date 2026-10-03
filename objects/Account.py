@@ -5,6 +5,8 @@ import urllib.parse
 
 from datetime import datetime, timedelta, timezone
 
+from opentelemetry.metrics import Observation
+
 import environment
 from utils.logger import setup_logger, TaskTracker
 
@@ -249,8 +251,14 @@ class Account:
     @staticmethod
     def create(username: str, password: str, email: str, about: str) -> "Account":
         query = """
-                INSERT INTO account.users (username, password, email, about)
-                VALUES (%s, %s, %s, %s) RETURNING id
+                WITH account AS (
+                    INSERT INTO account.users (username, password, email, about)
+                        VALUES (%s, %s, %s, %s)
+                        RETURNING id
+                )
+                INSERT INTO gq.profiles (account_id)
+                SELECT id FROM account
+                RETURNING account_id as id;
                 """
 
         params = (
@@ -261,7 +269,6 @@ class Account:
         )
 
         id = database.fetch_one(query, params)[0]
-        database.execute("INSERT INTO gq.profiles (account_id) VALUES (%s)", params=(id,))
         return Account(id)
 
     @staticmethod
@@ -547,6 +554,24 @@ class Account:
             params=(shift_id, self.id)
         )
 
+    @staticmethod
+    def get_accounts(options):
+        count = database.fetch_one("SELECT COUNT(*) FROM account.users;")[0]
+        logger.info(f"account poll: {count}")
+        yield Observation(count)
+
+    @staticmethod
+    def get_supporters(options):
+        count = database.fetch_one("SELECT COUNT(*) FROM account.users WHERE is_supporter = TRUE;")[0]
+        logger.info(f"supporter poll: {count}")
+        yield Observation(count)
+
+    @staticmethod
+    def get_pending(options):
+        count = database.fetch_one("SELECT COUNT(*) FROM account.pending;")[0]
+        logger.info(f"pending poll: {count}")
+        yield Observation(count)
+
     def jsonify(self) -> dict:
         return {
             "id": self.id,
@@ -563,3 +588,23 @@ class Account:
             "supporter_lasts": self.supporter_lasts,
             "tags": self.tags
         }
+
+
+account_counter = environment.meter.create_observable_gauge(
+    "gdcheerioscom_account_count",
+    callbacks=[Account.get_accounts],
+    description="The number of accounts on the site",
+    unit="1"
+)
+support_counter = environment.meter.create_observable_gauge(
+    "gdcheerioscom_support_count",
+    callbacks=[Account.get_supporters],
+    description="The number of supporters on the site",
+    unit="1"
+)
+pending_counter = environment.meter.create_observable_gauge(
+    "gdcheerioscom_pending_count",
+    callbacks=[Account.get_pending],
+    description="The number of pending supporters on the site",
+    unit="1"
+)
