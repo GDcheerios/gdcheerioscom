@@ -249,7 +249,7 @@ class Account:
 
     # <editor-fold desc="Modifiers">
     @staticmethod
-    def create(username: str, password: str, email: str, about: str) -> "Account":
+    def create(username: str, password: str, email: str, about: str, supporter_id: str = None, osu_id: int | str = None) -> "Account":
         query = """
                 WITH account AS (
                     INSERT INTO account.users (username, password, email, about)
@@ -269,6 +269,18 @@ class Account:
         )
 
         id = database.fetch_one(query, params)[0]
+        if supporter_id:
+            Account.claim_supporter(supporter_id, id)
+
+        if osu_id:
+            database.execute(
+                """
+                INSERT INTO auth.identities (user_id, provider, provider_subject)
+                VALUES (%s, %s, %s)
+                """,
+                params=(id, "osu", osu_id)
+            )
+
         return Account(id)
 
     @staticmethod
@@ -287,10 +299,10 @@ class Account:
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         pending_id = database.fetch_one(
             """
-            INSERT INTO account.pending (username, password, email, about, token)
-            VALUES (%s, %s, %s, %s, %s) RETURNING id
+            INSERT INTO account.pending (username, password, email, about, token, supporter_id, osu_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
             """,
-            params=(username, password, email, about, token_hash)
+            params=(username, password, email, about, token_hash, supporter_id, osu_id)
         )[0]
 
         try:
@@ -299,13 +311,6 @@ class Account:
                 f"sid={pending_id}",
                 f"&token={raw_token}"
             ]
-
-            if supporter_id is not None:
-                url_parts.append(f"&supporter_id={supporter_id}")
-            if osu_id is not None:
-                url_parts.append(f"&osu_id={osu_id}")
-            if google_info is not None:
-                url_parts.append(f"&google_info={urllib.parse.quote(json.dumps(google_info))}")
 
             verification_url = "".join(url_parts)
             EmailManager.send_verification_email(email, username, verification_url)

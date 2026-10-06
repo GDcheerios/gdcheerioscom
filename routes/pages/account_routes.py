@@ -51,7 +51,10 @@ def create():
 
 
 @account_blueprint.route("/login")
-def login(): return render_template("account/login.html")
+def login():
+    warning = request.args.get("warning", None)
+    supporter_id = request.args.get("supporter_id", None)
+    return render_template("account/login.html", supporter_id=supporter_id, warning=warning)
 
 
 @account_blueprint.route("/password-reset")

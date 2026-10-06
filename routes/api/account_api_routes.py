@@ -62,7 +62,7 @@ def create_account() -> Response:
         )
         return redirect(f"/account/create?msg={result['message']}")
     else:
-        result = Account.create(username, password, email, about_me)
+        result = Account.create(username, password, email, about_me, supporter_id=supporter_id, osu_id=osu_id)
         resp = make_response(redirect(f"/account/{result.id}"))
         _set_session_cookie(resp, Account.create_session(result.id))
         return resp
@@ -80,11 +80,9 @@ def login_cookie():
     supporter_id = request.form.get("supporter_id")
     login_result = account_api.login(username, password)
     if login_result[1] == 404:
-        resp = make_response(
-            render_template('account/login.html', warning="Couldn't find account with that username.", code=401))
+        resp = make_response(redirect(f'/account/login?warning=Couldn\'t find account with that username.&supporter_id={supporter_id}'))
     elif login_result[1] == 401:
-        resp = make_response(
-            render_template('account/login.html', warning="Incorrect password.", code=404))
+        resp = make_response(redirect(f'/account/login?warning=Incorrect password.&supporter_id={supporter_id}'))
     else:
         if supporter_id is not None:
             Account.claim_supporter(supporter_id, login_result[0]['data']['id'])
