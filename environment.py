@@ -25,47 +25,47 @@ tracker = TaskTracker(env_logger, name="environment_startup")
 # region Importing Environment Variables
 tracker.start("Importing environment variables")
 load_dotenv()
-domain = os.environ['DOMAIN']
-secret = os.environ['SECRET']
-is_production = int(os.environ['IS_PRODUCTION']) == 1
+domain = os.environ.get('DOMAIN', "")
+secret = os.environ.get('SECRET', "")
+is_production = int(os.environ.get('IS_PRODUCTION', "")) == 1
 debug = not is_production  # debugging?
-backend_websocket_url = os.environ['BACKEND_WEBSOCKET_URL']
-frontend_websocket_url = os.environ['FRONTEND_WEBSOCKET_URL']
+backend_websocket_url = os.environ.get('BACKEND_WEBSOCKET_URL', "")
+frontend_websocket_url = os.environ.get('FRONTEND_WEBSOCKET_URL', "")
 
 tracker.start_subtask("Importing environment variables", "checking email variables")
-smtp_host = os.environ['SMTP_HOST']
-smtp_email = os.environ['SMTP_EMAIL']
-smtp_password = os.environ['SMTP_PASSWORD']
+smtp_host = os.environ.get('SMTP_HOST', "")
+smtp_email = os.environ.get('SMTP_EMAIL', "")
+smtp_password = os.environ.get('SMTP_PASSWORD', "")
 email_verification = smtp_host != "" and smtp_email != "" and smtp_password != ""
 tracker.done_subtask("Importing environment variables", "checking email variables")
 
 tracker.start_subtask("Importing environment variables", "checking DB variables")
-db_user = os.environ['DB_USER']
-db_password = os.environ['DB_PASSWORD']
-db_hostname = os.environ['DB_HOSTNAME']
-db_port = 5432
-db = os.environ['DB']
+db_user = os.environ.get('DB_USER', "")
+db_password = os.environ.get('DB_PASSWORD', "")
+db_hostname = os.environ.get('DB_HOSTNAME', "")
+db_port = os.environ.get('DB_PORT', 5432)
+db = os.environ.get('DB', "")
 tracker.done_subtask("Importing environment variables", "checking DB variables")
 
 
 tracker.start_subtask("Importing environment variables", "checking osu! variables")
-osu_secret = os.environ['OSU_SECRET']
-osu_api_key = os.environ['OSU_API_KEY']
-osu_client_id = os.environ['CLIENT_ID']
+osu_secret = os.environ.get('OSU_SECRET', "")
+osu_api_key = os.environ.get('OSU_API_KEY', "")
+osu_client_id = os.environ.get('CLIENT_ID', "")
 osu = osu_secret != "" and osu_api_key != "" and osu_client_id != ""
 osu_refresh_cooldown: int = int(os.environ.get('OSU_REFRESH_COOLDOWN', 2))
 tracker.done_subtask("Importing environment variables", "checking osu! variables")
 
 tracker.start_subtask("Importing environment variables", "checking stripes variables")
-stripe_public_key = os.environ['STRIPE_PUBLIC_KEY']
-stripe_secret_key = os.environ['STRIPE_SECRET_KEY']
-stripe_webhook_secret = os.environ['STRIPE_WEBHOOK_SECRET']
+stripe_public_key = os.environ.get('STRIPE_PUBLIC_KEY', "")
+stripe_secret_key = os.environ.get('STRIPE_SECRET_KEY', "")
+stripe_webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET', "")
 stripe = stripe_public_key != "" and stripe_secret_key != "" and stripe_webhook_secret != ""
 tracker.done_subtask("Importing environment variables", "checking stripes variables")
 
 tracker.start_subtask("Importing environment variables", "checking google variables")
-google_client_id = os.environ['GOOGLE_CLIENT']
-google_client_secret = os.environ['GOOGLE_SECRET']
+google_client_id = os.environ.get('GOOGLE_CLIENT', "")
+google_client_secret = os.environ.get('GOOGLE_SECRET', "")
 google = google_client_id != "" and google_client_secret != ""
 tracker.done_subtask("Importing environment variables", "checking google variables")
 
