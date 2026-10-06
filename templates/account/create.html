@@ -28,12 +28,14 @@
                   <input
                           type="email"
                           name="em"
+                          placeholder="Email"
                           {% if email %}
                           value="{{ email }}"
                           {% endif %}
                           required
                           pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                           autocomplete="email"
+                          style="width: 75%;"
                   />
               <div class="error-container"><span class="error-message" id="email-error"></span></div>
               </p>
@@ -43,6 +45,7 @@
                   <input
                           type="text"
                           name="nm"
+                          placeholder="Username"
                           {% if username %}
                           value="{{ username }}"
                           {% endif %}
@@ -51,6 +54,7 @@
                           maxlength="24"
                           pattern="^[a-zA-Z0-9_$!]{1,24}$"
                           autocomplete="username"
+                          style="width: 75%;"
                   />
               <div class="error-container"><span class="error-message" id="username-error"></span></div>
               </p>
@@ -60,15 +64,17 @@
                   <input
                           type="password"
                           name="pw"
+                          placeholder="Password"
                           required
                           minlength="8"
                           pattern="^[a-zA-Z0-9_$!]{8,}$"
                           autocomplete="new-password"
+                          style="width: 75%;"
                   />
               <div class="error-container"><span class="error-message" id="password-error"></span></div>
               </p>
               <p><h1>Tell people about yourself</h1></p>
-              <p><input type="text" maxlength="3000" name="am"/></p>
+              <p><textarea type="text" maxlength="3000" name="am" style="width: 100%; height: 100px; resize: none;"></textarea></p>
               <p><input id="submit-btn" type="submit" value="Create" disabled/></p>
           </form>
           </div>
