@@ -107,15 +107,12 @@ def login_json():
 def verify_account() -> Response:
     sid = request.args.get("sid")
     token = request.args.get("token")
-    supporter_id = request.args.get("supporter_id")
-    osu_id = request.args.get("osu_id")
-    # google_info = request.args.get("google_info")
 
     if not sid or not token:
         return Response(status=400)
 
     row = environment.database.fetch_to_dict(
-        "SELECT id, email, username, password, about, token, expires FROM account.pending WHERE id = %s",
+        "SELECT id, email, username, password, about, token, expires, supporter_id, osu_id FROM account.pending WHERE id = %s",
         params=(sid,)
     )
     if not row:
@@ -139,17 +136,13 @@ def verify_account() -> Response:
         return redirect("/account/create?msg=username taken")
 
     account = Account.create(
-        row["username"],
-        row["password"],
-        row["email"],
-        row["about"]
+        username=row["username"],
+        password=row["password"],
+        email=row["email"],
+        about=row["about"],
+        supporter_id=row["supporter_id"],
+        osu_id=row["osu_id"]
     )
-
-    if supporter_id:
-        account.claim_supporter(supporter_id, account.id)
-
-    if osu_id:
-        account.set_osu_id(osu_id)
 
     resp = make_response(redirect(f"/account/{account.id}"))
     _set_session_cookie(resp, Account.create_session(account.id))
