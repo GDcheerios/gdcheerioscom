@@ -595,21 +595,22 @@ class Account:
         }
 
 
-account_counter = environment.meter.create_observable_gauge(
-    "gdcheerioscom_account_count",
-    callbacks=[Account.get_accounts],
-    description="The number of accounts on the site",
-    unit="1"
-)
-support_counter = environment.meter.create_observable_gauge(
-    "gdcheerioscom_support_count",
-    callbacks=[Account.get_supporters],
-    description="The number of supporters on the site",
-    unit="1"
-)
-pending_counter = environment.meter.create_observable_gauge(
-    "gdcheerioscom_pending_count",
-    callbacks=[Account.get_pending],
-    description="The number of pending supporters on the site",
-    unit="1"
-)
+if environment.metrics_allowed:
+    account_counter = environment.meter.create_observable_gauge(
+        "gdcheerioscom_account_count",
+        callbacks=[Account.get_accounts],
+        description="The number of accounts on the site",
+        unit="1"
+    )
+    support_counter = environment.meter.create_observable_gauge(
+        "gdcheerioscom_support_count",
+        callbacks=[Account.get_supporters],
+        description="The number of supporters on the site",
+        unit="1"
+    )
+    pending_counter = environment.meter.create_observable_gauge(
+        "gdcheerioscom_pending_count",
+        callbacks=[Account.get_pending],
+        description="The number of pending supporters on the site",
+        unit="1"
+    )
