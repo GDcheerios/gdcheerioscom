@@ -25,6 +25,7 @@ class Account:
     email: str
     links: list
     about: str
+    is_supporter: bool
     pfp: str
     status: str
     tags: list
@@ -215,6 +216,7 @@ class Account:
         load_task.done("initialize data")
         load_task.complete()
 
+    # region Sessions
     @staticmethod
     def from_session(session):
         id = database.fetch_one("SELECT user_id FROM account.sessions WHERE id = %s", params=(session,))
@@ -240,6 +242,7 @@ class Account:
             return
 
         database.execute("DELETE FROM account.sessions WHERE id = %s", params=(session_id,))
+    # endregion
 
     @staticmethod
     def search(query: str):
@@ -247,9 +250,9 @@ class Account:
             f"SELECT id, username FROM account.users WHERE username ILIKE %s OR about ILIKE %s LIMIT 5;",
             params=(f"%{query}%", f"%{query}%"))
 
-    # <editor-fold desc="Modifiers">
+    # region Creation
     @staticmethod
-    def create(username: str, password: str, email: str, about: str, supporter_id: str = None, osu_id: int | str = None) -> "Account":
+    def create(username: str, password: str, email: str, about: str = "", supporter_id: str | None = None, osu_id: int | str | None = None) -> "Account":
         query = """
                 WITH account AS (
                     INSERT INTO account.users (username, password, email, about)
@@ -326,12 +329,8 @@ class Account:
         }
 
     @staticmethod
-    def get_password_hash(password: str):
-        return str(environment.bcrypt.generate_password_hash(password))[2:-1]  # remove the byte chars
-
-    @staticmethod
-    def set_status(id: int, status: str):
-        database.execute("UPDATE account.users SET status = %s where id = %s", params=(status, id))
+    def get_password_hash(password: str): return str(environment.bcrypt.generate_password_hash(password))[2:-1]  # remove the byte chars
+    # endregion
 
     @staticmethod
     def change_username(id: int, new_username: str):
@@ -349,6 +348,7 @@ class Account:
 
         database.execute(f"update account.users set about = %s where id = %s;", params=(new_about, id))
 
+    # region Supporter
     @staticmethod
     def make_supporter(id: int, weeks: int = 1):
         """
@@ -390,6 +390,18 @@ class Account:
             params=(id, weeks)
         )
 
+    @property
+    def is_supporter(self) -> bool:
+        return environment.database.fetch_one(
+            """
+            UPDATE account.users
+            SET is_supporter = (last_support < supporter_lasts)
+            WHERE id = %s
+            RETURNING is_supporter
+            """,
+            (self.id,)
+        )[0]
+
     @staticmethod
     def buy_supporter(id: int, weeks: int = 1):
         """
@@ -397,8 +409,7 @@ class Account:
         """
         Account.make_supporter(id, weeks)
         Account.insert_supporter(id, weeks)
-
-    # </editor-fold>
+    # endregion
 
     # <editor-fold desc="Checks">
 
@@ -424,8 +435,7 @@ class Account:
 
     # </editor-fold>
 
-    # <editor-fold desc="Osu">
-
+    # region OSU
     def set_osu_id(self, osu_id):
         data = fetch_osu_data(osu_id)
         if data:
@@ -448,8 +458,7 @@ class Account:
                 return data
 
         return None
-
-    # </editor-fold>
+    # endregion
 
     def get_link(self, provider):
         """
@@ -465,6 +474,7 @@ class Account:
 
         return None
 
+    # region Tags
     def has_tag(self, tag_type: str) -> bool:
         return any(tag.get("type") == tag_type for tag in self.tags)
 
@@ -494,7 +504,9 @@ class Account:
         if deleted:
             self.tags = [tag for tag in self.tags if tag.get("id") != tag_id]
         return bool(deleted)
+    # endregion
 
+    # region Timecard
     def get_timecard(self, start=None, end=None) -> list:
         """
         Retrieves the timecard for the account.
@@ -558,24 +570,16 @@ class Account:
             """,
             params=(shift_id, self.id)
         )
+    # endregion
 
-    @staticmethod
-    def get_accounts(options):
-        count = database.fetch_one("SELECT COUNT(*) FROM account.users;")[0]
-        logger.info(f"account poll: {count}")
-        yield Observation(count)
-
-    @staticmethod
-    def get_supporters(options):
-        count = database.fetch_one("SELECT COUNT(*) FROM account.users WHERE is_supporter = TRUE;")[0]
-        logger.info(f"supporter poll: {count}")
-        yield Observation(count)
-
-    @staticmethod
-    def get_pending(options):
-        count = database.fetch_one("SELECT COUNT(*) FROM account.pending;")[0]
-        logger.info(f"pending poll: {count}")
-        yield Observation(count)
+    def delete(self):
+        database.execute(
+            """
+            DELETE FROM account.users
+            WHERE id = %s
+            """,
+            params=(self.id,)
+        )
 
     def jsonify(self) -> dict:
         return {
@@ -593,6 +597,26 @@ class Account:
             "supporter_lasts": self.supporter_lasts,
             "tags": self.tags
         }
+
+    # region Metrics
+    @staticmethod
+    def get_accounts(options):
+        count = database.fetch_one("SELECT COUNT(*) FROM account.users;")[0]
+        logger.info(f"account poll: {count}")
+        yield Observation(count)
+
+    @staticmethod
+    def get_supporters(options):
+        count = database.fetch_one("SELECT COUNT(*) FROM account.users WHERE is_supporter = TRUE;")[0]
+        logger.info(f"supporter poll: {count}")
+        yield Observation(count)
+
+    @staticmethod
+    def get_pending(options):
+        count = database.fetch_one("SELECT COUNT(*) FROM account.pending;")[0]
+        logger.info(f"pending poll: {count}")
+        yield Observation(count)
+    # endregion
 
 
 if environment.metrics_allowed:
