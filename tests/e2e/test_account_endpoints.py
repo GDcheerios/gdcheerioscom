@@ -23,6 +23,9 @@ class TestAccountEndpoints:
         Account.from_session(client.get_cookie("session").value).delete()
 
     def test_create_account_with_extras(self, client, db):
+        """
+        Test creating a new account with extra fields.
+        """
         supporter_id = db.fetch_one("insert into account.supports select from generate_series(1, 1) returning id")[0]
 
         form = {"nm": "test", "pw": "1234", "em": "test@example.com", "am": "Dude I'm testing so hard rn", "supporter_id": supporter_id, "osu_id": 11339405}
@@ -38,6 +41,34 @@ class TestAccountEndpoints:
         assert account.get_osu_data()["id"] == 11339405
 
         account.delete()
+
+    def test_queue_account(self, client, environment):
+        """
+        Test queue an account
+        """
+        environment.email_verification = True
+
+        form = {"nm": "test", "pw": "1234", "em": "test@example.com", "am": "Dude I'm testing so hard rn"}
+
+        response = client.post("/api/account/create-account", data=form)
+
+        assert response.status_code == 302
+
+        environment.email_verification = False
+
+    def test_queue_account_with_extras(self, client, environment, db):
+        """
+        Test queue an account with extra fields.
+        """
+        environment.email_verification = True
+        supporter_id = db.fetch_one("insert into account.supports select from generate_series(1, 1) returning id")[0]
+
+        form = {"nm": "test", "pw": "1234", "em": "test@example.com", "am": "Dude I'm testing so hard rn", "supporter_id": supporter_id, "osu_id": 11339405}
+        response = client.post("/api/account/create-account", data=form)
+
+        assert response.status_code == 302
+
+        environment.email_verification = False
 
     def test_signout(self, client):
         """
@@ -102,7 +133,8 @@ class TestAccountEndpoints:
 
         account = Account.create("test", Account.get_password_hash("1234"), email="test@example.com", about="")
         supporter_id = db.fetch_one("insert into account.supports select from generate_series(1, 1) returning id")[0]
-        response = client.post(f"/api/account/login-form", data={"nm": "test", "pw": "1234", "supporter_id": supporter_id})
+        response = client.post(f"/api/account/login-form",
+                               data={"nm": "test", "pw": "1234", "supporter_id": supporter_id})
 
         assert response.status_code == 302
 
