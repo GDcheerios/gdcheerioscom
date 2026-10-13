@@ -46,8 +46,10 @@ def create_account() -> Response:
     about_me = request.form.get("am")
 
     supporter_id = request.form.get("supporter_id")
+    if supporter_id in (None, "", "None"):
+        supporter_id = None
 
-    osu_id = request.form.get("osu_id")
+    osu_id = request.form.get("osu_id") or None
     google_info = request.form.get("google_info")
 
     if environment.email_verification:
