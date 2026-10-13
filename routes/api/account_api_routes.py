@@ -177,11 +177,11 @@ def reset_password():
 
     password_hash = Account.get_password_hash(password)
     environment.database.execute("UPDATE account.users SET password = %s WHERE id = %s",
-                                 params=(password_hash, password_reset["user"]))
+                                 params=(password_hash, password_reset["user_id"]))
     environment.database.execute("DELETE FROM account.password_resets WHERE id = %s", params=(code,))
 
     resp = Response(status=200)
-    _set_session_cookie(resp, Account.create_session(password_reset["user"]))
+    _set_session_cookie(resp, Account.create_session(password_reset["user_id"]))
 
     return resp
 
