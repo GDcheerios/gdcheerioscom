@@ -10,14 +10,15 @@ from utils.logger import setup_logger
 
 logger = setup_logger("api.osu")
 
-total_refreshes = environment.meter.create_counter(
-    name="gdcheerioscom_osu_refreshes_count",
-    description="How many osu refreshes there are."
-)
-total_refreshes_with_api_call = environment.meter.create_counter(
-    name="gdcheerioscom_osu_refreshes_api_call_count",
-    description="How many osu refreshes there are with an API call."
-)
+if environment.metrics_allowed:
+    total_refreshes = environment.meter.create_counter(
+        name="gdcheerioscom_osu_refreshes_count",
+        description="How many osu refreshes there are."
+    )
+    total_refreshes_with_api_call = environment.meter.create_counter(
+        name="gdcheerioscom_osu_refreshes_api_call_count",
+        description="How many osu refreshes there are with an API call."
+    )
 
 expiration = 0
 token = None
@@ -706,38 +707,39 @@ def get_total_osu_scores(options):
     yield Observation(count)
 
 
-total_matches_metric = environment.meter.create_observable_gauge(
-    name="gdcheerioscom_osu_matches_count",
-    description="How many matches there are.",
-    callbacks=[get_total_matches_count]
-)
+if environment.metrics_allowed:
+    total_matches_metric = environment.meter.create_observable_gauge(
+        name="gdcheerioscom_osu_matches_count",
+        description="How many matches there are.",
+        callbacks=[get_total_matches_count]
+    )
 
-total_open_matches = environment.meter.create_observable_gauge(
-    name="gdcheerioscom_osu_open_matches_count",
-    description="How many open matches there are.",
-    callbacks=[get_total_open_matches]
-)
+    total_open_matches = environment.meter.create_observable_gauge(
+        name="gdcheerioscom_osu_open_matches_count",
+        description="How many open matches there are.",
+        callbacks=[get_total_open_matches]
+    )
 
-total_closed_matches = environment.meter.create_observable_gauge(
-    name="gdcheerioscom_osu_closed_matches_count",
-    description="How many closed matches there are.",
-    callbacks=[get_total_closed_matches]
-)
+    total_closed_matches = environment.meter.create_observable_gauge(
+        name="gdcheerioscom_osu_closed_matches_count",
+        description="How many closed matches there are.",
+        callbacks=[get_total_closed_matches]
+    )
 
-total_osu_users = environment.meter.create_observable_gauge(
-    name="gdcheerioscom_osu_users_count",
-    description="How many osu users there are.",
-    callbacks=[get_total_osu_users]
-)
+    total_osu_users = environment.meter.create_observable_gauge(
+        name="gdcheerioscom_osu_users_count",
+        description="How many osu users there are.",
+        callbacks=[get_total_osu_users]
+    )
 
-total_osu_users_in_match = environment.meter.create_observable_gauge(
-    name="gdcheerioscom_osu_users_in_match_count",
-    description="How many osu users are in matches.",
-    callbacks=[get_total_osu_users_in_match]
-)
+    total_osu_users_in_match = environment.meter.create_observable_gauge(
+        name="gdcheerioscom_osu_users_in_match_count",
+        description="How many osu users are in matches.",
+        callbacks=[get_total_osu_users_in_match]
+    )
 
-total_osu_scores = environment.meter.create_observable_gauge(
-    name="gdcheerioscom_osu_scores_count",
-    description="How many osu scores there are.",
-    callbacks=[get_total_osu_scores]
-)
+    total_osu_scores = environment.meter.create_observable_gauge(
+        name="gdcheerioscom_osu_scores_count",
+        description="How many osu scores there are.",
+        callbacks=[get_total_osu_scores]
+    )
