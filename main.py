@@ -29,12 +29,14 @@ from routes.api.account_api_routes import account_api_blueprint
 from routes.api.osu_api_routes import osu_api_blueprint
 from routes.api.gentrys_quest_api_routes import gentrys_quest_api_blueprint
 from routes.api.payment_api_routes import payments_api_blueprint
+from routes.api.ontask_api_routes import ontask_api_blueprint
 
 #   pages
 from routes.pages.main_routes import main_blueprint
 from routes.pages.gentrys_quest_routes import gentrys_quest_blueprint
 from routes.pages.account_routes import account_blueprint
 from routes.pages.osu_routes import osu_blueprint
+from routes.pages.ontask_routes import ontask_blueprint
 
 # apis and objects
 from api.key_api import verify_api_key_header
@@ -161,12 +163,14 @@ def create_app():
     app.register_blueprint(osu_api_blueprint, url_prefix='/api')
     app.register_blueprint(gentrys_quest_api_blueprint, url_prefix='/api')
     app.register_blueprint(payments_api_blueprint, url_prefix='/payment')
+    app.register_blueprint(ontask_api_blueprint, url_prefix='/api')
 
     #   pages
     app.register_blueprint(main_blueprint)
     app.register_blueprint(gentrys_quest_blueprint, url_prefix='/gentrys-quest')
     app.register_blueprint(account_blueprint, url_prefix='/account')
     app.register_blueprint(osu_blueprint, url_prefix='/osu')
+    app.register_blueprint(ontask_blueprint, url_prefix='/ontask')
     startup_tracker.done("blueprint_registration")
 
     @app.route("/metrics", methods=["GET"])
