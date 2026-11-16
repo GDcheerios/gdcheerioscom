@@ -1372,6 +1372,66 @@
                     </div>
                 </div>
             </div>
+            {% if account.osu_matches|length > 0 %}
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <h2 style="margin: 8px 0 0; font-size: 22px;">osu! participation</h2>
+                    {% for match in account.osu_matches %}
+                        {% set official = match.pinned|default(false) %}
+                        {% set podium = {1: ('#ffd88a', '#302615', '#65502d'), 2: ('#e0e7f0', '#242830', '#4b5360'), 3: ('#e8b18b', '#30221b', '#664733')}.get(match.placement) %}
+                        {% set starting = match.starting_stats or {} %}
+                        {% set ending = match.ending_stats or {} %}
+                        <article style="overflow: hidden; border: 1px solid #343039; border-radius: 12px; background: #151316; color: #f5f0f3;">
+                            <header style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #343039;">
+                                <div style="flex: 1; min-width: 0;">
+                                    {% if official %}
+                                        <span style="display: inline-block; margin-bottom: 7px; padding: 4px 7px; border: 1px solid #4b4552; border-radius: 4px; background: #29232f; color: #cec1e0; font-size: 10px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;">Official match</span>
+                                    {% endif %}
+                                    <h3 style="margin: 0; color: #ded7dc; font-size: 18px; font-weight: 700; overflow-wrap: anywhere;">{{ match.name }}</h3>
+                                </div>
+                                <span style="padding: 4px 9px; border-radius: 6px; background: #29232b; color: #e4c4d6; font-size: 12px;">{{ 'Finished' if match.ended else ('Open' if match.open else 'In progress') }}</span>
+                            </header>
+                            <div style="display: flex; align-items: stretch;">
+                                <div style="display: flex; flex: 0 0 90px; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 20px 4px; background: {{ podium[1] if podium else '#1c191d' }}; border-right: 1px solid {{ podium[2] if podium else '#343039' }}; text-align: center;">
+                                    <span style="color: {{ podium[0] if podium else '#c6b9c3' }}; font-size: {{ '42px' if podium else '36px' }}; line-height: 1; font-weight: 900; letter-spacing: -2px;">{{ '#' ~ match.placement if match.placement else '—' }}</span>
+                                    <span style="color: #b7aab4; font-size: 11px;">Placement</span>
+                                    <span style="color: #b7aab4; font-size: 11px;">of {{ match.users }} players</span>
+                                </div>
+                                <div style="flex: 1; min-width: 0; padding: 16px 18px;">
+                                    <dl style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); align-items: center; gap: 16px 24px; margin: 0; font-variant-numeric: tabular-nums;">
+                                        <div style="min-width: 0;">
+                                            <dt style="margin-bottom: 4px; color: #b7aab4; font-size: 12px;">Match pp</dt>
+                                            <dd style="margin: 0; font-size: 26px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere;">{{ '{:,}'.format(match.reconstructed_pp) if match.reconstructed_pp is not none else '—' }}</dd>
+                                        </div>
+                                        {% for label, key in [('Plays', 'playcount'), ('Ranked score', 'ranked_score')] %}
+                                            <div style="min-width: 0;">
+                                                <dt style="margin-bottom: 4px; color: #b7aab4; font-size: 12px;">{{ label }}</dt>
+                                                <dd style="margin: 0; font-size: 20px; font-weight: 700; overflow-wrap: anywhere;">
+                                                    {% if ending.get(key) is not none and starting.get(key) is not none %}
+                                                        {{ '{:+,}'.format(ending[key] - starting[key]) }}
+                                                    {% else %}
+                                                        <span style="color: #b7aab4; font-size: 13px; font-weight: 400;">{{ 'Unavailable' if match.ended else 'In progress' }}</span>
+                                                    {% endif %}
+                                                </dd>
+                                            </div>
+                                        {% endfor %}
+                                    </dl>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 16px; color: #b7aab4; font-size: 12px; line-height: 1.5;">
+                                        {% if match.started_at %}
+                                            <time datetime="{{ match.started_at.isoformat() }}">{{ match.started_at.strftime('%b %d, %Y') }}</time>
+                                            <span>–</span>
+                                        {% endif %}
+                                        {% if match.ended_at %}
+                                            <time datetime="{{ match.ended_at.isoformat() }}">{{ match.ended_at.strftime('%b %d, %Y') }}</time>
+                                        {% else %}
+                                            <span>{{ 'Finished' if match.ended else 'Ongoing' }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
         {% endif %}
 {% endblock %}

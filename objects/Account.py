@@ -107,14 +107,23 @@ class Account:
             load_task.done_subtask("initialize data", "check supporter status")
 
             load_task.start_subtask("initialize data", "fetch osu matches")
-            self.osu_matches = database.fetch_all_to_dict(
-                """
-                SELECT id, name, open, pinned, ended, started_at, opener_id, ended_at, (
-                    SELECT count (*) FROM osu.match_users where match_id = osu.matches.id
-                    ) as users
-                FROM osu.matches
-                WHERE opener_id = %s
-                """, params=(self.id,))
+            self.osu_matches = []
+            osu_data = self.get_osu_data()
+            osu_id = None
+            if osu_data:
+                osu_id = osu_data.get("id")
+                self.osu_matches = database.fetch_all_to_dict(
+                    """
+                    SELECT m.id, m.name, m.open, m.pinned, m.ended, m.started_at, m.opener_id, m.ended_at,
+                           (SELECT count (*) FROM osu.match_users where match_id = m.id) as users,
+                           mu.*
+                    FROM osu.matches m
+                             join osu.match_users mu
+                                  on m.id = mu.match_id
+                    where mu.user_id = %s
+                    order by m.started_at desc
+                    """, params=(osu_id,))
+
             load_task.done_subtask("initialize data", "fetch osu matches")
 
         except TypeError:
