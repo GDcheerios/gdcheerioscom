@@ -561,23 +561,12 @@
                                                 style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
                                             Join Match
                                         </button>
-                                    {% else %}
-                                        <button id="refresh-button"
-                                                onclick="refreshButton()"
-                                                style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
-                                            Refresh
-                                        </button>
                                     {% endif %}
                                     {% if is_admin or is_creator %}
                                         <button id="add-user-button"
                                                 onclick="addUserButton()"
                                                 style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
                                             Add User
-                                        </button>
-                                        <button id="refresh-all-button"
-                                                onclick="refreshAllButton()"
-                                                style="padding: 10px 20px; font-size: 16px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 12px; cursor: pointer; margin: 10px auto;">
-                                            Refresh All
                                         </button>
                                         <button id="end-button"
                                                 onclick="endButton()"
@@ -791,30 +780,21 @@
                 return true;
             }
 
-            async refresh(pullFromOsu = false, sendSocket = false) {
+            async refresh() {
                 const now = new Date();
                 if (this.next_refresh && new Date(this.next_refresh) > now && !pullFromOsu) {
                     console.log(`Skipping refresh for player ${this.id}: next refresh at ${this.next_refresh}`);
                     return false;
                 }
 
-                const userData = await getUser(this.id, pullFromOsu);
+                const userData = await getUser(this.id);
 
-                if (!userData || !userData.user || userData.user.id == null) {
+                if (!userData || !userData || userData.id == null) {
                     console.error("Could not refresh player:", this.id, userData);
                     return false;
                 }
 
-                if (sendSocket) {
-                    publishRefresh(userData.user);
-                }
-
-                if (userData.score && pullFromOsu){
-                    await addScore(userData.score.id, sendSocket)
-                    publishScore(userData.score.id)
-                }
-
-                return this.updateData(userData.user);
+                return this.updateData(userData);
             }
 
             set startingStats(stats) {
@@ -910,10 +890,6 @@
                     const refreshButton = document.createElement('button');
                     refreshButton.textContent = 'Refresh';
                     refreshButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 8px; cursor: pointer; margin: 8px 0;';
-                    refreshButton.onclick = async () => {
-                        await this.refresh(true, true);
-                    };
-                    controls.appendChild(refreshButton);
 
                     const removeButton = document.createElement('button');
                     removeButton.textContent = 'Remove User';
@@ -1138,7 +1114,7 @@
                         <span style="text-wrap: nowrap;">${this.artist} - ${this.title}</span>
                     </div>
                     <div id="objective" class="score-row"></div>
-                    <h6 style="margin: 0 0 2px 4px;">Submitted by <a href="https://osu.ppy.sh/users/${this.userId}" target="_blank">${userData.user.username}</a> ${formatTimestamp(this.submitted_at)}</h6>
+                    <h6 style="margin: 0 0 2px 4px;">Submitted by <a href="https://osu.ppy.sh/users/${this.userId}" target="_blank">${userData.username}</a> ${formatTimestamp(this.submitted_at)}</h6>
                 `;
 
                 const objectiveContainer = this.element.querySelector('#objective');
@@ -1553,8 +1529,8 @@
         }
 
 
-        async function getUser(id, pullFromOsu = true) {
-            const url = `${buildApiUrl('/api/osu/fetch-user')}/${id}?skip_api=${!pullFromOsu}&match=${matchId}`;
+        async function getUser(id) {
+            const url = `${buildApiUrl('/api/osu/fetch-user')}/${id}?skip_api=true&match=${matchId}`;
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -1709,38 +1685,37 @@
                 }));
             };
 
-            ws.onmessage = function(event) {
+            ws.onmessage = async function (event) {
                 console.log('WebSocket message received:', event.data);
                 try {
                     const data = JSON.parse(event.data);
 
-                    if (data.type === 'refreshed' && data.match_id === matchId && data.user) {
-                        const player = players.get(Number(data.user.id));
+                    if (data.type === 'refreshed' && data.match_ids.includes(matchId) && data.user_id) {
+                        const player = players.get(Number(data.user_id));
+                        const user = await getUser(data.user_id);
                         if (!player) {
-                            addPlayer(data.user.id);
+                            await addPlayer(data.user_id);
                             return;
                         }
 
-                        console.log(data.user.placement_map)
-
-                        for (const [id, placement] of data.user.placement_map) {
+                        for (const [id, placement] of user.placement_map) {
                             const player = players.get(id);
                             if (player) {
-                                player.refresh(false, true);
+                                player.refresh();
                             }
                         }
 
-                        player.updateData(data.user);
+                        player.updateData(user);
                         player.render();
                         if (player.id === ID) {
-                            youCard.updateData(data.user);
+                            youCard.updateData(user);
                             youCard.render();
                         }
 
                         sort();
                     }
 
-                    if (data.type === 'new_score' && data.match_id === matchId && data.score_id && data.score_id) {
+                    if (data.type === 'new_score' && data.match_ids.includes(matchId) && data.score_id) {
                         addScore(data.score_id, false);
                     }
 
@@ -1759,34 +1734,6 @@
                     reconnectTimeout = setTimeout(connectWebSocket, 3000);
                 }
             };
-        }
-
-        function publishRefresh(user) {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                console.warn('WebSocket is not connected; refresh was not shared');
-                return false;
-            }
-
-            ws.send(JSON.stringify({
-                type: 'refresh',
-                match_id: matchId,
-                user: user
-            }));
-            return true;
-        }
-
-        function publishScore(scoreId) {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                console.warn('WebSocket is not connected; score was not shared');
-                return false;
-            }
-
-            ws.send(JSON.stringify({
-                type: 'new_score',
-                match_id: matchId,
-                score_id: scoreId
-            }));
-            return true;
         }
 
         connectWebSocket();
