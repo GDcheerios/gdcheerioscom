@@ -141,8 +141,8 @@
                     try {
                         const response = await fetch(`${buildApiUrl('/api/osu/fetch-user')}/${encodeURIComponent(identifier)}`);
                         const data = await response.json();
-                        if (!response.ok || data.error || !data.user) throw new Error(data.error || 'Player not found');
-                        renderPlayer(data.user);
+                        if (!response.ok || data.error || !data) throw new Error(data.error || 'Player not found');
+                        renderPlayer(data);
                         input.value = '';
                     } catch (requestError) { error.textContent = requestError.message; }
                 }

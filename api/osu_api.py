@@ -62,6 +62,39 @@ def check_access():
     return token
 
 
+def fetch_score(score_id: int):
+    score_req = requests.get(f"https://osu.ppy.sh/api/v2/scores/{score_id}",
+                             headers={"Authorization": f"Bearer {check_access()}", "x-api-version": "20220705"},
+                             params={"mode": "osu"}).json()
+    users = [row[0] for row in environment.database.fetch_all(
+        "select distinct user_id from osu.match_users mu join osu.matches m on mu.match_id = m.id where m.ended = false"
+    )]
+    scores = [row[0] for row in environment.database.fetch_all(
+        "select id from osu.scores where user_id in %s",
+        params=(tuple(users),)
+    )]
+
+    score = score_req
+    if not (score["id"] in scores) and score["user_id"] in users:
+        beatmap = score.get("beatmap") or {}
+        beatmapset = score.get("beatmapset") or beatmap.get("beatmapset") or {}
+        covers = beatmapset.get("covers") or {}
+
+        environment.database.execute("""
+                                     INSERT INTO osu.scores (id, beatmap_id, accuracy, rank, pp, score, user_id, cover,
+                                                             title, artist)
+                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                     """,
+                                     params=(score.get("id"), score.get("beatmap_id"),
+                                             round(float(score.get("accuracy", 0.0)), 4), score.get("rank", "F"),
+                                             round(float(score["pp"]), 2) if score.get("pp") is not None else 0,
+                                             score.get("classic_total_score") or 0, score.get("user_id"),
+                                             covers.get("cover") or covers.get("card") or "",
+                                             beatmapset.get("title") or "", beatmapset.get("artist") or ""))
+
+    return score
+
+
 def compare_to_match(user, match_id: int) -> dict:
     if not match_id:
         return user
@@ -120,34 +153,29 @@ def compare_to_match(user, match_id: int) -> dict:
 
     placement = environment.database.fetch_one(
         """
-        WITH match AS (
-            SELECT *
-            FROM osu.matches
-            WHERE id = %s
-        ),
-             ranked_users AS (
-                 SELECT mu.user_id,
-                        mu.placement AS old_placement,
-                        CASE LOWER(TRIM(m.objective))
-                            WHEN 'reconstructed_pp'
-                                THEN DENSE_RANK() OVER (ORDER BY mu.reconstructed_pp DESC)
-                            ELSE DENSE_RANK() OVER (
-                                ORDER BY (to_jsonb(u) ->> m.objective)::numeric -
-                                         (mu.starting_stats ->> m.objective)::numeric DESC
-                                )
-                            END AS new_placement
-                 FROM osu.match_users mu
-                          JOIN match m ON mu.match_id = m.id
-                          JOIN osu.users u ON mu.user_id = u.id
-             ),
+        WITH match AS (SELECT *
+                       FROM osu.matches
+                       WHERE id = %s),
+             ranked_users AS (SELECT mu.user_id,
+                                     mu.placement AS old_placement,
+                                     CASE LOWER(TRIM(m.objective))
+                                         WHEN 'reconstructed_pp'
+                                             THEN DENSE_RANK() OVER (ORDER BY mu.reconstructed_pp DESC)
+                                         ELSE DENSE_RANK() OVER (
+                                             ORDER BY (to_jsonb(u) ->> m.objective)::numeric -
+                                                      (mu.starting_stats ->> m.objective)::numeric DESC
+                                             )
+                                         END      AS new_placement
+                              FROM osu.match_users mu
+                                       JOIN match m ON mu.match_id = m.id
+                                       JOIN osu.users u ON mu.user_id = u.id),
              updated_users AS (
                  UPDATE osu.match_users AS mu
                      SET placement = ru.new_placement
                      FROM ranked_users ru, match m
                      WHERE mu.user_id = ru.user_id
                          AND mu.match_id = m.id
-                     RETURNING mu.user_id, ru.new_placement, ru.old_placement
-             )
+                     RETURNING mu.user_id, ru.new_placement, ru.old_placement)
         SELECT new_placement, old_placement
         FROM updated_users
         WHERE user_id = %s;
@@ -163,8 +191,8 @@ def compare_to_match(user, match_id: int) -> dict:
             SELECT user_id, placement
             FROM osu.match_users
             WHERE match_id = %s
-                AND placement >= %s
-                AND placement <= %s
+              AND placement >= %s
+              AND placement <= %s
             """,
             params=(match_id, min(placement), max(placement))
         )
@@ -207,10 +235,9 @@ def compare_to_match(user, match_id: int) -> dict:
             INSERT INTO osu.match_metrics (match_id, user_id, placement, objective, plays, date)
             VALUES (%s, %s, %s, %s, %s, CURRENT_DATE)
             ON CONFLICT (match_id, user_id, date)
-                DO UPDATE SET
-                    placement = EXCLUDED.placement,
-                    objective = EXCLUDED.objective,
-                    plays = EXCLUDED.plays;
+                DO UPDATE SET placement = EXCLUDED.placement,
+                              objective = EXCLUDED.objective,
+                              plays     = EXCLUDED.plays;
             """,
             params=(
                 match_id,
@@ -244,7 +271,6 @@ def get_user_info(user_identifier, skip_api=False):
 
     total_refreshes.add(1)
 
-
     if (
             not user_check
             or user_check["last_refresh"]
@@ -260,78 +286,36 @@ def get_user_info(user_identifier, skip_api=False):
                     "Authorization": f"Bearer {check_access()}",
                 },
             ).json()
-            recent_score_req = requests.get(
-                f"https://osu.ppy.sh/api/v2/users/{user_identifier}/scores/recent",
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {check_access()}",
-                    "x-api-version": "20220705"
-                },
-                params={
-                    "mode": "osu",
-                    "limit": 1,
-                    "include_fails": "1"
-                }
-            ).json()
 
             total_refreshes_with_api_call.add(1)
 
-            if len(recent_score_req) == 0:
-                return {
-                    'user': user_req,
-                    'score': None
-                }
-
-            try:
-                return {
-                    'user': user_req,
-                    'score': recent_score_req[0]
-                }
-            except KeyError:
-                return {
-                    'user': user_req,
-                    'score': None
-                }
+            return user_req
 
     if user_check:
-        score_check = environment.database.fetch_to_dict(
-            """
-            SELECT *
-            FROM osu.scores
-            WHERE user_id = %s
-            ORDER BY submitted_at DESC
-            LIMIT 1
-            """,
-            (user_check['id'],)
-        )
-        return {
-            'user': user_check,
-            'score': score_check
-        }
+        return user_check
 
     logger.info("user %s already checked within last minute or user not found", user_identifier)
 
     return None
 
 
-def extract_info(data):
+def extract_info(user_data: dict):
     """
     extract major info from user info
 
-    :param user_info: JSON from osu api user info
-    :return: json of important user info
+    :param user_data: JSON from osu api user info
+    :return: json of user info
     """
 
     try:
         try:
-            if data['error'] is None:
+            if user_data['error'] is None:
                 return None
         except KeyError:
             pass
 
-        if data:
-            user_info = data['user']
+        if user_data:
+            user_info = user_data
             last_refresh = user_info.get('last_refresh')
             if last_refresh:
                 next_refresh = last_refresh + dt.timedelta(minutes=environment.osu_refresh_cooldown)
@@ -363,15 +347,12 @@ def extract_info(data):
             }
 
             db = environment.database
-            if data['score'] is None:
-                data['score'] = {"id": 0}
 
             exists = db.fetch_to_dict(
                 """
-                SELECT EXISTS(SELECT 1 FROM osu.users WHERE id = %s)  as "user",
-                       EXISTS(SELECT 1 FROM osu.scores WHERE id = %s) as score
+                SELECT EXISTS(SELECT 1 FROM osu.users WHERE id = %s) as "user"
                 """,
-                params=(data['user']['id'], data['score']['id'])
+                params=(extracted_info['id'],)
             )
 
             if exists['user']:
@@ -446,59 +427,18 @@ def extract_info(data):
                     )
                 )
 
-            if not exists["score"] and data['score']['id'] != 0:
-                db.execute(
-                    """
-                    INSERT INTO osu.scores (id, beatmap_id, user_id, submitted_at, accuracy, rank, pp, score, cover,
-                                            title, artist)
-                    VALUES (%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    params=(
-                        data['score']['id'],
-                        data['score']['beatmap']['id'],
-                        data['user']['id'],
-                        data['score']['accuracy'],
-                        data['score']['rank'],
-                        data['score']['pp'],
-                        data['score']['classic_total_score'],
-                        data['score']['beatmapset']['covers']['cover'],
-                        data['score']['beatmapset']['title'],
-                        data['score']['beatmapset']['artist']
-                    )
-                )
-
-            score = None
-            if data['score']['id'] != 0:
-                score = {
-                    'score': data['score']['classic_total_score'],
-                    'pp': data['score']['pp'],
-                    'beatmap_id': data['score']['beatmap']['id'],
-                    'id': data['score']['id'],
-                    'accuracy': data['score']['accuracy'],
-                    'rank': data['score']['rank'],
-                    'cover': data['score']['beatmapset']['covers']['cover'],
-                    'title': data['score']['beatmapset']['title'],
-                    'artist': data['score']['beatmapset']['artist']
-                }
-
-            info = {
-                'user': extracted_info,
-                'score': score
-            }
-
-            return info
+            return extracted_info
         else:
             logger.warning("user info not found")
             return None
     except KeyError as e:
-
-        return data
+        return user_data
 
 
 def fetch_osu_data(user_id, skip_api=False, match_id=None):
     result = extract_info(get_user_info(user_id, skip_api=skip_api))
     if match_id:
-        result["user"] = compare_to_match(result["user"], match_id)
+        result = compare_to_match(result, match_id)
 
     return result
 
@@ -508,13 +448,13 @@ def get_team(id):
         """
         SELECT t.*,
                COALESCE(SUM(
-                       CASE LOWER(TRIM(m.objective))
-                           WHEN 'reconstructed_pp' THEN mu.reconstructed_pp
-                           ELSE
-                               (to_jsonb(u) ->> m.objective)::numeric
-                                   - (mu.starting_stats ->> m.objective)::numeric
-                           END
-               ), 0) AS points
+                                CASE LOWER(TRIM(m.objective))
+                                    WHEN 'reconstructed_pp' THEN mu.reconstructed_pp
+                                    ELSE
+                                        (to_jsonb(u) ->> m.objective)::numeric
+                                            - (mu.starting_stats ->> m.objective)::numeric
+                                    END
+                        ), 0) AS points
 
         FROM osu.teams t
                  LEFT JOIN osu.match_users mu ON t.id = mu.team_id
@@ -531,7 +471,8 @@ def get_team(id):
 def get_team_users(id, limit: int = 20):
     return [user[0] for user in environment.database.fetch_all(
         """
-        SELECT user_id FROM osu.match_users
+        SELECT user_id
+        FROM osu.match_users
         WHERE team_id = %s
         ORDER BY placement
         LIMIT %s
@@ -608,21 +549,17 @@ def get_recent_scores(match_id: int, limit: int = 5):
 def get_best_scores(match_id: int, limit: int = 5):
     return environment.database.fetch_all(
         """
-        WITH match AS (
-            SELECT *
-            FROM osu.matches
-            WHERE id = %s
-        )
+        WITH match AS (SELECT *
+                       FROM osu.matches
+                       WHERE id = %s)
         SELECT s.id
         FROM osu.scores s,
              match
         WHERE s.submitted_at > match.started_at
           AND s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
-          AND s.user_id IN (
-            SELECT mu.user_id
-            FROM osu.match_users mu
-            WHERE mu.match_id = match.id
-        )
+          AND s.user_id IN (SELECT mu.user_id
+                            FROM osu.match_users mu
+                            WHERE mu.match_id = match.id)
         ORDER BY (
                      COALESCE(
                              (
@@ -666,6 +603,7 @@ def get_average_metric_by_score(match_id: int, user_id: int, metric: str = "accu
         """,
         params=(match_id, user_id, limit, metric, metric, metric)
     )[0]
+
 
 # </editor-fold>
 

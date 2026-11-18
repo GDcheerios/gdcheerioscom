@@ -77,7 +77,7 @@ def add_osu_user():
     user = request.json["user"]
     match_id = request.json["match_id"]
 
-    user = osu_api.fetch_osu_data(user)['user']
+    user = osu_api.fetch_osu_data(user)
 
     existing = environment.database.fetch_one(
         """
@@ -187,7 +187,7 @@ def change_nickname():
 def freeze_user():
     user_id = request.json["userId"]
     match_id = request.json["match"]
-    user = osu_api.fetch_osu_data(user_id, skip_api=True)["user"]
+    user = osu_api.fetch_osu_data(user_id, skip_api=True)
     environment.database.execute(
         """
         UPDATE osu.match_users
@@ -300,8 +300,7 @@ def create_match():
         team["dbID"] = db_result[0]
 
     for player_id, player_data in players.items():
-        osu_player = osu_api.fetch_osu_data(player_id, skip_api=True)
-        user_stats = osu_player["user"]
+        user_stats = osu_api.fetch_osu_data(player_id, skip_api=True)
         user_stats["reconstructed_pp"] = 0
         safe_stats_json = json.dumps(_json_safe(user_stats))
 
@@ -334,7 +333,7 @@ def end_match(id):
     logger.info("ending match id=%s users=%s", id, match_users)
     environment.database.execute("UPDATE osu.matches SET ended = true WHERE id = %s", params=(id,))
     for user in match_users:
-        user = osu_api.fetch_osu_data(user, skip_api=True)["user"]
+        user = osu_api.fetch_osu_data(user, skip_api=True)
         environment.database.execute(
             """
             UPDATE osu.match_users
@@ -378,7 +377,11 @@ def get_recent_scores(match_id: int):
 @osu_api_blueprint.get('/osu/scores/<int:match_id>/best')
 def get_best_score(match_id):
     limit = request.args.get("limit", type=int, default=5)
-
     return osu_api.get_best_scores(match_id, limit)
+
+
+@osu_api_blueprint.get('/osu/scores/push/<int:score_id>')
+def push_score(score_id: int):
+    return osu_api.fetch_score(score_id)
 
 # endregion
