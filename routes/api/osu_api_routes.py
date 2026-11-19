@@ -384,4 +384,23 @@ def get_best_score(match_id):
 def push_score(score_id: int):
     return osu_api.fetch_score(score_id)
 
+
+@osu_api_blueprint.get('/osu/scores/user/<int:user_id>/recent')
+def get_user_recent_scores(user_id: int):
+    match_id = request.args.get("match", type=int)
+    limit = request.args.get("limit", type=int, default=5)
+    if match_id is None:
+        return {"error": "match query parameter is required"}, 400
+    return osu_api.get_user_recent_scores(match_id, user_id, limit)
+
+
+@osu_api_blueprint.get('/osu/scores/user/<int:user_id>/best')
+def get_user_best_scores(user_id: int):
+    match_id = request.args.get("match", type=int)
+    limit = request.args.get("limit", type=int, default=5)
+    if match_id is None:
+        return {"error": "match query parameter is required"}, 400
+    return osu_api.get_user_best_scores(match_id, user_id, limit)
+
+
 # endregion

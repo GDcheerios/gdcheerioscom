@@ -580,6 +580,57 @@ def get_best_scores(match_id: int, limit: int = 5):
     )
 
 
+def get_user_recent_scores(match_id: int, user_id: int, limit: int = 5):
+    return environment.database.fetch_all(
+        """
+        WITH match AS (SELECT *
+                       FROM osu.matches
+                       WHERE id = %s)
+        SELECT s.id
+        FROM osu.scores s,
+             match
+        WHERE s.user_id = %s
+          AND s.submitted_at > match.started_at
+          AND s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
+        ORDER BY s.submitted_at DESC
+        LIMIT %s
+        """,
+        params=(match_id, user_id, limit)
+    )
+
+
+def get_user_best_scores(match_id: int, user_id: int, limit: int = 5):
+    return environment.database.fetch_all(
+        """
+        WITH match AS (SELECT *
+                       FROM osu.matches
+                       WHERE id = %s)
+        SELECT s.id
+        FROM osu.scores s,
+             match
+        WHERE s.user_id = %s
+          AND s.submitted_at > match.started_at
+          AND s.submitted_at <= COALESCE(match.ended_at::timestamp, NOW())
+        ORDER BY (
+                     COALESCE(
+                             (
+                                 to_json(s.*) ->>
+                                 CASE LOWER(TRIM(match.objective::text))
+                                     WHEN 'reconstructed_pp' THEN 'pp'
+                                     WHEN 'total_score' THEN 'score'
+                                     WHEN 'ranked_score' THEN 'score'
+                                     ELSE LOWER(TRIM(match.objective::text))
+                                     END
+                                 )::numeric,
+                             0
+                     )
+                     ) DESC
+        LIMIT %s
+        """,
+        params=(match_id, user_id, limit),
+    )
+
+
 def get_average_metric_by_score(match_id: int, user_id: int, metric: str = "accuracy", limit: int = 100):
     return environment.database.fetch_one(
         """
