@@ -8,21 +8,36 @@
 <body>
 {% include 'navbar.html' %}
 {% block body %}
+    {% set server_cents = monetary_details.server_cents if (monetary_details and monetary_details.server_cents) else 0 %}
+    {% set goal_cents = monetary_details.goal_cents if (monetary_details and monetary_details.goal_cents) else 5000 %}
+    {% set pct = (server_cents / goal_cents * 100) if goal_cents > 0 else 0 %}
     <section class="block" id="supporter" aria-labelledby="supporter">
         <div class="center">
             <h2>Support GDcheerios.com</h2>
             <div style="margin: 10px 20%;">
                 <p>
-                    I love being able to create things for people to use,
+                    I love being able to create services for people to use,
                     and I have so much fun creating these projects.
                     Letting people experience them for free is a big part of what makes me happy.
                     <br><br>
                     Unfortunately, keeping the servers running isn't free, and I do have to pay for them.
                 </p>
                 <h3>Where your money goes</h3>
+
                 <p>
                     Your money goes towards server costs, paying the development team, and outside contributors/resources.
                 </p>
+                <div class="server-goal-box">
+                    <div class="server-goal-top">
+                        <span class="server-goal-label">Monthly Server Goal</span>
+                        <span class="server-goal-stats">
+                          <strong>${{ '%.2f'|format(server_cents / 100) }}</strong> / ${{ '%.2f'|format(goal_cents / 100) }} ({{ pct | round | int }}%)
+                        </span>
+                    </div>
+                    <div class="server-goal-track" role="progressbar" aria-valuenow="{{ pct | round | int }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="server-goal-fill" style="width: {{ [pct, 100] | min }}%;"></div>
+                    </div>
+                </div>
                 <h3>What you get with being a supporter</h3>
                 <h3>Status</h3>
                 <ul>
@@ -46,14 +61,18 @@
                     <label for="weeks-slider" style="display: block; margin-bottom: 10px;">How long do you want supporter status?</label>
                     <input type="range" class="supporter-slider" id="weeks-slider" name="weeks" min="1" max="104" value="1">
                     <div id="time-display">1 week</div>
+                    <div id="money-display"></div>
                     <button type="submit" class="supporter-button">Buy Supporter</button>
                 </form>
             {% else %}
                 <a href="/account/login" class="supporter-button">Login to buy supporter</a>
             {% endif %}
+            {% if logged_in %}
             <script>
                 const slider = document.getElementById('weeks-slider');
                 const display = document.getElementById('time-display');
+                const moneyDisplay = document.getElementById('money-display');
+                const weeklyCost = {{ weekly_cost | tojson }};
 
                 function updateSliderVisuals() {
                     const min = parseInt(slider.min, 10);
@@ -95,14 +114,40 @@
                     }
 
                     display.textContent = text;
+                    updateMoneyDisplay(totalWeeks);
 
                     // Update the green fill based on current value
                     updateSliderVisuals();
                 });
 
-                // Initialize visuals on page load
+                const stripeFee = (grossCents) =>
+                    grossCents > 0 ? Math.round(grossCents * 0.029) + 30 : 0;
+
+                function splitPaymentCents(grossCents) {
+                    const feeCents = stripeFee(grossCents);
+                    const netCents = Math.max(0, grossCents - feeCents);
+                    const serverCents = Math.floor(netCents / 2);
+                    const teamCents = netCents - serverCents;
+
+                    return {
+                        grossCents,
+                        stripeCents: feeCents,
+                        netCents,
+                        serverCents,
+                        teamCents,
+                    };
+                }
+
+                function updateMoneyDisplay(weeks) {
+                    const split = splitPaymentCents(weeks * weeklyCost);
+                    const dollars = cents => '$' + (cents / 100).toFixed(2);
+                    moneyDisplay.textContent = `Total: ${dollars(split.grossCents)} | Estimated Stripe fee: ${dollars(split.stripeCents)} | Servers: ${dollars(split.serverCents)} | Development team: ${dollars(split.teamCents)}`;
+                }
+
                 updateSliderVisuals();
+                updateMoneyDisplay(parseInt(slider.value, 10));
             </script>
+            {% endif %}
         </div>
     </section>
 {% endblock %}

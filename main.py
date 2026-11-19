@@ -84,6 +84,27 @@ def create_app():
             'stripe': environment.stripe,
             'google': environment.google,
             'debug': environment.debug,
+            'monetary_details':
+                environment.database.fetch_to_dict(
+                    """
+                    SELECT
+                        %s::integer as goal_cents,
+                        COUNT(*) AS purchase_count,
+                        COALESCE(SUM(weeks), 0) AS total_weeks_purchased,
+                        COALESCE(
+                            SUM(
+                                GREATEST(0, (weeks * 100) - (ROUND((weeks * 100) * 0.029)::INT + 30)) / 2
+                            ),
+                            0
+                        ) AS server_cents
+                    FROM account.supports
+                    WHERE purchased = TRUE
+                      AND supported_on >= date_trunc('month', NOW())
+                      AND supported_on < date_trunc('month', NOW()) + INTERVAL '1 month';
+                        
+                    """,
+                    params=(environment.monthly_server_goal_cents,)
+                )
         }
 
     startup_tracker.done("context_processor")

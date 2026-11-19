@@ -47,7 +47,6 @@ db_port = os.environ.get('DB_PORT', 5432)
 db = os.environ.get('DB', "")
 tracker.done_subtask("Importing environment variables", "checking DB variables")
 
-
 tracker.start_subtask("Importing environment variables", "checking osu! variables")
 osu_secret = os.environ.get('OSU_SECRET', "")
 osu_api_key = os.environ.get('OSU_API_KEY', "")
@@ -181,23 +180,40 @@ tracker.done("Storage Setup")
 # region Payment Setup
 tracker.start("Payment Setup")
 weekly_cost = 100  # cents
+monthly_server_goal_cents = 5000  # $50.00 in cents (goal = 50)
+stripe_fee = lambda gross_cents: round(gross_cents * 0.029) + 30 if gross_cents > 0 else 0
+
+
+def split_payment_cents(gross_cents: int) -> dict:
+    fee_cents = stripe_fee(gross_cents)
+    net_cents = max(0, gross_cents - fee_cents)
+    server_cents = net_cents // 2
+    team_cents = net_cents - server_cents
+
+    return {
+        "gross_cents": gross_cents,
+        "stripe_cents": fee_cents,
+        "net_cents": net_cents,
+        "server_cents": server_cents,
+        "team_cents": team_cents,
+    }
+
+
 tracker.done("Payment Setup")
 # endregion
 
 # region Database Checks
 tracker.start("Checking Database Environment")
 _dev_schema_exists = Database.fetch_one("""
-                   SELECT EXISTS (
-                        SELECT *
-                        FROM pg_catalog.pg_namespace
-                        WHERE nspname = 'dev'
-                   );
+                                        SELECT EXISTS (SELECT *
+                                                       FROM pg_catalog.pg_namespace
+                                                       WHERE nspname = 'dev');
                    """)[0]
 _dev_info = Database.fetch_one("""
-                   SELECT *
-                   FROM pg_catalog.pg_namespace
-                   WHERE nspname = 'dev'
-                   LIMIT 1;
+                               SELECT *
+                               FROM pg_catalog.pg_namespace
+                               WHERE nspname = 'dev'
+                               LIMIT 1;
                    """)
 dev_timecard_exists = Database.fetch_one(
     """

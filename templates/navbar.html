@@ -10,9 +10,6 @@
           <li><a href="/">Home</a></li>
           <li><a href="/about">About Me</a></li>
           <li><a href="/changelog">Changelog</a></li>
-            {% if stripe %}
-                <li><a href="/supporter">Support</a></li>
-            {% endif %}
             <li><a target="_blank" href="/status">Status</a></li>
             <li><a href="https://github.com/GDcheeriosYT/gdcheerioscom" target="_blank">GitHub</a></li>
         </ul>
@@ -36,6 +33,19 @@
       {% endif %}
       
       <li><a href="/search">Search</a></li>
+
+      <!-- supporter -->
+        {% if stripe %}
+            {% set pct = ((monetary_details.server_cents / monetary_details.goal_cents) * 100) if (monetary_details and monetary_details.goal_cents) else 0 %}
+            <li>
+                <a href="/supporter" class="nav-goal-link" title="Monthly Server Costs: ${{ '%.2f'|format((monetary_details.server_cents or 0) / 100) }} / ${{ '%.2f'|format((monetary_details.goal_cents or 5000) / 100) }}">
+                    Supporter: {{ pct | round | int }}%
+                    <span class="nav-goal-underline">
+                    <span class="nav-goal-fill" style="width: {{ [pct, 100] | min }}%;"></span>
+                  </span>
+                </a>
+            </li>
+        {% endif %}
 
       <!-- Account dropdown -->
       <li class="dropdown">

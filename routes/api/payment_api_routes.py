@@ -77,6 +77,6 @@ def stripe_webhook():
 
         if user_id:
             from objects.Account import Account
-            Account.make_supporter(int(user_id), weeks)
+            Account.buy_supporter(int(user_id), weeks)
 
     return jsonify(success=True), 200

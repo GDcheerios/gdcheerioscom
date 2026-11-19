@@ -390,13 +390,13 @@ class Account:
             Account.make_supporter(id, weeks[0])
 
     @staticmethod
-    def insert_supporter(id: int, weeks: int = 1):
+    def insert_supporter(id: int, weeks: int = 1, purchased: bool = False):
         database.execute(
             """
-            INSERT INTO account.supports (user_id, weeks)
-            VALUES (%s, %s)
+            INSERT INTO account.supports (user_id, weeks, purchased)
+            VALUES (%s, %s, %s)
             """,
-            params=(id, weeks)
+            params=(id, weeks, purchased)
         )
 
     @staticmethod
@@ -405,7 +405,7 @@ class Account:
         Method specific for after purchase
         """
         Account.make_supporter(id, weeks)
-        Account.insert_supporter(id, weeks)
+        Account.insert_supporter(id, weeks, purchased=True)
 
     # </editor-fold>
 
