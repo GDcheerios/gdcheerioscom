@@ -331,7 +331,7 @@ def end_match(id):
                    environment.database.fetch_all("SELECT user_id FROM osu.match_users WHERE match_id = %s",
                                                   params=(id,))]
     logger.info("ending match id=%s users=%s", id, match_users)
-    environment.database.execute("UPDATE osu.matches SET ended = true WHERE id = %s", params=(id,))
+    environment.database.execute("UPDATE osu.matches SET ended = true, ended_at = NOW() WHERE id = %s", params=(id,))
     for user in match_users:
         user = osu_api.fetch_osu_data(user, skip_api=True)
         environment.database.execute(
