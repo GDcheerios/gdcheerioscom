@@ -592,6 +592,7 @@ def get_average_metric_by_score(match_id: int, user_id: int, metric: str = "accu
                         WHERE user_id = %s
                           and submitted_at > m.started_at
                           and submitted_at <= COALESCE(m.ended_at::timestamp, NOW())
+                        ORDER BY submitted_at DESC
                         LIMIT %s)
         SELECT CASE
                    WHEN %s = 'pp' THEN AVG(nullif(s.pp, 0))
