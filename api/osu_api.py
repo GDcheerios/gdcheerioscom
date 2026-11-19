@@ -229,6 +229,10 @@ def compare_to_match(user, match_id: int) -> dict:
         "background": user["background"]
     }
 
+    gdcheerios_id = environment.database.fetch_one("SELECT user_id from auth.identities WHERE provider = 'osu' and provider_subject::text = %s::text", params=(user['id'],))
+    if gdcheerios_id:
+        user["gdcheerios_id"] = gdcheerios_id[0]
+
     if not match["ended"]:
         environment.database.execute(
             """

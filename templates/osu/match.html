@@ -864,7 +864,7 @@
                 this.detailsElement.classList.add('player-details');
                 this.container.appendChild(this.detailsElement);
                 this.container.appendChild(this.element);
-                this.usernameEl = document.createElement('a');
+                this.usernameEl = document.createElement('p');
                 this.usernameEl.classList.add('username');
                 this.placementEl = document.createElement('h3');
                 this.placementEl.classList.add('placement');
@@ -890,6 +890,9 @@
             }
 
             updateData(playerData) {
+                console.log(playerData)
+
+
                 if (!playerData || playerData.id == null) {
                     console.error("Invalid player data:", playerData);
                     return false;
@@ -921,6 +924,7 @@
                 this.grade_sh = playerData.grade_sh;
                 this.grade_a = playerData.grade_a;
                 this.averages = playerData.averages;
+                if (playerData.gdcheerios_id) this.gdcheerios_id = playerData.gdcheerios_id;
 
                 this.statChanged = previousValue !== undefined &&
                     Number(previousValue) !== Number(this[matchObjective]);
@@ -1061,6 +1065,24 @@
                     tabBtn.addEventListener('click', () => self.switchTab(tab.name));
                     tabsBar.appendChild(tabBtn);
                 });
+
+                const osuProfileTabBtn = document.createElement('button');
+                osuProfileTabBtn.classList.add('player-details-tab');
+                osuProfileTabBtn.dataset.tab = "osu profile";
+                osuProfileTabBtn.textContent = "osu! Profile";
+                osuProfileTabBtn.addEventListener('click', () => window.open(`https://osu.ppy.sh/users/${this.id}`, "_blank"))
+
+                tabsBar.appendChild(osuProfileTabBtn)
+
+                if (this.gdcheerios_id) {
+                    const gdcheeriosProfileTabBtn = document.createElement('button');
+                    gdcheeriosProfileTabBtn.classList.add('player-details-tab');
+                    gdcheeriosProfileTabBtn.dataset.tab = "gd profile";
+                    gdcheeriosProfileTabBtn.textContent = "GDcheerios.com Profile";
+                    gdcheeriosProfileTabBtn.addEventListener('click', () => window.open(`https://gdcheerios.com/user/${this.gdcheerios_id}`, "_blank"))
+
+                    tabsBar.appendChild(gdcheeriosProfileTabBtn)
+                }
 
                 this.detailsElement.appendChild(tabsBar);
 
@@ -1372,8 +1394,6 @@
                 this.element.replaceChildren();
                 this.renderPlacement();
                 this.usernameEl.textContent = (this.nickname != null ? this.nickname : this.username) + ((this.team != null) ? ` [${this.team.acronym}]`.toUpperCase() : '');
-                this.usernameEl.href = `https://osu.ppy.sh/users/${this.id}`;
-                this.usernameEl.target = "_blank";
                 if (this.avatar_url) {
                     this.avatarEl.src = this.avatar_url;
                 }
