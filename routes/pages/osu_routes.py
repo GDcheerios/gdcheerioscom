@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request
 
 import environment
-from api.osu_api import get_matches, fetch_osu_data, get_recent_scores
+from api.osu_api import get_matches, fetch_osu_data, get_recent_scores, get_best_scores
 from objects.Account import Account
 
 osu_blueprint = Blueprint('osu_blueprint', __name__)
@@ -26,6 +26,7 @@ def osu_match(id):
     player_ids = [player_id[0] for player_id in environment.database.fetch_all(
         "SELECT user_id FROM osu.match_users WHERE match_id = %s AND placement <= 20 ORDER BY placement LIMIT 20", params=(id,))]
     recent_scores = get_recent_scores(id, limit=6)
+    best_scores = get_best_scores(id, limit=10)
     team_ids = [team[0] for team in environment.database.fetch_all(
         """
         SELECT id FROM osu.teams WHERE match_id = %s
@@ -74,5 +75,6 @@ def osu_match(id):
         websocket_url=environment.frontend_websocket_url,
         player_ids=player_ids,
         recent_scores=recent_scores,
+        best_scores=best_scores,
         team_ids=team_ids
     )

@@ -596,12 +596,18 @@
                     </div>
                     <div class="osu-box match-scores-panel">
                         <div style="display: flex; flex-direction: row; justify-content: space-evenly; margin-bottom: 10px;">
-                            <div style="cursor: pointer;" onclick="showRecentPlays()">
-                                <h1 id="recentPlaysEl" style="color: white; text-align: center; margin: 0">Recent Plays</h1>
-                            </div>
+                            {% if not match.ended %}
+                                <div style="cursor: pointer;" onclick="showRecentPlays()">
+                                    <h1 id="recentPlaysEl" style="color: white; text-align: center; margin: 0">Recent Plays</h1>
+                                </div>
                             <div style="cursor: pointer;" onclick="showBestPlays()">
-                            <h1 id="bestPlaysEl" style="color: gray; text-align: center; margin: 0">Best Plays</h1>
+                                <h1 id="bestPlaysEl" style="color: gray; text-align: center; margin: 0">Best Plays</h1>
                             </div>
+                            {% else %}
+                                <div>
+                                    <h1 id="bestPlaysEl" style="color: white; text-align: center; margin: 0">Best Plays</h1>
+                                </div>
+                            {% endif %}
                         </div>
                         <div id="scores"></div>
                     </div>
@@ -1556,7 +1562,6 @@
                 yourCardContainer.appendChild(youCard.container);
                 youCard.render();
             }
-            sort();
         }
 
         async function getScore(id) {
@@ -1695,15 +1700,16 @@
                         const user = await getUser(data.user_id);
                         if (!player) {
                             await addPlayer(data.user_id);
+                            sort();
                             return;
                         }
 
-                        for (const [id, placement] of user.placement_map) {
-                            const player = players.get(id);
-                            if (player) {
-                                player.refresh();
-                            }
-                        }
+                        await Promise.all(
+                            user.placement_map.map(([id]) => {
+                                const p = players.get(id);
+                                return p ? p.refresh() : Promise.resolve();
+                            })
+                        );
 
                         player.updateData(user);
                         player.render();
@@ -1743,7 +1749,11 @@
             await Promise.all({{ team_ids | tojson }}.map(teamId => addTeam(teamId)));
             await Promise.all({{ player_ids | tojson }}.map(playerId => addPlayer(playerId)));
             await updateChart();
-            for (const scoreId of {{ recent_scores | tojson }}) addScore(scoreId);
+            {% if not match.ended %}
+                for (const scoreId of {{ recent_scores | tojson }}) await addScore(scoreId);
+            {% else %}
+                for (const scoreId of {{ best_scores | tojson }}) await addScore(scoreId);
+            {% endif %}
         });
 
         window.addEventListener('beforeunload', function() {
@@ -1844,6 +1854,7 @@
             players.clear();
             playersList.replaceChildren();
             await Promise.all({{ player_ids | tojson }}.map(playerId => addPlayer(playerId)));
+            sort();
             await updateChart();
         }
 
@@ -1866,6 +1877,7 @@
                 const data = await response.json();
                 if (data.id) {
                     await addPlayer(data.id);
+                    sort();
                 } else if (data.error) {
                     alert(`Failed to add user: ${data.error}`);
                 } else {
@@ -2009,6 +2021,7 @@
             if (response.ok){
                 const data = await response.json();
                 for (const player of data) await addPlayer(player);
+                sort();
             }
         }
 
