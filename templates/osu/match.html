@@ -10,7 +10,157 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
             <style>
                 :root {
-                    --player-details-height: 260px;
+                    --player-details-height: 340px;
+                }
+
+                .player-details-tabs {
+                    display: flex;
+                    gap: 2px;
+                    margin-top: 6px;
+                    margin-bottom: 8px;
+                    padding-bottom: 6px;
+                    border-bottom: 1px solid rgba(100, 150, 220, 0.25);
+                }
+
+                .player-details-tab {
+                    padding: 4px 12px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: #888;
+                    background: transparent;
+                    border: 1px solid transparent;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+                }
+
+                .player-details-tab:hover {
+                    color: #bbb;
+                    background: rgba(100, 150, 220, 0.1);
+                }
+
+                .player-details-tab.active {
+                    color: #fff;
+                    background: rgba(100, 150, 220, 0.2);
+                    border-color: rgba(100, 150, 220, 0.4);
+                }
+
+                .player-details-content {
+                    flex: 1;
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    min-height: 0;
+                }
+
+                .player-details-content::-webkit-scrollbar {
+                    width: 4px;
+                }
+
+                .player-details-content::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+
+                .player-details-content::-webkit-scrollbar-thumb {
+                    background: rgba(100, 150, 220, 0.3);
+                    border-radius: 2px;
+                }
+
+                .player-details-content::-webkit-scrollbar-thumb:hover {
+                    background: rgba(100, 150, 220, 0.5);
+                }
+
+                .player-details-panel {
+                    display: none;
+                    max-height: var(--player-details-height);
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    min-height: 0;
+                }
+
+                .player-details-panel::-webkit-scrollbar {
+                    width: 4px;
+                }
+
+                .player-details-panel::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+
+                .player-details-panel::-webkit-scrollbar-thumb {
+                    background: rgba(100, 150, 220, 0.3);
+                    border-radius: 2px;
+                }
+
+                .player-details-panel::-webkit-scrollbar-thumb:hover {
+                    background: rgba(100, 150, 220, 0.5);
+                }
+
+                .player-details-panel.active {
+                    display: block;
+                }
+
+                .player-score-mini {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 4px 6px;
+                    margin-bottom: 4px;
+                    border-radius: 6px;
+                    background: rgba(100, 150, 220, 0.06);
+                    font-size: 12px;
+                }
+
+                .player-score-mini img {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 4px;
+                    object-fit: cover;
+                }
+
+                .player-score-mini .score-mini-info {
+                    flex: 1;
+                    min-width: 0;
+                    overflow: hidden;
+                }
+
+                .player-score-mini .score-mini-title {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    color: #ccc;
+                    font-size: 11px;
+                }
+
+                .player-score-mini .score-mini-stats {
+                    display: flex;
+                    gap: 8px;
+                    color: #888;
+                    font-size: 11px;
+                }
+
+                .player-score-mini .score-mini-stats span {
+                    color: #66aaff;
+                    font-weight: bold;
+                }
+
+                .player-score-mini .score-mini-rank {
+                    font-weight: bold;
+                    font-size: 13px;
+                    min-width: 24px;
+                    text-align: center;
+                }
+
+                .tab-loading {
+                    text-align: center;
+                    color: #888;
+                    padding: 16px;
+                    font-size: 12px;
+                }
+
+                .tab-empty {
+                    text-align: center;
+                    color: #666;
+                    padding: 16px;
+                    font-size: 12px;
                 }
 
                 @keyframes slideIn {
@@ -262,7 +412,7 @@
 
                 .player-details {
                     display: flex;
-                    flex-direction: row;
+                    flex-direction: column;
                     position: absolute;
                     z-index: 1;
                     top: 0;
@@ -859,12 +1009,90 @@
                 }, 200);
             }
 
+            switchTab(tabName, forceApply = false) {
+                const wasSameTab = this.activeTab === tabName;
+                if (wasSameTab && !forceApply) return;
+                this.activeTab = tabName;
+
+                const tabsBar = this.detailsElement.querySelector('.player-details-tabs');
+                if (tabsBar) {
+                    tabsBar.querySelectorAll('.player-details-tab').forEach(tab => {
+                        tab.classList.toggle('active', tab.dataset.tab === tabName);
+                    });
+                }
+
+                const content = this.detailsElement.querySelector('.player-details-content');
+                if (content) {
+                    content.querySelectorAll('.player-details-panel').forEach(panel => {
+                        panel.classList.toggle('active', panel.dataset.panel === tabName);
+                    });
+                }
+
+                if (tabName === 'recent' && !this._recentLoaded) {
+                    this.loadRecentPlays();
+                } else if (tabName === 'best' && !this._bestLoaded) {
+                    this.loadBestPlays();
+                }
+            }
+
             renderDetails() {
                 this.detailsElement.replaceChildren();
-                const controls = document.createElement('div');
-                controls.style.flexDirection = 'column';
 
-                const detailsContent = document.createElement('div');
+                const tabsBar = document.createElement('div');
+                tabsBar.classList.add('player-details-tabs');
+
+                const self = this;
+
+                const tabs = [
+                    { name: 'stats', label: 'Stats' },
+                    { name: 'recent', label: 'Recent Plays' },
+                    { name: 'best', label: 'Best Plays' }
+                ];
+
+                {% if (is_creator or is_admin) and not match_ended %}
+                    tabs.splice(1, 0, { name: 'controls', label: 'Controls' });
+                {% endif %}
+
+                tabs.forEach(tab => {
+                    const tabBtn = document.createElement('button');
+                    tabBtn.classList.add('player-details-tab');
+                    tabBtn.dataset.tab = tab.name;
+                    tabBtn.textContent = tab.label;
+                    tabBtn.addEventListener('click', () => self.switchTab(tab.name));
+                    tabsBar.appendChild(tabBtn);
+                });
+
+                this.detailsElement.appendChild(tabsBar);
+
+                const content = document.createElement('div');
+                content.classList.add('player-details-content');
+
+                tabs.forEach(tab => {
+                    const panel = document.createElement('div');
+                    panel.classList.add('player-details-panel');
+                    panel.dataset.panel = tab.name;
+                    content.appendChild(panel);
+                });
+
+                this.detailsElement.appendChild(content);
+
+                this._recentLoaded = false;
+                this._bestLoaded = false;
+
+                this.renderStatsPanel();
+                {% if (is_creator or is_admin) and not match_ended %}
+                    this.renderControlsPanel();
+                {% endif %}
+                this.renderRecentPlaysPanel();
+                this.renderBestPlaysPanel();
+
+                this.switchTab(this.activeTab || 'stats', true);
+            }
+
+            renderStatsPanel() {
+                const content = this.detailsElement.querySelector('.player-details-content');
+                const panel = content.querySelector('[data-panel="stats"]');
+                if (!panel) return;
 
                 const createStat = (label, value) => {
                     const statEl = document.createElement('div');
@@ -872,116 +1100,272 @@
                     return statEl;
                 };
 
-                const statsText = document.createElement('h3');
+                panel.replaceChildren();
+
+                const statsText = document.createElement('h4');
                 statsText.textContent = 'Stats';
-                detailsContent.appendChild(statsText);
-                detailsContent.appendChild(createStat("Plays", this.playcount.toLocaleString()))
+                statsText.style.cssText = 'margin: 0 0 6px 0; font-size: 13px; color: #aaa;';
+                panel.appendChild(statsText);
+                panel.appendChild(createStat("Plays", this.playcount.toLocaleString()));
 
-                const averageText = document.createElement('h3');
+                const averageText = document.createElement('h4');
                 averageText.textContent = 'Average';
-                detailsContent.appendChild(averageText);
-                detailsContent.appendChild(createStat('Score', parseInt(this.averages.score || 0).toLocaleString()));
-                detailsContent.appendChild(createStat('Accuracy', (this.averages.accuracy * 100 || 0).toFixed(2) + '%'));
-                detailsContent.appendChild(createStat('PP', parseInt(this.averages.pp || 0).toLocaleString()));
+                averageText.style.cssText = 'margin: 10px 0 4px 0; font-size: 13px; color: #aaa;';
+                panel.appendChild(averageText);
+                panel.appendChild(createStat('Score', parseInt(this.averages.score || 0).toLocaleString()));
+                panel.appendChild(createStat('Accuracy', (this.averages.accuracy * 100 || 0).toFixed(2) + '%'));
+                panel.appendChild(createStat('PP', parseInt(this.averages.pp || 0).toLocaleString()));
+            }
 
-                {% if (is_creator or is_admin) and not match_ended %}
-                    this.detailsElement.appendChild(controls);
+            renderControlsPanel() {
+                const content = this.detailsElement.querySelector('.player-details-content');
+                const panel = content.querySelector('[data-panel="controls"]');
+                if (!panel) return;
 
-                    const controlsText = document.createElement('h3');
-                    controlsText.textContent = 'Controls';
-                    controls.appendChild(controlsText);
+                const controls = document.createElement('div');
+                controls.style.flexDirection = 'column';
 
-                    const refreshButton = document.createElement('button');
-                    refreshButton.textContent = 'Refresh';
-                    refreshButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 8px; cursor: pointer; margin: 8px 0;';
+                const controlsText = document.createElement('h4');
+                controlsText.textContent = 'Controls';
+                controlsText.style.cssText = 'margin: 0 0 6px 0; font-size: 13px; color: #aaa;';
+                controls.appendChild(controlsText);
 
-                    const removeButton = document.createElement('button');
-                    removeButton.textContent = 'Remove User';
-                    removeButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81, 0, 0), rgb(81, 0, 0)); border: 2px solid rgb(255, 0, 0); border-radius: 8px; cursor: pointer; margin: 8px 0;';
-                    removeButton.onclick = async () => {
-                        await removeUserButton(this.id);
-                    };
-                    controls.appendChild(removeButton);
+                const refreshButton = document.createElement('button');
+                refreshButton.textContent = 'Refresh';
+                refreshButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgba(15, 30, 70, 0.85), rgba(25, 45, 90, 0.65)); border: 2px solid rgba(100, 150, 220, 0.8); border-radius: 8px; cursor: pointer; margin: 8px 0;';
 
-                    const freezeButton = document.createElement('button');
-                    freezeButton.textContent = 'Freeze User';
-                    freezeButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81, 0, 0), rgb(81, 0, 0)); border: 2px solid rgb(255, 0, 0); border-radius: 8px; cursor: pointer; margin: 8px 0;';
-                    freezeButton.onclick = async () => {
-                        await freezeUserButton(this.id);
-                    };
-                    controls.appendChild(freezeButton);
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remove User';
+                removeButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81, 0, 0), rgb(81, 0, 0)); border: 2px solid rgb(255, 0, 0); border-radius: 8px; cursor: pointer; margin: 8px 0;';
+                removeButton.onclick = async () => {
+                    await removeUserButton(this.id);
+                };
+                controls.appendChild(removeButton);
 
-                    const teamForm = document.createElement('form');
-                    teamForm.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0;';
-                    const teamSelect = document.createElement('select');
-                    teamSelect.setAttribute('aria-label', 'Team for ' + this.username);
-                    teamSelect.style.cssText = 'max-width: 180px; padding: 8px; color: white; background: #192d5a; border-radius: 8px;';
-                    teamSelect.add(new Option('No team', ''));
-                    for (const team of teams.values()) {
-                        teamSelect.add(new Option(`${team.name} [${team.acronym}]`, String(team.id)));
-                    }
-                    teamSelect.value = this.team ? String(this.team.id) : '';
-                    const saveTeamButton = document.createElement('button');
-                    saveTeamButton.type = 'submit';
-                    saveTeamButton.textContent = this.team ? 'Change Team' : 'Add to Team';
-                    saveTeamButton.style.cssText = refreshButton.style.cssText;
-                    saveTeamButton.style.margin = '0';
-                    const teamMessage = document.createElement('span');
-                    teamMessage.setAttribute('role', 'status');
-                    teamMessage.style.cssText = 'flex-basis: 100%; font-size: 12px;';
-                    teamForm.append(teamSelect, saveTeamButton, teamMessage);
-                    teamForm.onsubmit = async event => {
-                        event.preventDefault();
-                        saveTeamButton.disabled = true;
-                        teamSelect.disabled = true;
-                        teamMessage.textContent = 'Saving…';
-                        try {
-                            const response = await fetch('/api/osu/change-team', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({match_id: matchId, user: this.id,
-                                    team_id: teamSelect.value ? Number(teamSelect.value) : null})
-                            });
-                            const result = await response.json();
-                            if (!response.ok) throw new Error(result.error || 'Could not save team.');
-                            location.reload();
-                        } catch (error) {
-                            teamMessage.textContent = error.message || 'Could not save team. Please try again.';
-                            saveTeamButton.disabled = false;
-                            teamSelect.disabled = false;
-                        }
-                    };
-                    controls.appendChild(teamForm);
+                const freezeButton = document.createElement('button');
+                freezeButton.textContent = 'Freeze User';
+                freezeButton.style.cssText = 'padding: 8px 16px; font-size: 14px; font-weight: bold; color: #fff; background: linear-gradient(135deg, rgb(81, 0, 0), rgb(81, 0, 0)); border: 2px solid rgb(255, 0, 0); border-radius: 8px; cursor: pointer; margin: 8px 0;';
+                freezeButton.onclick = async () => {
+                    await freezeUserButton(this.id);
+                };
+                controls.appendChild(freezeButton);
 
-                    const nicknameInput = document.createElement('input');
-                    nicknameInput.type = 'text';
-                    nicknameInput.placeholder = 'Nickname';
-                    nicknameInput.value = this.nickname || '';
-                    nicknameInput.style.width = '160px';
-
-                    const submitButton = document.createElement('button');
-                    submitButton.textContent = "Change nickname";
-
-                    submitButton.style.cssText = refreshButton.style.cssText;
-                    submitButton.style.margin = '0';
-                    submitButton.style.width = '100px';
-
-                    submitButton.addEventListener('click', async (e) => {
-                        await changeNickname(this.id, nicknameInput.value);
+                const teamForm = document.createElement('form');
+                teamForm.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0;';
+                const teamSelect = document.createElement('select');
+                teamSelect.setAttribute('aria-label', 'Team for ' + this.username);
+                teamSelect.style.cssText = 'max-width: 180px; padding: 8px; color: white; background: #192d5a; border-radius: 8px;';
+                teamSelect.add(new Option('No team', ''));
+                for (const team of teams.values()) {
+                    teamSelect.add(new Option(`${team.name} [${team.acronym}]`, String(team.id)));
+                }
+                teamSelect.value = this.team ? String(this.team.id) : '';
+                const saveTeamButton = document.createElement('button');
+                saveTeamButton.type = 'submit';
+                saveTeamButton.textContent = this.team ? 'Change Team' : 'Add to Team';
+                saveTeamButton.style.cssText = refreshButton.style.cssText;
+                saveTeamButton.style.margin = '0';
+                const teamMessage = document.createElement('span');
+                teamMessage.setAttribute('role', 'status');
+                teamMessage.style.cssText = 'flex-basis: 100%; font-size: 12px;';
+                teamForm.append(teamSelect, saveTeamButton, teamMessage);
+                teamForm.onsubmit = async event => {
+                    event.preventDefault();
+                    saveTeamButton.disabled = true;
+                    teamSelect.disabled = true;
+                    teamMessage.textContent = 'Saving…';
+                    try {
+                        const response = await fetch('/api/osu/change-team', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({match_id: matchId, user: this.id,
+                                team_id: teamSelect.value ? Number(teamSelect.value) : null})
+                        });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.error || 'Could not save team.');
                         location.reload();
-                    });
+                    } catch (error) {
+                        teamMessage.textContent = error.message || 'Could not save team. Please try again.';
+                        saveTeamButton.disabled = false;
+                        teamSelect.disabled = false;
+                    }
+                };
+                controls.appendChild(teamForm);
 
-                    controls.append(nicknameInput, submitButton);
+                const nicknameInput = document.createElement('input');
+                nicknameInput.type = 'text';
+                nicknameInput.placeholder = 'Nickname';
+                nicknameInput.value = this.nickname || '';
+                nicknameInput.style.width = '160px';
 
-                    const separator = document.createElement('div');
-                    separator.style.width = '2px';
-                    separator.style.background = 'linear-gradient(to bottom, transparent 0%, rgba(100, 150, 220, 0.6) 15%, rgba(100, 150, 220, 0.6) 85%, transparent 100%)';
-                    separator.style.margin = '0 12px';
-                    separator.style.alignSelf = 'stretch';
+                const submitButton = document.createElement('button');
+                submitButton.textContent = "Change nickname";
+                submitButton.style.cssText = refreshButton.style.cssText;
+                submitButton.style.margin = '0';
+                submitButton.style.width = '100px';
 
-                    this.detailsElement.appendChild(separator);
-                {% endif %}
-                this.detailsElement.appendChild(detailsContent);
+                submitButton.addEventListener('click', async (e) => {
+                    await changeNickname(this.id, nicknameInput.value);
+                    location.reload();
+                });
+
+                controls.append(nicknameInput, submitButton);
+                panel.replaceChildren();
+                panel.appendChild(controls);
+            }
+
+            renderRecentPlaysPanel() {
+                const content = this.detailsElement.querySelector('.player-details-content');
+                const panel = content.querySelector('[data-panel="recent"]');
+                if (!panel) return;
+                if (this._recentLoaded) return;
+
+                const loadingEl = document.createElement('div');
+                loadingEl.classList.add('tab-loading');
+                loadingEl.textContent = 'Loading recent plays…';
+                panel.appendChild(loadingEl);
+            }
+
+            async loadRecentPlays() {
+                if (this._recentLoaded) return;
+                this._recentLoaded = true;
+
+                const content = this.detailsElement.querySelector('.player-details-content');
+                const panel = content.querySelector('[data-panel="recent"]');
+                if (!panel) return;
+
+                try {
+                    const response = await fetch(
+                        `${buildApiUrl('/api/osu/scores/user/' + this.id + '/recent')}` + `?match=${matchId}&limit=100`,
+                        { method: 'GET', headers: {'Content-Type': 'application/json'} }
+                    );
+
+                    if (!response.ok) {
+                        panel.innerHTML = '<div class="tab-empty">No recent plays found.</div>';
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (!data || data.length === 0) {
+                        panel.innerHTML = '<div class="tab-empty">No recent plays found.</div>';
+                        return;
+                    }
+
+                    panel.replaceChildren();
+                    for (const scoreId of data) {
+                        console.log(scoreId)
+                        const scoreData = await getScore(scoreId);
+                        if (scoreData) {
+                            panel.appendChild(this.renderScoreMini(scoreData));
+                        }
+                    }
+                } catch (err) {
+                    console.error('Failed to load recent plays:', err);
+                    panel.innerHTML = '<div class="tab-empty">Failed to load recent plays.</div>';
+                }
+            }
+
+            renderBestPlaysPanel() {
+                const content = this.detailsElement.querySelector('.player-details-content');
+                const panel = content.querySelector('[data-panel="best"]');
+                if (!panel) return;
+                if (this._bestLoaded) return;
+
+                const loadingEl = document.createElement('div');
+                loadingEl.classList.add('tab-loading');
+                loadingEl.textContent = 'Loading best plays…';
+                panel.appendChild(loadingEl);
+            }
+
+            async loadBestPlays() {
+                if (this._bestLoaded) return;
+                this._bestLoaded = true;
+
+                const content = this.detailsElement.querySelector('.player-details-content');
+                const panel = content.querySelector('[data-panel="best"]');
+                if (!panel) return;
+
+                try {
+                    const response = await fetch(
+                        `${buildApiUrl('/api/osu/scores/user/' + this.id + '/best')}` + `?match=${matchId}&limit=100`,
+                        { method: 'GET', headers: {'Content-Type': 'application/json'} }
+                    );
+
+                    if (!response.ok) {
+                        panel.innerHTML = '<div class="tab-empty">No best plays found.</div>';
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (!data || data.length === 0) {
+                        panel.innerHTML = '<div class="tab-empty">No best plays found.</div>';
+                        return;
+                    }
+
+                    panel.replaceChildren();
+                    for (const scoreId of data) {
+                        const scoreData = await getScore(scoreId);
+                        if (scoreData) {
+                            panel.appendChild(this.renderScoreMini(scoreData));
+                        }
+                    }
+                } catch (err) {
+                    console.error('Failed to load best plays:', err);
+                    panel.innerHTML = '<div class="tab-empty">Failed to load best plays.</div>';
+                }
+            }
+
+            renderScoreMini(scoreData) {
+                const el = document.createElement('div');
+                el.classList.add('player-score-mini');
+
+                const beatmapset = scoreData.beatmapset || {};
+                const covers = scoreData.cover ? { cover: scoreData.cover } : (beatmapset.covers || {});
+                const coverUrl = covers.cover || covers.card || '';
+
+                const img = document.createElement('img');
+                img.src = coverUrl || '';
+                img.alt = '';
+                img.loading = 'lazy';
+                if (!coverUrl) img.style.display = 'none';
+
+                const info = document.createElement('div');
+                info.classList.add('score-mini-info');
+
+                const title = document.createElement('div');
+                title.classList.add('score-mini-title');
+                title.textContent = `${scoreData.artist || ''} - ${scoreData.title || ''}`;
+
+                const stats = document.createElement('div');
+                stats.classList.add('score-mini-stats');
+
+                const scoreSpan = document.createElement('div');
+                scoreSpan.innerHTML = 'Score: <span>' + (scoreData.score ? scoreData.score.toLocaleString('en-US') : '—') + '</span>';
+
+                const ppSpan = document.createElement('div');
+                ppSpan.innerHTML = 'PP: <span>' + (scoreData.pp ? parseFloat(scoreData.pp).toFixed(1) : '—') + '</span>';
+
+                const accSpan = document.createElement('div');
+                accSpan.innerHTML = 'Acc: <span>' + (scoreData.accuracy ? (parseFloat(scoreData.accuracy) * 100).toFixed(2) + '%' : '—') + '</span>';
+
+                stats.appendChild(scoreSpan);
+                stats.appendChild(ppSpan);
+                stats.appendChild(accSpan);
+                info.appendChild(title);
+                info.appendChild(stats);
+
+                const rank = document.createElement('div');
+                rank.classList.add('score-mini-rank');
+                const rankMap = {XH: 'SS+', X: 'SS', SH: 'S+', S: 'S', A: 'A', B: 'B', C: 'C', D: 'D', F: 'F'};
+                const rankLabel = rankMap[scoreData.rank] || scoreData.rank || '—';
+                rank.textContent = rankLabel;
+                const rankColors = {XH: '#ffd700', X: '#ffd700', SH: '#72e6a0', S: '#72e6a0', A: '#66aaff', B: '#aaa', C: '#888', D: '#ff8f9e', F: '#ff4444'};
+                rank.style.color = rankColors[scoreData.rank] || '#888';
+
+                el.appendChild(img);
+                el.appendChild(info);
+                el.appendChild(rank);
+                return el;
             }
 
             render() {
