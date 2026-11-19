@@ -1746,6 +1746,7 @@
             await Promise.all({{ team_ids | tojson }}.map(teamId => addTeam(teamId)));
             await Promise.all({{ player_ids | tojson }}.map(playerId => addPlayer(playerId)));
             await updateChart();
+            sort();
             {% if not match.ended %}
                 for (const scoreId of {{ recent_scores | tojson }}) await addScore(scoreId);
             {% else %}
