@@ -41,7 +41,7 @@ from api.key_api import verify_api_key_header
 from objects.Account import Account
 
 server_logger = setup_logger("main")
-server_logger.addHandler(environment.otel_handler)
+if environment.metrics_allowed: server_logger.addHandler(environment.otel_handler)
 startup_tracker = TaskTracker(server_logger, name="flask_server_startup")
 
 
@@ -95,17 +95,18 @@ def create_app():
     # set up events
     startup_tracker.start("request_hooks")
 
-    request_counter = environment.meter.create_counter(
-        "gdcheerioscom_req_count",
-        description="Total number of HTTP requests processed",
-        unit="1",
-    )
+    if environment.metrics_allowed:
+        request_counter = environment.meter.create_counter(
+            "gdcheerioscom_req_count",
+            description="Total number of HTTP requests processed",
+            unit="1",
+        )
 
-    request_duration = environment.meter.create_histogram(
-        "gdcheerioscom_req_duration_seconds",
-        description="HTTP request duration in seconds",
-        unit="s",
-    )
+        request_duration = environment.meter.create_histogram(
+            "gdcheerioscom_req_duration_seconds",
+            description="HTTP request duration in seconds",
+            unit="s",
+        )
 
     @app.before_request
     def before_request():
@@ -137,13 +138,14 @@ def create_app():
             successful=(200 <= response.status_code < 500),
         )
 
-        metric_labels = {
-            "endpoint": g.req_endpoint,
-            "method": request.method,
-            "status_code": str(response.status_code),
-        }
-        request_counter.add(1, metric_labels)
-        request_duration.record(g.req_duration, metric_labels)
+        if environment.metrics_allowed:
+            metric_labels = {
+                "endpoint": g.req_endpoint,
+                "method": request.method,
+                "status_code": str(response.status_code),
+            }
+            request_counter.add(1, metric_labels)
+            request_duration.record(g.req_duration, metric_labels)
 
         if not static: log_request(server_logger, request_payload)
 
