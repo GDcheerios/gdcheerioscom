@@ -351,7 +351,7 @@ def end_match(id):
 def get_metrics(match_id):
     return environment.database.fetch_all_to_dict(
         """
-        SELECT * FROM osu.match_metrics WHERE match_id = %s and placement <= 10
+        SELECT * FROM osu.match_metrics WHERE match_id = %s and placement <= 100
         ORDER BY date ASC, placement ASC
         """,
         params=(match_id,)

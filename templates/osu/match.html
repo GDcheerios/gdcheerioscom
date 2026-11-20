@@ -327,23 +327,13 @@
                     position: relative;
                     height: 75%;
                     overflow: hidden;
+                    --players-list-top-color: #000;
+                    -webkit-mask-image: linear-gradient(to bottom, var(--players-list-top-color), #000 24px, #000 max(24px, calc(100% - 52px)), transparent);
+                    mask-image: linear-gradient(to bottom, var(--players-list-top-color), #000 24px, #000 max(24px, calc(100% - 52px)), transparent);
                 }
 
-                .players-list-fade {
-                    display: none;
-                    position: absolute;
-                    z-index: 3;
-                    right: 0;
-                    bottom: 0;
-                    left: 0;
-                    height: 52px;
-                    pointer-events: none;
-                    background: transparent;
-                }
-
-                #players-list {
-                    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 52px), transparent 100%);
-                    mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 52px), transparent 100%);
+                .players-list-frame.is-scrolled {
+                    --players-list-top-color: transparent;
                 }
 
                 .player {
@@ -477,7 +467,9 @@
                 }
 
                 .match-player-panel #players-list {
-                    overflow: hidden;
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(100, 150, 220, 0.65) rgba(100, 150, 220, 0.12);
                 }
 
                 .match-player-panel #you-container {
@@ -594,7 +586,7 @@
                     border-radius: 12px;
                 }
 
-                #charts-controls button, #chart-mode {
+                #charts-controls button, #charts-controls select, #chart-limit {
                     box-sizing: border-box;
                     min-height: 40px;
                     margin: 0;
@@ -613,7 +605,7 @@
                     border-color: transparent;
                 }
 
-                #charts-controls button:hover, #chart-mode:hover {
+                #charts-controls button:hover, #charts-controls select:hover, #chart-limit:hover {
                     background: #254477;
                     border-color: #7ba8e9;
                     color: white;
@@ -626,15 +618,124 @@
                     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.2);
                 }
 
-                #charts-controls button:focus-visible, #chart-mode:focus-visible {
+                #charts-controls button:focus-visible, #charts-controls select:focus-visible, #chart-limit:focus-visible {
                     outline: 2px solid #b7d8ff;
                     outline-offset: 3px;
                 }
 
                 #charts-controls button:active { background: #18345e; }
                 .chart-mode-control label { color: #c1d2ec; font-size: 13px; }
-                #chart-mode { color-scheme: dark; }
+                #chart-mode, #chart-limit { color-scheme: dark; }
+                #chart-limit { width: 5em; }
                 #chart-mode-help, #chart-status { color: #c1d2ec; font-size: 13px; line-height: 1.5; }
+
+                .chart-layout {
+                    display: grid;
+                    grid-template-columns: minmax(230px, 28%) minmax(0, 1fr);
+                    align-items: start;
+                    gap: 20px;
+                }
+                .chart-player-picker {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    min-width: 0;
+                    height: 440px;
+                    box-sizing: border-box;
+                    padding: 16px;
+                    text-align: left;
+                    color: #d2e1f7;
+                    color-scheme: dark;
+                    background: #101b32;
+                    border: 1px solid #2a4062;
+                    border-radius: 14px;
+                }
+                .chart-player-picker > label {
+                    font-size: 15px;
+                    font-weight: 600;
+                }
+                #chart-player-search {
+                    width: 100%;
+                    min-height: 42px;
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 8px 12px;
+                    border: 1px solid #4a638a;
+                    border-radius: 8px;
+                    background: #0b1428;
+                    color: inherit;
+                    font: inherit;
+                    font-size: 16px;
+                }
+                #chart-player-search::placeholder { color: #9baeca; }
+                .chart-player-actions {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 8px;
+                }
+                .chart-player-actions button {
+                    min-height: 36px;
+                    margin: 0;
+                    padding: 6px 8px;
+                    color: inherit;
+                    background: #192d50;
+                    border: 1px solid #4a638a;
+                    border-radius: 8px;
+                    font: inherit;
+                    font-size: 14px;
+                    cursor: pointer;
+                }
+                .chart-player-actions button:hover { background: #244169; }
+                .chart-player-picker :focus-visible {
+                    outline: 2px solid #a4c8ff;
+                    outline-offset: 2px;
+                }
+                #chart-player-list {
+                    flex: 1 1 auto;
+                    min-height: 0;
+                    overflow-y: auto;
+                    scrollbar-gutter: stable;
+                    scrollbar-width: thin;
+                    scrollbar-color: #5878a4 #0b1428;
+                    padding: 4px 6px 4px 3px;
+                    border-top: 1px solid #2a4062;
+                }
+                .chart-player-option {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    box-sizing: border-box;
+                    min-height: 42px;
+                    padding: 8px;
+                    border-radius: 8px;
+                    font-size: 15px;
+                    line-height: 1.3;
+                    overflow-wrap: anywhere;
+                    cursor: pointer;
+                }
+                .chart-player-option + .chart-player-option { margin-top: 3px; }
+                .chart-player-option:hover, .chart-player-option:focus-within { background: #1a2d4a; }
+                .chart-player-option input {
+                    flex: 0 0 16px;
+                    width: 16px;
+                    height: 16px;
+                    margin: 0;
+                    accent-color: #a4c8ff;
+                    cursor: pointer;
+                }
+                .chart-player-swatch {
+                    flex: 0 0 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                }
+                #chart-player-count, #chart-player-empty { color: #aebfda; font-size: 13px; }
+                .chart-plot { position: relative; height: 440px; min-width: 0; }
+
+                @media (max-width: 700px) {
+                    .chart-layout { grid-template-columns: minmax(0, 1fr); }
+                    .chart-player-picker { height: 340px; }
+                    .chart-plot { height: 360px; }
+                }
 
                 @media (max-width: 600px) {
                     #charts-controls, .chart-view-buttons { width: 100%; }
@@ -645,7 +746,7 @@
                 }
 
                 @media (prefers-reduced-motion: reduce) {
-                    #charts-controls button, #chart-mode { transition: none; }
+                    #charts-controls button, #charts-controls select, #chart-limit { transition: none; }
                 }
 
                 .match-dashboard #controls {
@@ -695,7 +796,6 @@
                     </div>
                     <div class="players-list-frame">
                         <div id="players-list" style="height: 100%;"></div>
-                        <div id="players-list-fade" class="players-list-fade" aria-hidden="true"></div>
                     </div>
                     <div id="you-container">
                         <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent 0%, rgba(100, 150, 220, 0.8) 50%, transparent 100%); margin: 10px 0;"></div>
@@ -778,6 +878,11 @@
                                         <option value="daily">Daily</option>
                                     </select>
                                     </div>
+                                    <div class="chart-mode-control">
+                                        <label for="chart-limit">Players</label>
+                                        <input id="chart-limit" type="number" min="5" max="100" step="1" value="20"
+                                               onchange="updateChart()">
+                                    </div>
                                     <button type="button" onclick="updateChart()">Refresh</button>
                                 {% endif %}
                             </div>
@@ -786,8 +891,21 @@
                             {% if is_supporter or is_admin %}
                                 <p id="chart-mode-help">Cumulative shows the recorded totals, or placement, for each day.</p>
                                 <p id="chart-status" role="status">Loading metrics…</p>
-                                <div style="position: relative; height: 360px; width: 100%;">
-                                    <canvas id="chart" role="img" aria-label="Player placement over time"></canvas>
+                                <div class="chart-layout">
+                                    <div class="chart-player-picker" role="group" aria-label="Chart players">
+                                        <label for="chart-player-search">Search players</label>
+                                        <input id="chart-player-search" type="search" placeholder="Name or user ID">
+                                        <div class="chart-player-actions">
+                                            <button id="chart-show-players" type="button">Show all</button>
+                                            <button id="chart-hide-players" type="button">Hide all</button>
+                                        </div>
+                                        <div id="chart-player-count" role="status"></div>
+                                        <div id="chart-player-list"></div>
+                                        <div id="chart-player-empty" hidden>No matching players.</div>
+                                    </div>
+                                    <div class="chart-plot">
+                                        <canvas id="chart" role="img" aria-label="Player placement over time"></canvas>
+                                    </div>
                                 </div>
                             {% else %}
                                 <h1>Please invest in gdcheerios supporter to see these metrics</h1>
@@ -1616,6 +1734,9 @@
 
         // visual
         const playersList = document.getElementById('players-list');
+        playersList.addEventListener('scroll', () => {
+            playersList.parentElement.classList.toggle('is-scrolled', playersList.scrollTop > 0);
+        }, {passive: true});
         const teamsDiv = document.getElementById('teams');
         const scoresDiv = document.getElementById('scores');
         const youCardElement = document.getElementById('your-card');
@@ -1769,6 +1890,7 @@
                 player.renderPlacement();
             });
 
+            const scrollTop = playersList.scrollTop;
             const fragment = document.createDocumentFragment();
             sortedPlayers.forEach(player => {
                 if (player.container.parentNode === playersList) {
@@ -1786,6 +1908,7 @@
                 );
             });
             playersList.appendChild(fragment);
+            playersList.scrollTop = scrollTop;
 
             if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 sortedPlayers.forEach(player => {
@@ -1817,36 +1940,156 @@
             });
         }
 
-        async function updateChart(view = chartView, mode = chartMode) {
+        let cachedMetricRows = null;
+        let hoveredDatasetIndex = null;
+
+        const crosshairPlugin = {
+            id: 'crosshair',
+            afterDatasetsDraw(chart) {
+                const { ctx, tooltip, chartArea: { top, bottom } } = chart;
+                if (!tooltip || !tooltip.getActiveElements().length) return;
+                const x = tooltip.getActiveElements()[0].element.x;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x, top);
+                ctx.lineTo(x, bottom);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(180, 210, 255, 0.35)';
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.restore();
+            }
+        };
+
+        const hiddenChartPlayers = new Set();
+
+        function updateChartPlayerCount() {
+            const datasets = metricsChart.data.datasets;
+            const visible = datasets.filter(dataset => !dataset.hidden).length;
+            document.getElementById('chart-player-count').textContent = `${visible} of ${datasets.length} visible`;
+        }
+
+        function renderChartPlayerPicker() {
+            const search = document.getElementById('chart-player-search').value.trim().toLowerCase();
+            const list = document.getElementById('chart-player-list');
+            const entries = document.createDocumentFragment();
+
+            for (const dataset of metricsChart.data.datasets) {
+                if (search && !dataset.playerSearchText.includes(search)) continue;
+
+                const label = document.createElement('label');
+                label.className = 'chart-player-option';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = !dataset.hidden;
+                checkbox.addEventListener('change', () => {
+                    dataset.hidden = !checkbox.checked;
+                    if (dataset.hidden) hiddenChartPlayers.add(dataset.userId);
+                    else hiddenChartPlayers.delete(dataset.userId);
+                    metricsChart.update('none');
+                    updateChartPlayerCount();
+                });
+
+                const swatch = document.createElement('span');
+                swatch.className = 'chart-player-swatch';
+                swatch.style.backgroundColor = dataset.backgroundColor;
+                const name = document.createElement('span');
+                name.textContent = dataset.label;
+                label.append(checkbox, swatch, name);
+                entries.appendChild(label);
+            }
+
+            document.getElementById('chart-player-empty').hidden = !search || entries.childElementCount > 0;
+            list.replaceChildren(entries);
+            updateChartPlayerCount();
+        }
+
+        function setAllChartPlayersVisible(visible) {
+            if (!metricsChart) return;
+            for (const dataset of metricsChart.data.datasets) {
+                dataset.hidden = !visible;
+                if (visible) hiddenChartPlayers.delete(dataset.userId);
+                else hiddenChartPlayers.add(dataset.userId);
+            }
+            metricsChart.update('none');
+            renderChartPlayerPicker();
+        }
+
+        if (chart) {
+            document.getElementById('chart-player-search').addEventListener('input', () => {
+                if (metricsChart) renderChartPlayerPicker();
+            });
+            document.getElementById('chart-show-players').addEventListener('click', () => setAllChartPlayersVisible(true));
+            document.getElementById('chart-hide-players').addEventListener('click', () => setAllChartPlayersVisible(false));
+        }
+
+        const podiumChartColors = ['#ffd75a', '#d2e1f0', '#e0975b'];
+
+        function getPlayerChartColor(id, player) {
+            const podiumColor = podiumChartColors[player?.placement - 1];
+            if (podiumColor) return podiumColor;
+
+            const teamColor = player?.team?.color ?? teams.get(player?.team?.id)?.color;
+            if (/^#[\da-f]{6}$/i.test(teamColor ?? '')) {
+                const tint = 0.25 + (id % 13) * 0.03;
+                const channels = teamColor.slice(1).match(/../g).map(channel => {
+                    const value = parseInt(channel, 16);
+                    return Math.round(value + (255 - value) * tint);
+                });
+                return `rgb(${channels.join(', ')})`;
+            }
+
+            const hue = Math.round((id * 137.508) % 360);
+            return `hsl(${hue}, 78%, 65%)`;
+        }
+
+        function withChartOpacity(color, alpha) {
+            return Chart.helpers.color(color).alpha(alpha).rgbString();
+        }
+
+        async function updateChart(view = chartView, mode = chartMode, forceRefresh = false) {
             if (!chart || !['placement', 'objective', 'plays'].includes(view) ||
                 !['cumulative', 'daily'].includes(mode)) return;
+
             chartView = view;
             chartMode = mode;
+            const limitInput = document.getElementById('chart-limit');
+            const entryLimit = Math.max(5, Math.min(100, Math.round(Number.isNaN(limitInput.valueAsNumber) ? 20 : limitInput.valueAsNumber)));
+            limitInput.value = entryLimit;
+
             const daily = mode === 'daily';
             const placementTotals = view === 'placement' && !daily;
+
             document.getElementById('chart-mode').value = mode;
             document.getElementById('chart-mode-help').textContent = daily
-                ? 'Change since the previous calendar day. Gaps mean a daily snapshot is missing.' +
-                    (view === 'placement' ? ' Positive values mean places gained.' : '')
-                : 'Cumulative shows the recorded totals, or placement, for each day.';
+                ? 'Day-over-day change. Dotted segments indicate missing daily snapshots.' +
+                (view === 'placement' ? ' Positive = ranks gained.' : '')
+                : 'Recorded totals' + (view === 'placement' ? ' (1st place at top).' : ' per day.');
+
             const request = ++chartRequest;
             const status = document.getElementById('chart-status');
             const metricTitle = view === 'objective' ? matchObjective.replaceAll('_', ' ') : view;
-            const title = daily ? `${metricTitle} — daily gain` : metricTitle;
-            status.textContent = 'Loading metrics…';
+            const title = daily ? `${metricTitle} (daily)` : metricTitle;
+
             document.querySelectorAll('[data-chart-view]').forEach(button => {
-                const active = button.dataset.chartView === view;
-                button.setAttribute('aria-pressed', String(active));
+                button.setAttribute('aria-pressed', String(button.dataset.chartView === view));
             });
+
             try {
-                const response = await fetch(buildApiUrl(`/api/osu/get-metrics/${matchId}`));
-                if (!response.ok) throw new Error('Could not load metrics. Use Refresh to try again.');
-                const rows = await response.json();
-                if (!Array.isArray(rows)) throw new Error('Unexpected metrics response.');
-                if (request !== chartRequest) return;
+                if (!cachedMetricRows || forceRefresh) {
+                    status.textContent = 'Loading metrics…';
+                    const response = await fetch(buildApiUrl(`/api/osu/get-metrics/${matchId}`));
+                    if (!response.ok) throw new Error('Could not load metrics. Use Refresh to try again.');
+                    const rows = await response.json();
+                    if (!Array.isArray(rows)) throw new Error('Unexpected metrics response.');
+                    if (request !== chartRequest) return;
+                    cachedMetricRows = rows;
+                }
+
                 const byPlayer = new Map();
                 const dates = new Set();
-                for (const row of rows) {
+
+                for (const row of cachedMetricRows) {
                     if (row.date == null || row[view] == null || row.user_id == null) continue;
                     const timestamp = Date.parse(row.date);
                     const value = Number(row[view]);
@@ -1857,60 +2100,167 @@
                     byPlayer.get(id).set(date, value);
                     dates.add(date);
                 }
-                const labels = Array.from(dates).sort();
-                const datasets = Array.from(byPlayer).sort(([a], [b]) => a - b).map(([id, values]) => {
+
+                const rawLabels = Array.from(dates).sort();
+                const totalPlayers = byPlayer.size;
+
+                const sortedEntries = Array.from(byPlayer.entries()).sort(([idA], [idB]) => {
+                    const pA = players.get(idA)?.placement ?? 9999;
+                    const pB = players.get(idB)?.placement ?? 9999;
+                    return pA - pB || idA - idB;
+                });
+
+                const datasets = sortedEntries.slice(0, entryLimit).map(([id, values]) => {
                     const player = players.get(id);
-                    const color = `hsl(${(id * 137.508) % 360}, 75%, 65%)`;
+                    const isYou = id === ID;
+                    const placement = player?.placement;
+                    const isTop3 = placement >= 1 && placement <= 3;
+                    const isImportant = isYou || (placement >= 1 && placement <= 10);
+                    const baseAlpha = isImportant ? 1 : 0.6;
+                    const baseWidth = isYou ? 3.5 : (isTop3 ? 2.75 : 1.75);
+                    const color = getPlayerChartColor(id, player);
+                    const labelName = (player?.nickname || player?.username || `User ${id}`) + (isYou ? ' (You)' : '');
+
                     return {
-                        label: player?.nickname || player?.username,
-                        data: chartMetricValues(labels, values, view, mode),
-                        borderColor: color,
+                        label: labelName,
+                        userId: id,
+                        playerSearchText: `${labelName} ${player?.username ?? ''} ${id}`.toLowerCase(),
+                        hidden: hiddenChartPlayers.has(id),
+                        baseAlpha,
+                        baseWidth,
+                        data: chartMetricValues(rawLabels, values, view, mode),
+                        borderColor: withChartOpacity(color, baseAlpha),
                         backgroundColor: color,
-                        borderWidth: 2,
-                        pointRadius: labels.length > 60 ? 1 : 3,
-                        spanGaps: false,
+                        borderWidth: baseWidth,
+                        pointRadius: rawLabels.length === 1 ? 4 : 0,
+                        pointHoverRadius: 5,
+                        pointHoverBorderWidth: 2,
+                        pointHoverBorderColor: '#0a0a1a',
+                        spanGaps: true,
+                        segment: {
+                            borderDash: ctx => (ctx.p0.skip || ctx.p1.skip) ? [5, 5] : undefined
+                        },
                         tension: 0
                     };
                 });
+
+                const applyHighlight = (chartInstance, activeIdx) => {
+                    if (hoveredDatasetIndex === activeIdx) return;
+                    hoveredDatasetIndex = activeIdx;
+                    chartInstance.data.datasets.forEach((ds, idx) => {
+                        const focused = activeIdx === null || activeIdx === idx;
+                        const alpha = focused ? (activeIdx === idx ? 1 : ds.baseAlpha) : 0.12;
+                        ds.borderColor = withChartOpacity(ds.backgroundColor, alpha);
+                        ds.borderWidth = activeIdx === idx ? 4 : ds.baseWidth;
+                    });
+                    chartInstance.update('none');
+                };
+
                 const options = {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: false,
-                    {#interaction: {mode: 'index', intersect: false},#}
+                    animation: { duration: 220 },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    onHover: (event, elements, chartInstance) => {
+                        const nearest = chartInstance.getElementsAtEventForMode(
+                            event, 'nearest', { intersect: true }, false
+                        );
+                        applyHighlight(chartInstance, nearest.length ? nearest[0].datasetIndex : null);
+                    },
                     plugins: {
-                        legend: {labels: {color: '#eee'}},
-                        tooltip: {callbacks: {label: context => {
-                            const value = context.parsed.y;
-                            if (value == null) return '';
-                            const formatted = placementTotals ? `#${value}` :
-                                (daily && value > 0 ? '+' : '') +
-                                value.toLocaleString(undefined, {maximumFractionDigits: 2}) +
-                                (view === 'placement' ? ' places' :
-                                    view === 'objective' ? (daily && matchObjective === 'accuracy'
-                                        ? ' percentage points' : getStringEnding(matchObjective)) : '');
-                            return `${context.dataset.label}: ${formatted}`;
-                        }}}
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10, 15, 35, 0.94)',
+                            borderColor: 'rgba(100, 150, 220, 0.45)',
+                            borderWidth: 1,
+                            padding: 10,
+                            titleColor: '#fff',
+                            bodyColor: '#d2e1f7',
+                            usePointStyle: true,
+                            itemSort: (a, b) => {
+                                if (a.parsed.y == null) return 1;
+                                if (b.parsed.y == null) return -1;
+                                return placementTotals
+                                    ? a.parsed.y - b.parsed.y
+                                    : b.parsed.y - a.parsed.y;
+                            },
+                            callbacks: {
+                                title: items => {
+                                    if (!items.length) return '';
+                                    const iso = rawLabels[items[0].dataIndex];
+                                    return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', {
+                                        weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'
+                                    });
+                                },
+                                label: context => {
+                                    const value = context.parsed.y;
+                                    if (value == null) return null;
+                                    const formatted = placementTotals
+                                        ? `#${value}`
+                                        : (daily && value > 0 ? '+' : '') +
+                                        value.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
+                                        (view === 'placement' ? ' places' :
+                                            view === 'objective' ? (daily && matchObjective === 'accuracy'
+                                                ? ' pp' : getStringEnding(matchObjective)) : ' plays');
+                                    return ` ${context.dataset.label}: ${formatted}`;
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        x: {title: {display: true, text: 'Date', color: '#eee'},
-                            ticks: {color: '#ccc', maxTicksLimit: 10}, grid: {color: '#ffffff15'}},
-                        y: {reverse: placementTotals, min: placementTotals ? 1 : undefined,
+                        x: {
+                            ticks: {
+                                color: '#9ba9bf',
+                                maxTicksLimit: 10,
+                                callback(val) {
+                                    const iso = this.getLabelForValue(val);
+                                    return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', {
+                                        month: 'short', day: 'numeric', timeZone: 'UTC'
+                                    });
+                                }
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.06)' }
+                        },
+                        y: {
+                            reverse: placementTotals,
+                            min: placementTotals ? 1 : undefined,
                             beginAtZero: daily,
-                            title: {display: true, text: title, color: '#eee'},
-                            ticks: {color: '#ccc', precision: view === 'objective' ? 2 : 0},
-                            grid: {color: '#ffffff15'}}
+                            title: { display: true, text: title.toUpperCase(), color: '#9ba9bf', font: { size: 11, weight: 'bold' } },
+                            ticks: {
+                                color: '#9ba9bf',
+                                precision: view === 'objective' && matchObjective === 'accuracy' ? 2 : 0,
+                                callback: value => placementTotals ? `#${value}` : formatNumber(value)
+                            },
+                            grid: {
+                                color: ctx => (daily && ctx.tick.value === 0)
+                                    ? 'rgba(255, 255, 255, 0.28)'
+                                    : 'rgba(255, 255, 255, 0.06)'
+                            }
+                        }
                     }
                 };
+
+                hoveredDatasetIndex = null;
                 if (metricsChart) {
-                    metricsChart.data = {labels, datasets};
+                    metricsChart.data = { labels: rawLabels, datasets };
                     metricsChart.options = options;
                     metricsChart.update();
                 } else {
-                    metricsChart = new Chart(chart, {type: 'line', data: {labels, datasets}, options});
+                    metricsChart = new Chart(chart, {
+                        type: 'line',
+                        data: { labels: rawLabels, datasets },
+                        options,
+                        plugins: [crosshairPlugin]
+                    });
                 }
+
+                renderChartPlayerPicker();
                 chart.setAttribute('aria-label', `Player ${title} over time`);
-                const hasValues = datasets.some(dataset => dataset.data.some(value => value !== null));
-                status.textContent = hasValues ? '' : daily && labels.length
+                const hasValues = datasets.some(ds => ds.data.some(v => v !== null));
+                status.textContent = hasValues ? `Showing ${datasets.length} of ${totalPlayers} players by placement.` : daily && rawLabels.length
                     ? 'Daily gains need snapshots on two consecutive days.'
                     : 'No metrics recorded for this match yet.';
             } catch (error) {
